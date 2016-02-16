@@ -123,6 +123,7 @@ struct buf_2d {
 };
 
 struct macroblockd_plane {
+  DECLARE_ALIGNED(16, int16_t, pred[64 * 64]);
   tran_low_t *dqcoeff;
   PLANE_TYPE plane_type;
   int subsampling_x;
