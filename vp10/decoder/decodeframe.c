@@ -1552,11 +1552,14 @@ static const uint8_t *decode_tiles(VP10Decoder *pbi, const uint8_t *data,
               ? &cm->counts
               : NULL;
       vp10_zero(tile_data->dqcoeff);
+      vp10_zero(tile_data->pvq_ref_coeff);
       vp10_tile_init(&tile_data->xd.tile, tile_data->cm, tile_row, tile_col);
       setup_token_decoder(buf->data, data_end, buf->size, &cm->error,
                           &tile_data->bit_reader, pbi->decrypt_cb,
                           pbi->decrypt_state);
-      vp10_init_macroblockd(cm, &tile_data->xd, tile_data->dqcoeff);
+      //tile_data->pvq_ref_coeff
+      vp10_init_macroblockd(cm, &tile_data->xd, tile_data->dqcoeff);//,
+                            //tile_data->pvq_ref_coeff);
       tile_data->xd.plane[0].color_index_map = tile_data->color_index_map[0];
       tile_data->xd.plane[1].color_index_map = tile_data->color_index_map[1];
     }

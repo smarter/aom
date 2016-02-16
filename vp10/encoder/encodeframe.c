@@ -1072,6 +1072,7 @@ static void rd_pick_sb_modes(VP10_COMP *cpi, TileDataEnc *tile_data,
     p[i].coeff = ctx->coeff_pbuf[i][0];
     p[i].qcoeff = ctx->qcoeff_pbuf[i][0];
     pd[i].dqcoeff = ctx->dqcoeff_pbuf[i][0];
+    pd[i].pvq_ref_coeff = ctx->pvq_ref_coeff_pbuf[i][0];
     p[i].eobs = ctx->eobs_pbuf[i][0];
   }
 

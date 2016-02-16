@@ -600,9 +600,14 @@ void vp10_xform_quant_fp(MACROBLOCK *x, int plane, int block, int blk_row,
 #endif
       break;
     case TX_8X8:
-      vp10_fdct8x8_quant(src_diff, diff_stride, coeff, 64, x->skip_block,
+      /*vp10_fdct8x8_quant(src_diff, diff_stride, coeff, 64, x->skip_block,
                          p->zbin, p->round_fp, p->quant_fp, p->quant_shift,
                          qcoeff, dqcoeff, pd->dequant, eob, scan_order->scan,
+                         scan_order->iscan);*/
+      vpx_fdct8x8(src_diff, coeff, diff_stride);
+      vp10_quantize_fp(coeff, 64, x->skip_block, p->zbin, p->round_fp,
+                       p->quant_fp, p->quant_shift, qcoeff, dqcoeff,
+                       pd->dequant, eob, scan_order->scan,
 #if !CONFIG_AOM_QM
                          scan_order->iscan);
 #else
@@ -1091,6 +1096,7 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
   tran_low_t *coeff = BLOCK_OFFSET(p->coeff, block);
   tran_low_t *qcoeff = BLOCK_OFFSET(p->qcoeff, block);
   tran_low_t *dqcoeff = BLOCK_OFFSET(pd->dqcoeff, block);
+  tran_low_t *pvq_ref_coeff = BLOCK_OFFSET(pd->pvq_ref_coeff, block);
   PLANE_TYPE plane_type = (plane == 0) ? PLANE_TYPE_Y : PLANE_TYPE_UV;
   TX_TYPE tx_type = get_tx_type(plane_type, xd, block);
   const scan_order *const scan_order = get_scan(tx_size, tx_type);
@@ -1208,7 +1214,7 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
   }
 #endif  // CONFIG_VPX_HIGHBITDEPTH
 
-#if 0
+#if 1
   switch (tx_size) {
     case TX_32X32:
       if (!x->skip_recode) {
@@ -1293,15 +1299,20 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
   switch (tx_size) {
     case TX_32X32:
       if (!x->skip_recode) {
-        //forward transform is applied to predicted image, instead of computing residue.
-        //vpx_subtract_block(32, 32, src_diff, diff_stride, src, src_stride, dst,
-        //                   dst_stride);
-        fwd_txfm_32x32(x->use_lp32x32fdct, src_diff, coeff, diff_stride,
-                       tx_type);
+        // instead of computing residue in pixel domain,
+        // pvq uses the residue defined in freq domain.
+        // for this, forward transform is applied to 1) predicted image
+        // and 2) target original image.
+        // note that pvq in decoder also need to apply forward transform
+        // to predicted image.
 
-        fwd_txfm_32x32(x->use_lp32x32fdct, src_diff, coeff, diff_stride,
+        //forward transform of predicted image.
+        fwd_txfm_32x32(x->use_lp32x32fdct, dst, pvq_ref_coeff, diff_stride,
                        tx_type);
-        //pvq will go here.
+        //forward transform of original image.
+        fwd_txfm_32x32(x->use_lp32x32fdct, src, coeff, src_stride,
+                       tx_type);
+        //pvq will be called here.
         vpx_quantize_b_32x32(coeff, 1024, x->skip_block, p->zbin, p->round,
                              p->quant, p->quant_shift, qcoeff, dqcoeff,
                              pd->dequant, eob, scan_order->scan,
@@ -1312,7 +1323,8 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
       break;
     case TX_16X16:
       if (!x->skip_recode) {
-        fwd_txfm_16x16(src_diff, coeff, diff_stride, tx_type);
+        fwd_txfm_16x16(dst, pvq_ref_coeff, diff_stride, tx_type);
+        fwd_txfm_16x16(src, coeff, src_stride, tx_type);
         vpx_quantize_b(coeff, 256, x->skip_block, p->zbin, p->round, p->quant,
                        p->quant_shift, qcoeff, dqcoeff, pd->dequant, eob,
                        scan_order->scan, scan_order->iscan);
@@ -1322,7 +1334,8 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
       break;
     case TX_8X8:
       if (!x->skip_recode) {
-        fwd_txfm_8x8(src_diff, coeff, diff_stride, tx_type);
+        fwd_txfm_8x8(dst, pvq_ref_coeff, diff_stride, tx_type);
+        fwd_txfm_8x8(src, coeff, src_stride, tx_type);
         vpx_quantize_b(coeff, 64, x->skip_block, p->zbin, p->round, p->quant,
                        p->quant_shift, qcoeff, dqcoeff, pd->dequant, eob,
                        scan_order->scan, scan_order->iscan);
@@ -1331,7 +1344,9 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
       break;
     case TX_4X4:
       if (!x->skip_recode) {
-        vp10_fwd_txfm_4x4(src_diff, coeff, diff_stride, tx_type,
+        vp10_fwd_txfm_4x4(dst, pvq_ref_coeff, diff_stride, tx_type,
+                          xd->lossless[mbmi->segment_id]);
+        vp10_fwd_txfm_4x4(src, coeff, src_stride, tx_type,
                           xd->lossless[mbmi->segment_id]);
         vpx_quantize_b(coeff, 16, x->skip_block, p->zbin, p->round, p->quant,
                        p->quant_shift, qcoeff, dqcoeff, pd->dequant, eob,
