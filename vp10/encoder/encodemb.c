@@ -1305,6 +1305,8 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
 
   // transform block size in pixels
   tx_blk_size = 1 << (tx_size + 2);
+  assert(pred + tx_blk_size * tx_blk_size < &pd->pred + 64 * 64);
+  assert(src_diff + tx_blk_size * tx_blk_size < &p->src_diff + 64 * 64);
   for (j=0; j < tx_blk_size; j++)
     for (i=0; i < tx_blk_size; i++) {
       src_diff[tx_blk_size * j + i] = src[src_stride * j + i];

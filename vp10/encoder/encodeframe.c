@@ -942,6 +942,7 @@ static void update_state(VP10_COMP *cpi, ThreadData *td, PICK_MODE_CONTEXT *ctx,
     p[i].coeff = ctx->coeff_pbuf[i][1];
     p[i].qcoeff = ctx->qcoeff_pbuf[i][1];
     pd[i].dqcoeff = ctx->dqcoeff_pbuf[i][1];
+    pd[i].pvq_ref_coeff = ctx->pvq_ref_coeff_pbuf[i][1];
     p[i].eobs = ctx->eobs_pbuf[i][1];
   }
 
@@ -949,6 +950,7 @@ static void update_state(VP10_COMP *cpi, ThreadData *td, PICK_MODE_CONTEXT *ctx,
     p[i].coeff = ctx->coeff_pbuf[i][2];
     p[i].qcoeff = ctx->qcoeff_pbuf[i][2];
     pd[i].dqcoeff = ctx->dqcoeff_pbuf[i][2];
+    pd[i].pvq_ref_coeff = ctx->pvq_ref_coeff_pbuf[i][2];
     p[i].eobs = ctx->eobs_pbuf[i][2];
   }
 
