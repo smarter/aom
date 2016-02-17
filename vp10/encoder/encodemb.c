@@ -1115,6 +1115,9 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
 #endif
   const int src_stride = p->src.stride;
   const int dst_stride = pd->dst.stride;
+  int tx_blk_size;
+  int i, j;
+
   dst = &pd->dst.buf[4 * (blk_row * dst_stride + blk_col)];
   src = &p->src.buf[4 * (blk_row * src_stride + blk_col)];
   src_diff = &p->src_diff[4 * (blk_row * diff_stride + blk_col)];
@@ -1301,9 +1304,7 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
   // existing VP10 transform functions
 
   // transform block size in pixels
-  int tx_blk_size;
   tx_blk_size = 1 << (tx_size + 2);
-  int i, j;
   for (j=0; j < tx_blk_size; j++)
     for (i=0; i < tx_blk_size; i++) {
       src_diff[tx_blk_size * j + i] = src[src_stride * j + i];
