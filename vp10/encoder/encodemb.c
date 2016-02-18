@@ -1117,7 +1117,8 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
   const int dst_stride = pd->dst.stride;
   int tx_blk_size;
   int i, j;
-
+  // TODO (yushin): Make use of this return flag from pvq_encode()
+  int skip;
   dst = &pd->dst.buf[4 * (blk_row * dst_stride + blk_col)];
   src = &p->src.buf[4 * (blk_row * src_stride + blk_col)];
   src_diff = &p->src_diff[4 * (blk_row * diff_stride + blk_col)];
@@ -1300,85 +1301,92 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
       break;
   }
 #else
-  // Convert uint8 orig and predict to int16 in order to use
-  // existing VP10 transform functions
-
   // transform block size in pixels
   tx_blk_size = 1 << (tx_size + 2);
+
   assert(pred + tx_blk_size * tx_blk_size < &pd->pred + 64 * 64);
   assert(src_diff + tx_blk_size * tx_blk_size < &p->src_diff + 64 * 64);
+
+  // copy uint8 orig and predicted block to int16 buffer
+  // in order to use existing VP10 transform functions
   for (j=0; j < tx_blk_size; j++)
     for (i=0; i < tx_blk_size; i++) {
       src_diff[tx_blk_size * j + i] = src[src_stride * j + i];
       pred[tx_blk_size * j + i] = dst[dst_stride * j + i];
     }
 
-  switch (tx_size) {
-    case TX_32X32:
-      if (!x->skip_recode) {
-        // Instead of computing residue in pixel domain,
-        // pvq uses the residue defined in freq domain.
-        // For this, forward transform is applied to 1) predicted image
-        // and 2) target original image.
-        // Note that pvq in decoder also need to apply forward transform
-        // to predicted image to obtain reference vector.
-
+  // Instead of computing residue in pixel domain,
+  // pvq uses the residue defined in freq domain.
+  // For this, forward transform is applied to 1) predicted image
+  // and 2) target original image.
+  // Note that pvq in decoder also need to apply forward transform
+  // to predicted image to obtain reference vector.
+  if (!x->skip_recode) {
+    switch (tx_size) {
+      case TX_32X32:
         //forward transform of predicted image.
         fwd_txfm_32x32(x->use_lp32x32fdct, pred, pvq_ref_coeff, tx_blk_size,
                        tx_type);
         //forward transform of original image.
         fwd_txfm_32x32(x->use_lp32x32fdct, src_diff, coeff, tx_blk_size,
                        tx_type);
-        //pvq will be called here.
-        vpx_quantize_b_32x32(coeff, 1024, x->skip_block, p->zbin, p->round,
-                             p->quant, p->quant_shift, qcoeff, dqcoeff,
-                             pd->dequant, eob, scan_order->scan,
-                             scan_order->iscan);
-      }
-      if (*eob)
-        vp10_inv_txfm_add_32x32(dqcoeff, dst, dst_stride, *eob, tx_type);
-      break;
-    case TX_16X16:
-      if (!x->skip_recode) {
+        break;
+      case TX_16X16:
         fwd_txfm_16x16(pred, pvq_ref_coeff, tx_blk_size, tx_type);
         fwd_txfm_16x16(src_diff, coeff, tx_blk_size, tx_type);
-        vpx_quantize_b(coeff, 256, x->skip_block, p->zbin, p->round, p->quant,
-                       p->quant_shift, qcoeff, dqcoeff, pd->dequant, eob,
-                       scan_order->scan, scan_order->iscan);
-      }
-      if (*eob)
-        vp10_inv_txfm_add_16x16(dqcoeff, dst, dst_stride, *eob, tx_type);
-      break;
-    case TX_8X8:
-      if (!x->skip_recode) {
+        break;
+      case TX_8X8:
         fwd_txfm_8x8(pred, pvq_ref_coeff, tx_blk_size, tx_type);
         fwd_txfm_8x8(src_diff, coeff, tx_blk_size, tx_type);
-        vpx_quantize_b(coeff, 64, x->skip_block, p->zbin, p->round, p->quant,
-                       p->quant_shift, qcoeff, dqcoeff, pd->dequant, eob,
-                       scan_order->scan, scan_order->iscan);
-      }
-      if (*eob) vp10_inv_txfm_add_8x8(dqcoeff, dst, dst_stride, *eob, tx_type);
-      break;
-    case TX_4X4:
-      if (!x->skip_recode) {
+        break;
+      case TX_4X4:
         vp10_fwd_txfm_4x4(pred, pvq_ref_coeff, tx_blk_size, tx_type,
                           xd->lossless[mbmi->segment_id]);
         vp10_fwd_txfm_4x4(src_diff, coeff, tx_blk_size, tx_type,
                           xd->lossless[mbmi->segment_id]);
-        vpx_quantize_b(coeff, 16, x->skip_block, p->zbin, p->round, p->quant,
-                       p->quant_shift, qcoeff, dqcoeff, pd->dequant, eob,
-                       scan_order->scan, scan_order->iscan);
-      }
+        break;
+      default: assert(0); break;
+    }
+    // Change coefficient ordering for pvq encoding.
+    //od_raster_to_coding_order(dblock,  n, &d[bo], w);
+    //od_raster_to_coding_order(predt,  n, &pred[0], n);
 
-      if (*eob) {
+    // pvq of daala will be called here.
+    /*skip = od_pvq_encode(enc, pred, coeff, dqcoeff, quant, pli, tx_size,
+     OD_PVQ_BETA[use_masking][pli][bs], OD_ROBUST_STREAM, 0,
+     ctx->q_scaling, bx, by, enc->state.qm + off, enc->state.qm_inv
+     + off);*/
+
+    vpx_quantize_b(coeff, tx_size * tx_size, x->skip_block, p->zbin, p->round,
+                         p->quant, p->quant_shift, qcoeff, dqcoeff,
+                         pd->dequant, eob, scan_order->scan,
+                         scan_order->iscan);
+
+    //od_init_skipped_coeffs(d, pred, ctx->is_keyframe, bo, n, w);
+    // Back to original coefficient order
+    //od_coding_order_to_raster(&d[bo], w, scalar_out, n);
+  }//if (!x->skip_recode) {
+
+  if (*eob) {
+    switch (tx_size) {
+      case TX_32X32:
+       vp10_inv_txfm_add_32x32(dqcoeff, dst, dst_stride, *eob, tx_type);
+        break;
+      case TX_16X16:
+        vp10_inv_txfm_add_16x16(dqcoeff, dst, dst_stride, *eob, tx_type);
+        break;
+      case TX_8X8:
+        vp10_inv_txfm_add_8x8(dqcoeff, dst, dst_stride, *eob, tx_type);
+        break;
+      case TX_4X4:
         // this is like vp10_short_idct4x4 but has a special case around eob<=1
         // which is significant (not just an optimization) for the lossless
         // case.
         vp10_inv_txfm_add_4x4(dqcoeff, dst, dst_stride, *eob, tx_type,
                               xd->lossless[mbmi->segment_id]);
-      }
-      break;
-    default: assert(0); break;
+        break;
+      default: assert(0); break;
+    }
   }
 #endif
   if (*eob) *(args->skip) = 0;
