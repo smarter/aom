@@ -1033,6 +1033,8 @@ static void encode_block(int plane, int block, int blk_row, int blk_col,
   uint8_t *dst;
   ENTROPY_CONTEXT *a, *l;
   TX_TYPE tx_type = get_tx_type(pd->plane_type, xd, block);
+  int tx_blk_size;
+  int j;
   dst = &pd->dst.buf[4 * blk_row * pd->dst.stride + 4 * blk_col];
   a = &ctx->ta[plane][blk_col];
   l = &ctx->tl[plane][blk_row];
@@ -1122,6 +1124,18 @@ static void encode_block(int plane, int block, int blk_row, int blk_col,
     return;
   }
 #endif  // CONFIG_VPX_HIGHBITDEPTH
+
+#if ENABLE_PVQ
+  // Since vp10 does not have inverse transform only function
+  // but contain adding the inverse transform to predicted image,
+  // pass blank dummy image to vp10_inv_txfm_add_*x*(), i.e. set dst as zeros
+
+  // transform block size in pixels
+  tx_blk_size = 1 << (tx_size + 2);
+
+  for (j=0; j < tx_blk_size; j++)
+    memset(dst + j * tx_blk_size, 0, tx_size);
+#endif
 
   switch (tx_size) {
     case TX_32X32:
@@ -1227,7 +1241,6 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
   tran_low_t *coeff = BLOCK_OFFSET(p->coeff, block);
   tran_low_t *qcoeff = BLOCK_OFFSET(p->qcoeff, block);
   tran_low_t *dqcoeff = BLOCK_OFFSET(pd->dqcoeff, block);
-  tran_low_t *pvq_ref_coeff = BLOCK_OFFSET(pd->pvq_ref_coeff, block);
   PLANE_TYPE plane_type = (plane == 0) ? PLANE_TYPE_Y : PLANE_TYPE_UV;
   TX_TYPE tx_type = get_tx_type(plane_type, xd, block);
   const scan_order *const scan_order = get_scan(tx_size, tx_type);
@@ -1237,7 +1250,6 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
   const int diff_stride = 4 * (1 << bwl);
   uint8_t *src, *dst;
   int16_t *src_diff;
-  int16_t *src_int16, *pred;
   uint16_t *eob = &p->eobs[block];
   int seg_id = xd->mi[0]->mbmi.segment_id;
 #if CONFIG_AOM_QM
@@ -1247,8 +1259,12 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
 #endif
   const int src_stride = p->src.stride;
   const int dst_stride = pd->dst.stride;
+#if ENABLE_PVQ
+  tran_low_t *pvq_ref_coeff = BLOCK_OFFSET(pd->pvq_ref_coeff, block);
+  int16_t *src_int16, *pred;
   int tx_blk_size;
   int i, j;
+#endif
   // TODO (yushin): Make use of this return flag from pvq_encode()
   //int skip;
   dst = &pd->dst.buf[4 * (blk_row * dst_stride + blk_col)];
