@@ -1118,7 +1118,7 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
   int tx_blk_size;
   int i, j;
   // TODO (yushin): Make use of this return flag from pvq_encode()
-  int skip;
+  //int skip;
   dst = &pd->dst.buf[4 * (blk_row * dst_stride + blk_col)];
   src = &p->src.buf[4 * (blk_row * src_stride + blk_col)];
   src_diff = &p->src_diff[4 * (blk_row * diff_stride + blk_col)];
@@ -1304,8 +1304,8 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
   // transform block size in pixels
   tx_blk_size = 1 << (tx_size + 2);
 
-  assert(pred + tx_blk_size * tx_blk_size < &pd->pred + 64 * 64);
-  assert(src_diff + tx_blk_size * tx_blk_size < &p->src_diff + 64 * 64);
+  assert(pred + tx_blk_size * tx_blk_size < (int16_t *) &pd->pred + 64 * 64);
+  assert(src_diff + tx_blk_size * tx_blk_size < (int16_t *) &p->src_diff + 64 * 64);
 
   // copy uint8 orig and predicted block to int16 buffer
   // in order to use existing VP10 transform functions

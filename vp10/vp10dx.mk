@@ -30,4 +30,9 @@ VP10_DX_SRCS-yes += decoder/decoder.h
 VP10_DX_SRCS-yes += decoder/dsubexp.c
 VP10_DX_SRCS-yes += decoder/dsubexp.h
 
+# PVQ fro daala
+VP10_DX_SRCS-yes += decoder/pvq_decoder.c
+VP10_DX_SRCS-yes += decoder/pvq_decoder.h
+VP10_DX_SRCS-yes += decoder/decint.h
+
 VP10_DX_SRCS-yes := $(filter-out $(VP10_DX_SRCS_REMOVE-yes),$(VP10_DX_SRCS-yes))
