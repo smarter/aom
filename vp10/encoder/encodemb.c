@@ -1133,8 +1133,8 @@ static void encode_block(int plane, int block, int blk_row, int blk_col,
   // transform block size in pixels
   tx_blk_size = 1 << (tx_size + 2);
 
-  for (j=0; j < tx_blk_size; j++)
-    memset(dst + j * tx_blk_size, 0, tx_size);
+  /*for (j=0; j < tx_blk_size; j++)
+    memset(dst + j * pd->dst.stride, 0, tx_blk_size);*/
 #endif
 
   switch (tx_size) {
@@ -1464,6 +1464,9 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
       pred[tx_blk_size * j + i] = dst[dst_stride * j + i];
     }
 
+  vpx_subtract_block(tx_blk_size, tx_blk_size, src_int16, tx_blk_size, src, src_stride, dst,
+                     dst_stride);
+
   // Instead of computing residue in pixel domain,
   // pvq uses the residue defined in freq domain.
   // For this, forward transform is applied to 1) predicted image
@@ -1506,10 +1509,19 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
      ctx->q_scaling, bx, by, enc->state.qm + off, enc->state.qm_inv
      + off);*/
 
-    vpx_quantize_b_c(coeff, tx_size * tx_size, x->skip_block, p->zbin, p->round,
+    vpx_quantize_b_32x32_c(coeff, tx_size * tx_size, x->skip_block, p->zbin, p->round,
                          p->quant, p->quant_shift, qcoeff, dqcoeff,
                          pd->dequant, eob, scan_order->scan,
                          scan_order->iscan);
+    /*if (tx_size == TX_32X32)
+      vpx_quantize_b_32x32(coeff, 1024, x->skip_block, p->zbin, p->round,
+                           p->quant, p->quant_shift, qcoeff, dqcoeff,
+                           pd->dequant, eob, scan_order->scan,
+                           scan_order->iscan);
+    else
+      vpx_quantize_b(coeff, tx_size * tx_size, x->skip_block, p->zbin, p->round, p->quant,
+                     p->quant_shift, qcoeff, dqcoeff, pd->dequant, eob,
+                     scan_order->scan, scan_order->iscan);*/
 
     //od_init_skipped_coeffs(d, pred, ctx->is_keyframe, bo, n, w);
     // Back to original coefficient order
@@ -1520,8 +1532,8 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
   // but contain adding the inverse transform to predicted image,
   // pass blank dummy image to vp10_inv_txfm_add_*x*(), i.e. set dst as zeros
 
-  for (j=0; j < tx_blk_size; j++)
-    memset(dst + j * tx_blk_size, 0, tx_size);
+  /*for (j=0; j < tx_blk_size; j++)
+    memset(dst + j * dst_stride, 0, tx_blk_size);*/
 
   if (*eob) {
     switch (tx_size) {
