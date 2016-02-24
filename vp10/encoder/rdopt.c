@@ -2523,7 +2523,7 @@ static int64_t handle_inter_mode(
           memcpy(skip_txfm, x->skip_txfm, sizeof(skip_txfm));
           memcpy(bsse, x->bsse, sizeof(bsse));
         }
-      }
+      }//for (i = 0; i < SWITCHABLE_FILTERS; ++i) {
       restore_dst_buf(xd, orig_dst, orig_dst_stride);
     }
   }

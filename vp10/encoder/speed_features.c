@@ -407,6 +407,11 @@ static void set_rt_speed_feature(VP10_COMP *cpi, SPEED_FEATURES *sf, int speed,
     sf->adaptive_rd_thresh = 4;
     sf->mv.subpel_force_stop = 2;
     sf->lpf_pick = LPF_PICK_MINIMAL_LPF;
+    // For dev.
+    sf->partition_search_type = FIXED_PARTITION;
+    sf->always_this_block_size = BLOCK_16X16;
+    //cpi->partition_search_skippable_frame = 0;
+    sf->disable_filter_search_var_thresh = 5000;
   }
 }
 

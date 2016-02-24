@@ -695,10 +695,22 @@ void vp10_xform_quant_fp(MACROBLOCK *x, int plane, int block, int blk_row,
       break;
     default: assert(0); break;
   }
-
+#if 0
   vp10_quantize_fp_c(coeff, tx_blk_size * tx_blk_size, x->skip_block, p->zbin, p->round_fp,
                    p->quant_fp, p->quant_shift, qcoeff, dqcoeff,
                    pd->dequant, eob, scan_order->scan, scan_order->iscan);
+#else
+  if (tx_size == TX_32X32)
+    vp10_quantize_fp_32x32(coeff, 1024, x->skip_block, p->zbin, p->round_fp,
+                           p->quant_fp, p->quant_shift, qcoeff, dqcoeff,
+                           pd->dequant, eob, scan_order->scan,
+                           scan_order->iscan);
+  else
+    vp10_quantize_fp(coeff, tx_blk_size * tx_blk_size, x->skip_block, p->zbin, p->round_fp,
+                     p->quant_fp, p->quant_shift, qcoeff, dqcoeff,
+                     pd->dequant, eob, scan_order->scan, scan_order->iscan);
+
+#endif
 #endif//#if !ENABLE_PVQ
 }
 
@@ -1133,8 +1145,8 @@ static void encode_block(int plane, int block, int blk_row, int blk_col,
   // transform block size in pixels
   tx_blk_size = 1 << (tx_size + 2);
 
-  /*for (j=0; j < tx_blk_size; j++)
-    memset(dst + j * pd->dst.stride, 0, tx_blk_size);*/
+  for (j=0; j < tx_blk_size; j++)
+    memset(dst + j * pd->dst.stride, 0, tx_blk_size);
 #endif
 
   switch (tx_size) {
@@ -1453,20 +1465,6 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
   // transform block size in pixels
   tx_blk_size = 1 << (tx_size + 2);
 
-  assert(pred + tx_blk_size * tx_blk_size < (int16_t *) &pd->pred + 64 * 64);
-  assert(src_diff + tx_blk_size * tx_blk_size < (int16_t *) &p->src_diff + 64 * 64);
-
-  // copy uint8 orig and predicted block to int16 buffer
-  // in order to use existing VP10 transform functions
-  for (j=0; j < tx_blk_size; j++)
-    for (i=0; i < tx_blk_size; i++) {
-      src_int16[tx_blk_size * j + i] = src[src_stride * j + i];
-      pred[tx_blk_size * j + i] = dst[dst_stride * j + i];
-    }
-
-  vpx_subtract_block(tx_blk_size, tx_blk_size, src_int16, tx_blk_size, src, src_stride, dst,
-                     dst_stride);
-
   // Instead of computing residue in pixel domain,
   // pvq uses the residue defined in freq domain.
   // For this, forward transform is applied to 1) predicted image
@@ -1474,6 +1472,20 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
   // Note that pvq in decoder also need to apply forward transform
   // to predicted image to obtain reference vector.
   if (!x->skip_recode) {
+    assert(pred + tx_blk_size * tx_blk_size < (int16_t *) &pd->pred + 64 * 64);
+    assert(src_diff + tx_blk_size * tx_blk_size < (int16_t *) &p->src_diff + 64 * 64);
+
+    // copy uint8 orig and predicted block to int16 buffer
+    // in order to use existing VP10 transform functions
+    for (j=0; j < tx_blk_size; j++)
+      for (i=0; i < tx_blk_size; i++) {
+        src_int16[tx_blk_size * j + i] = src[src_stride * j + i];
+        pred[tx_blk_size * j + i] = dst[dst_stride * j + i];
+      }
+
+    /*vpx_subtract_block(tx_blk_size, tx_blk_size, src_int16, tx_blk_size, src, src_stride, dst,
+                       dst_stride);*/
+
     switch (tx_size) {
       case TX_32X32:
         //forward transform of predicted image.
@@ -1508,20 +1520,22 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
      OD_PVQ_BETA[use_masking][pli][bs], OD_ROBUST_STREAM, 0,
      ctx->q_scaling, bx, by, enc->state.qm + off, enc->state.qm_inv
      + off);*/
-
-    vpx_quantize_b_32x32_c(coeff, tx_size * tx_size, x->skip_block, p->zbin, p->round,
+#if 0
+    vpx_quantize_b_32x32_c(coeff, tx_blk_size * tx_blk_size, x->skip_block, p->zbin, p->round,
                          p->quant, p->quant_shift, qcoeff, dqcoeff,
                          pd->dequant, eob, scan_order->scan,
                          scan_order->iscan);
-    /*if (tx_size == TX_32X32)
+#else
+    if (tx_size == TX_32X32)
       vpx_quantize_b_32x32(coeff, 1024, x->skip_block, p->zbin, p->round,
                            p->quant, p->quant_shift, qcoeff, dqcoeff,
                            pd->dequant, eob, scan_order->scan,
                            scan_order->iscan);
     else
-      vpx_quantize_b(coeff, tx_size * tx_size, x->skip_block, p->zbin, p->round, p->quant,
+      vpx_quantize_b(coeff, tx_blk_size * tx_blk_size, x->skip_block, p->zbin, p->round, p->quant,
                      p->quant_shift, qcoeff, dqcoeff, pd->dequant, eob,
-                     scan_order->scan, scan_order->iscan);*/
+                     scan_order->scan, scan_order->iscan);
+#endif
 
     //od_init_skipped_coeffs(d, pred, ctx->is_keyframe, bo, n, w);
     // Back to original coefficient order
@@ -1532,8 +1546,8 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
   // but contain adding the inverse transform to predicted image,
   // pass blank dummy image to vp10_inv_txfm_add_*x*(), i.e. set dst as zeros
 
-  /*for (j=0; j < tx_blk_size; j++)
-    memset(dst + j * dst_stride, 0, tx_blk_size);*/
+  for (j=0; j < tx_blk_size; j++)
+    memset(dst + j * dst_stride, 0, tx_blk_size);
 
   if (*eob) {
     switch (tx_size) {
