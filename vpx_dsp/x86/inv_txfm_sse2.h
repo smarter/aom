@@ -121,6 +121,7 @@ static INLINE void load_buffer_8x16(const tran_low_t *input, __m128i *in) {
   in[15] = load_input_data(input + 15 * 16);
 }
 
+#if 1
 #define RECON_AND_STORE(dest, in_x)                  \
   {                                                  \
     __m128i d0 = _mm_loadl_epi64((__m128i *)(dest)); \
@@ -129,6 +130,14 @@ static INLINE void load_buffer_8x16(const tran_low_t *input, __m128i *in) {
     d0 = _mm_packus_epi16(d0, d0);                   \
     _mm_storel_epi64((__m128i *)(dest), d0);         \
   }
+#else
+// Hack to avoid adding decoded signal to dest
+#define RECON_AND_STORE(dest, in_x)                  \
+  {                                                  \
+    in_x = _mm_packus_epi16(in_x, in_x);             \
+    _mm_storel_epi64((__m128i *)(dest), in_x);       \
+  }
+#endif
 
 static INLINE void write_buffer_8x16(uint8_t *dest, __m128i *in, int stride) {
   const __m128i final_rounding = _mm_set1_epi16(1 << 5);

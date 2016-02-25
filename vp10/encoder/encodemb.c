@@ -1026,9 +1026,15 @@ void vp10_xform_quant(MACROBLOCK *x, int plane, int block, int blk_row,
     default: assert(0); break;
   }
 
-  vpx_quantize_b(coeff, tx_blk_size * tx_blk_size, x->skip_block, p->zbin, p->round, p->quant,
-                 p->quant_shift, qcoeff, dqcoeff, pd->dequant, eob,
-                 scan_order->scan, scan_order->iscan);
+  if (tx_size == TX_32X32)
+    vpx_quantize_b_32x32(coeff, 1024, x->skip_block, p->zbin, p->round,
+                         p->quant, p->quant_shift, qcoeff, dqcoeff,
+                         pd->dequant, eob, scan_order->scan,
+                         scan_order->iscan);
+  else
+    vpx_quantize_b(coeff, tx_blk_size * tx_blk_size, x->skip_block, p->zbin, p->round, p->quant,
+                   p->quant_shift, qcoeff, dqcoeff, pd->dequant, eob,
+                   scan_order->scan, scan_order->iscan);
 
 #endif//#if !ENABLE_PVQ
 }
@@ -1482,9 +1488,6 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
         src_int16[tx_blk_size * j + i] = src[src_stride * j + i];
         pred[tx_blk_size * j + i] = dst[dst_stride * j + i];
       }
-
-    /*vpx_subtract_block(tx_blk_size, tx_blk_size, src_int16, tx_blk_size, src, src_stride, dst,
-                       dst_stride);*/
 
     switch (tx_size) {
       case TX_32X32:
