@@ -2600,6 +2600,8 @@ static int64_t handle_inter_mode(
     rdcosty = RDCOST(x->rdmult, x->rddiv, *rate2, *distortion);
     rdcosty = VPXMIN(rdcosty, RDCOST(x->rdmult, x->rddiv, 0, *psse));
 
+    vp10_subtract_plane(x, bsize, 1);
+    vp10_subtract_plane(x, bsize, 2);
     if (!super_block_uvrd(cpi, x, rate_uv, &distortion_uv, &skippable_uv,
                           &sseuv, bsize, ref_best_rd - rdcosty)) {
       *rate2 = INT_MAX;
