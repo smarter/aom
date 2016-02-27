@@ -665,32 +665,32 @@ void vp10_xform_quant_fp(MACROBLOCK *x, int plane, int block, int blk_row,
   // in order to use existing VP10 transform functions
   for (j = 0; j < tx_blk_size; j++)
     for (i = 0; i < tx_blk_size; i++) {
-      src_int16[tx_blk_size * j + i] = src[src_stride * j + i];
-      pred[tx_blk_size * j + i] = dst[dst_stride * j + i];
+      src_int16[diff_stride * j + i] = src[src_stride * j + i];
+      pred[diff_stride * j + i] = dst[dst_stride * j + i];
     }
 
   switch (tx_size) {
     case TX_32X32:
       //forward transform of predicted image.
-      fdct32x32(x->use_lp32x32fdct, pred, pvq_ref_coeff, tx_blk_size);
+      fdct32x32(x->use_lp32x32fdct, pred, pvq_ref_coeff, diff_stride);
       //forward transform of original image.
-      fdct32x32(x->use_lp32x32fdct, src_int16, coeff, tx_blk_size);
+      fdct32x32(x->use_lp32x32fdct, src_int16, coeff, diff_stride);
       break;
     case TX_16X16:
-      vpx_fdct16x16(pred, pvq_ref_coeff, tx_blk_size);
-      vpx_fdct16x16(src_int16, coeff, tx_blk_size);
+      vpx_fdct16x16(pred, pvq_ref_coeff, diff_stride);
+      vpx_fdct16x16(src_int16, coeff, diff_stride);
       break;
     case TX_8X8:
-      vpx_fdct8x8(pred, pvq_ref_coeff, tx_blk_size);
-      vpx_fdct8x8(src_int16, coeff, tx_blk_size);
+      vpx_fdct8x8(pred, pvq_ref_coeff, diff_stride);
+      vpx_fdct8x8(src_int16, coeff, diff_stride);
       break;
     case TX_4X4:
       if (xd->lossless[xd->mi[0]->mbmi.segment_id]) {
-        vp10_fwht4x4(pred, pvq_ref_coeff, tx_blk_size);
-        vp10_fwht4x4(src_int16, coeff, tx_blk_size);
+        vp10_fwht4x4(pred, pvq_ref_coeff, diff_stride);
+        vp10_fwht4x4(src_int16, coeff, diff_stride);
       } else {
-        vpx_fdct4x4(pred, pvq_ref_coeff, tx_blk_size);
-        vpx_fdct4x4(src_int16, coeff, tx_blk_size);
+        vpx_fdct4x4(pred, pvq_ref_coeff, diff_stride);
+        vpx_fdct4x4(src_int16, coeff, diff_stride);
       }
       break;
     default: assert(0); break;
