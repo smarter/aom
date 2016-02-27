@@ -663,8 +663,8 @@ void vp10_xform_quant_fp(MACROBLOCK *x, int plane, int block, int blk_row,
 
   // copy uint8 orig and predicted block to int16 buffer
   // in order to use existing VP10 transform functions
-  for (j=0; j < tx_blk_size; j++)
-    for (i=0; i < tx_blk_size; i++) {
+  for (j = 0; j < tx_blk_size; j++)
+    for (i = 0; i < tx_blk_size; i++) {
       src_int16[tx_blk_size * j + i] = src[src_stride * j + i];
       pred[tx_blk_size * j + i] = dst[dst_stride * j + i];
     }
@@ -1522,8 +1522,8 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
 
     // copy uint8 orig and predicted block to int16 buffer
     // in order to use existing VP10 transform functions
-    for (j=0; j < tx_blk_size; j++)
-      for (i=0; i < tx_blk_size; i++) {
+    for (j = 0; j < tx_blk_size; j++)
+      for (i = 0; i < tx_blk_size; i++) {
         src_int16[diff_stride * j + i] = src[src_stride * j + i];
         pred[diff_stride * j + i] = dst[dst_stride * j + i];
       }
@@ -1570,12 +1570,6 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
     for (i=0; i < tx_blk_size * tx_blk_size; i++)
       coeff[i] = coeff[i] - pvq_ref_coeff[i];
 
-#if 0
-    vpx_quantize_b_32x32_c(coeff, tx_blk_size * tx_blk_size, x->skip_block, p->zbin, p->round,
-                         p->quant, p->quant_shift, qcoeff, dqcoeff,
-                         pd->dequant, eob, scan_order->scan,
-                         scan_order->iscan);
-#else
     if (tx_size == TX_32X32)
       vpx_quantize_b_32x32(coeff, 1024, x->skip_block, p->zbin, p->round,
                            p->quant, p->quant_shift, qcoeff, dqcoeff,
@@ -1585,7 +1579,6 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
       vpx_quantize_b(coeff, tx_blk_size * tx_blk_size, x->skip_block, p->zbin, p->round, p->quant,
                      p->quant_shift, qcoeff, dqcoeff, pd->dequant, eob,
                      scan_order->scan, scan_order->iscan);
-#endif
 
     // Reconstruct residue + predicted signal in transform domain
     for (i=0; i < tx_blk_size * tx_blk_size; i++)
