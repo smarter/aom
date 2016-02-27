@@ -996,8 +996,8 @@ void vp10_xform_quant(MACROBLOCK *x, int plane, int block, int blk_row,
 
   // copy uint8 orig and predicted block to int16 buffer
   // in order to use existing VP10 transform functions
-  for (j=0; j < tx_blk_size; j++)
-    for (i=0; i < tx_blk_size; i++) {
+  for (j = 0; j < tx_blk_size; j++)
+    for (i = 0; i < tx_blk_size; i++) {
       src_int16[diff_stride * j + i] = src[src_stride * j + i];
       pred[diff_stride * j + i] = dst[dst_stride * j + i];
     }
@@ -1589,10 +1589,10 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
   // but contain adding the inverse transform to predicted image,
   // pass blank dummy image to vp10_inv_txfm_add_*x*(), i.e. set dst as zeros
 
-  for (j=0; j < tx_blk_size; j++)
-    memset(dst + j * dst_stride, 0, tx_blk_size);
-
   if (*eob) {
+    for (j=0; j < tx_blk_size; j++)
+      memset(dst + j * dst_stride, 0, tx_blk_size);
+
     switch (tx_size) {
       case TX_32X32:
        vp10_inv_txfm_add_32x32(dqcoeff, dst, dst_stride, *eob, tx_type);
