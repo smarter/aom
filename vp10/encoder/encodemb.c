@@ -1027,10 +1027,8 @@ void vp10_xform_quant(MACROBLOCK *x, int plane, int block, int blk_row,
   }
 
   // Difference of predicted and original in TRANSFORM domain
-  for (j=0; j < tx_blk_size; j++)
-    for (i=0; i < tx_blk_size; i++) {
-      coeff[tx_blk_size * j + i] = coeff[tx_blk_size * j + i] - pvq_ref_coeff[tx_blk_size * j + i];
-    }
+  for (i=0; i < tx_blk_size * tx_blk_size; i++)
+    coeff[i] = coeff[i] - pvq_ref_coeff[i];
 
   if (tx_size == TX_32X32)
     vpx_quantize_b_32x32(coeff, 1024, x->skip_block, p->zbin, p->round,
@@ -1193,11 +1191,8 @@ static void encode_block(int plane, int block, int blk_row, int blk_col,
   }
 
   // Reconstruct residue + predicted signal in transform domain
-  for (j=0; j < tx_blk_size; j++)
-    for (i=0; i < tx_blk_size; i++) {
-      dqcoeff[tx_blk_size * j + i] = pvq_ref_coeff[tx_blk_size * j + i] + dqcoeff[tx_blk_size * j + i]  ;
-    }
-
+  for (i=0; i < tx_blk_size * tx_blk_size; i++)
+    dqcoeff[i] = pvq_ref_coeff[i] + dqcoeff[i];
 #endif
 
   switch (tx_size) {
