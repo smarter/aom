@@ -872,7 +872,7 @@ void vp10_xform_quant(MACROBLOCK *x, int plane, int block, int blk_row,
 #else
   tran_low_t *pvq_ref_coeff = BLOCK_OFFSET(pd->pvq_ref_coeff, block);
   uint8_t *src, *dst;
-  int16_t *src_int16, *pred;
+  int16_t *src_int16;
   const int src_stride = p->src.stride;
   const int dst_stride = pd->dst.stride;
   int tx_blk_size;
@@ -880,7 +880,7 @@ void vp10_xform_quant(MACROBLOCK *x, int plane, int block, int blk_row,
   dst = &pd->dst.buf[4 * (blk_row * dst_stride + blk_col)];
   src = &p->src.buf[4 * (blk_row * src_stride + blk_col)];
   src_int16 = &p->src_int16[4 * (blk_row * diff_stride + blk_col)];
-  pred = &pd->pred[4 * (blk_row * diff_stride + blk_col)];
+  int16_t *pred = &pd->pred[4 * (blk_row * diff_stride + blk_col)];
 #endif
 
 #if CONFIG_VPX_HIGHBITDEPTH
@@ -1026,6 +1026,12 @@ void vp10_xform_quant(MACROBLOCK *x, int plane, int block, int blk_row,
     default: assert(0); break;
   }
 
+  // Difference of predicted and original in TRANSFORM domain
+  for (j=0; j < tx_blk_size; j++)
+    for (i=0; i < tx_blk_size; i++) {
+      coeff[tx_blk_size * j + i] = coeff[tx_blk_size * j + i] - pvq_ref_coeff[tx_blk_size * j + i];
+    }
+
   if (tx_size == TX_32X32)
     vpx_quantize_b_32x32(coeff, 1024, x->skip_block, p->zbin, p->round,
                          p->quant, p->quant_shift, qcoeff, dqcoeff,
@@ -1052,7 +1058,14 @@ static void encode_block(int plane, int block, int blk_row, int blk_col,
   ENTROPY_CONTEXT *a, *l;
   TX_TYPE tx_type = get_tx_type(pd->plane_type, xd, block);
   int tx_blk_size;
-  int j;
+  int i, j;
+#if ENABLE_PVQ
+  tran_low_t *pvq_ref_coeff = BLOCK_OFFSET(pd->pvq_ref_coeff, block);
+  //int16_t *pred = BLOCK_OFFSET(pd->pred, block);
+  const int bwl = b_width_log2_lookup[plane_bsize];
+  const int diff_stride = 4 * (1 << bwl);
+  int16_t *pred = &pd->pred[4 * (blk_row * diff_stride + blk_col)];
+#endif
   dst = &pd->dst.buf[4 * blk_row * pd->dst.stride + 4 * blk_col];
   a = &ctx->ta[plane][blk_col];
   l = &ctx->tl[plane][blk_row];
@@ -1152,7 +1165,39 @@ static void encode_block(int plane, int block, int blk_row, int blk_col,
   tx_blk_size = 1 << (tx_size + 2);
 
   for (j=0; j < tx_blk_size; j++)
+    for (i=0; i < tx_blk_size; i++) {
+      pred[tx_blk_size * j + i] = dst[pd->dst.stride * j + i];
+    }
+
+  for (j=0; j < tx_blk_size; j++)
     memset(dst + j * pd->dst.stride, 0, tx_blk_size);
+#endif
+
+#if 1
+  switch (tx_size) {
+    case TX_32X32:
+      //forward transform of predicted image.
+      fwd_txfm_32x32(x->use_lp32x32fdct, pred, pvq_ref_coeff, tx_blk_size, tx_type);
+      break;
+    case TX_16X16:
+      fwd_txfm_16x16(pred, pvq_ref_coeff, tx_blk_size, tx_type);
+      break;
+    case TX_8X8:
+      fwd_txfm_8x8(pred, pvq_ref_coeff, tx_blk_size, tx_type);
+      break;
+    case TX_4X4:
+      vp10_fwd_txfm_4x4(pred, pvq_ref_coeff, tx_blk_size, tx_type,
+                        xd->lossless[xd->mi[0]->mbmi.segment_id]);
+      break;
+    default: assert(0); break;
+  }
+
+  // Reconstruct residue + predicted signal in transform domain
+  for (j=0; j < tx_blk_size; j++)
+    for (i=0; i < tx_blk_size; i++) {
+      dqcoeff[tx_blk_size * j + i] = pvq_ref_coeff[tx_blk_size * j + i] + dqcoeff[tx_blk_size * j + i]  ;
+    }
+
 #endif
 
   switch (tx_size) {
@@ -1279,9 +1324,10 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
   const int dst_stride = pd->dst.stride;
 #if ENABLE_PVQ
   tran_low_t *pvq_ref_coeff = BLOCK_OFFSET(pd->pvq_ref_coeff, block);
-  int16_t *src_int16, *pred;
+  int16_t *src_int16;
   int tx_blk_size;
   int i, j;
+  int16_t *pred = &pd->pred[4 * (blk_row * diff_stride + blk_col)];
 #endif
   // TODO (yushin): Make use of this return flag from pvq_encode()
   //int skip;
@@ -1289,8 +1335,6 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
   src = &p->src.buf[4 * (blk_row * src_stride + blk_col)];
   src_diff = &p->src_diff[4 * (blk_row * diff_stride + blk_col)];
   src_int16 = &p->src_int16[4 * (blk_row * diff_stride + blk_col)];
-  pred = &pd->pred[4 * (blk_row * diff_stride + blk_col)];
-
   mode = plane == 0 ? get_y_mode(xd->mi[0], block) : mbmi->uv_mode;
   vp10_predict_intra_block(xd, bwl, bhl, tx_size, mode, dst, dst_stride, dst,
                            dst_stride, blk_col, blk_row, plane);
@@ -1478,38 +1522,38 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
   // Note that pvq in decoder also need to apply forward transform
   // to predicted image to obtain reference vector.
   if (!x->skip_recode) {
-    assert(pred + tx_blk_size * tx_blk_size < (int16_t *) &pd->pred + 64 * 64);
-    assert(src_diff + tx_blk_size * tx_blk_size < (int16_t *) &p->src_diff + 64 * 64);
+    //assert(pred + diff_stride * tx_blk_size < (int16_t *) &pd->pred + 64 * 64);
+    //assert(src_diff + diff_stride * tx_blk_size < (int16_t *) &p->src_diff + 64 * 64);
 
     // copy uint8 orig and predicted block to int16 buffer
     // in order to use existing VP10 transform functions
     for (j=0; j < tx_blk_size; j++)
       for (i=0; i < tx_blk_size; i++) {
-        src_int16[tx_blk_size * j + i] = src[src_stride * j + i];
-        pred[tx_blk_size * j + i] = dst[dst_stride * j + i];
+        src_int16[diff_stride * j + i] = src[src_stride * j + i];
+        pred[diff_stride * j + i] = dst[dst_stride * j + i];
       }
 
     switch (tx_size) {
       case TX_32X32:
         //forward transform of predicted image.
-        fwd_txfm_32x32(x->use_lp32x32fdct, pred, pvq_ref_coeff, tx_blk_size,
+        fwd_txfm_32x32(x->use_lp32x32fdct, pred, pvq_ref_coeff, diff_stride,
                        tx_type);
         //forward transform of original image.
-        fwd_txfm_32x32(x->use_lp32x32fdct, src_int16, coeff, tx_blk_size,
+        fwd_txfm_32x32(x->use_lp32x32fdct, src_int16, coeff, diff_stride,
                        tx_type);
         break;
       case TX_16X16:
-        fwd_txfm_16x16(pred, pvq_ref_coeff, tx_blk_size, tx_type);
-        fwd_txfm_16x16(src_int16, coeff, tx_blk_size, tx_type);
+        fwd_txfm_16x16(pred, pvq_ref_coeff, diff_stride, tx_type);
+        fwd_txfm_16x16(src_int16, coeff, diff_stride, tx_type);
         break;
       case TX_8X8:
-        fwd_txfm_8x8(pred, pvq_ref_coeff, tx_blk_size, tx_type);
-        fwd_txfm_8x8(src_int16, coeff, tx_blk_size, tx_type);
+        fwd_txfm_8x8(pred, pvq_ref_coeff, diff_stride, tx_type);
+        fwd_txfm_8x8(src_int16, coeff, diff_stride, tx_type);
         break;
       case TX_4X4:
-        vp10_fwd_txfm_4x4(pred, pvq_ref_coeff, tx_blk_size, tx_type,
+        vp10_fwd_txfm_4x4(pred, pvq_ref_coeff, diff_stride, tx_type,
                           xd->lossless[mbmi->segment_id]);
-        vp10_fwd_txfm_4x4(src_int16, coeff, tx_blk_size, tx_type,
+        vp10_fwd_txfm_4x4(src_int16, coeff, diff_stride, tx_type,
                           xd->lossless[mbmi->segment_id]);
         break;
       default: assert(0); break;
@@ -1523,6 +1567,14 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
      OD_PVQ_BETA[use_masking][pli][bs], OD_ROBUST_STREAM, 0,
      ctx->q_scaling, bx, by, enc->state.qm + off, enc->state.qm_inv
      + off);*/
+
+    //od_init_skipped_coeffs(d, pred, ctx->is_keyframe, bo, n, w);
+    // Back to original coefficient order
+    //od_coding_order_to_raster(&d[bo], w, scalar_out, n);
+    // Difference of predicted and original in TRANSFORM domain
+    for (i=0; i < tx_blk_size * tx_blk_size; i++)
+      coeff[i] = coeff[i] - pvq_ref_coeff[i];
+
 #if 0
     vpx_quantize_b_32x32_c(coeff, tx_blk_size * tx_blk_size, x->skip_block, p->zbin, p->round,
                          p->quant, p->quant_shift, qcoeff, dqcoeff,
@@ -1540,9 +1592,9 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
                      scan_order->scan, scan_order->iscan);
 #endif
 
-    //od_init_skipped_coeffs(d, pred, ctx->is_keyframe, bo, n, w);
-    // Back to original coefficient order
-    //od_coding_order_to_raster(&d[bo], w, scalar_out, n);
+    // Reconstruct residue + predicted signal in transform domain
+    for (i=0; i < tx_blk_size * tx_blk_size; i++)
+      dqcoeff[i] = pvq_ref_coeff[i] + dqcoeff[i];
   }//if (!x->skip_recode) {
 
   // Since vp10 does not have inverse transform only function
