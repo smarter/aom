@@ -51,6 +51,11 @@
 #include "vp10/decoder/dsubexp.h"
 
 #define MAX_VP10_HEADER_SIZE 80
+#define ENABLE_PVQ (1)
+
+#if ENABLE_PVQ
+#include "vp10/encoder/encodemb.h"
+#endif
 
 static int is_compound_reference_allowed(const VP10_COMMON *cm) {
   int i;
@@ -218,6 +223,15 @@ static void inverse_transform_block_inter(MACROBLOCKD *xd, int plane,
   struct macroblockd_plane *const pd = &xd->plane[plane];
   TX_TYPE tx_type = get_tx_type(pd->plane_type, xd, block);
   const int seg_id = xd->mi[0]->mbmi.segment_id;
+#if ENABLE_PVQ
+  // transform block size in pixels
+  int tx_blk_size = 1 << (tx_size + 2);
+  int i, j;
+  tran_low_t *pvq_ref_coeff = pd->pvq_ref_coeff;
+  const int diff_stride = tx_blk_size;
+  int16_t *pred = pd->pred;
+#endif
+
   if (eob > 0) {
     tran_low_t *const dqcoeff = pd->dqcoeff;
 #if CONFIG_VPX_HIGHBITDEPTH
@@ -243,6 +257,45 @@ static void inverse_transform_block_inter(MACROBLOCKD *xd, int plane,
       }
     } else {
 #endif  // CONFIG_VPX_HIGHBITDEPTH
+
+#if 1//ENABLE_PVQ
+      // Since vp10 does not have separate inverse transform
+      // but also contains adding to predicted image,
+      // pass blank dummy image to vp10_inv_txfm_add_*x*(), i.e. set dst as zeros
+
+      // transform block size in pixels
+      tx_blk_size = 1 << (tx_size + 2);
+
+      for (j=0; j < tx_blk_size; j++)
+        for (i=0; i < tx_blk_size; i++) {
+          pred[diff_stride * j + i] = dst[pd->dst.stride * j + i];
+        }
+
+      for (j=0; j < tx_blk_size; j++)
+        memset(dst + j * pd->dst.stride, 0, tx_blk_size);
+
+      switch (tx_size) {
+        case TX_32X32:
+          //forward transform of predicted image.
+          fwd_txfm_32x32(0, pred, pvq_ref_coeff, diff_stride, tx_type);
+          break;
+        case TX_16X16:
+          fwd_txfm_16x16(pred, pvq_ref_coeff, diff_stride, tx_type);
+          break;
+        case TX_8X8:
+          fwd_txfm_8x8(pred, pvq_ref_coeff, diff_stride, tx_type);
+          break;
+        case TX_4X4:
+          vp10_fwd_txfm_4x4(pred, pvq_ref_coeff, diff_stride, tx_type,
+                            xd->lossless[xd->mi[0]->mbmi.segment_id]);
+          break;
+        default: assert(0); break;
+      }
+
+      // Reconstruct residue + predicted signal in transform domain
+      for (i=0; i < tx_blk_size * tx_blk_size; i++)
+        dqcoeff[i] = pvq_ref_coeff[i] + dqcoeff[i];
+#endif
       switch (tx_size) {
         case TX_4X4:
           vp10_inv_txfm_add_4x4(dqcoeff, dst, stride, eob, tx_type,
@@ -282,6 +335,15 @@ static void inverse_transform_block_intra(MACROBLOCKD *xd, int plane,
                                           int stride, int eob) {
   struct macroblockd_plane *const pd = &xd->plane[plane];
   const int seg_id = xd->mi[0]->mbmi.segment_id;
+#if ENABLE_PVQ
+  // transform block size in pixels
+  int tx_blk_size = 1 << (tx_size + 2);
+  int i, j;
+  tran_low_t *pvq_ref_coeff = pd->pvq_ref_coeff;
+  const int diff_stride = tx_blk_size;
+  int16_t *pred = pd->pred;
+#endif
+
   if (eob > 0) {
     tran_low_t *const dqcoeff = pd->dqcoeff;
 #if CONFIG_VPX_HIGHBITDEPTH
@@ -307,6 +369,46 @@ static void inverse_transform_block_intra(MACROBLOCKD *xd, int plane,
       }
     } else {
 #endif  // CONFIG_VPX_HIGHBITDEPTH
+
+#if ENABLE_PVQ
+      // Since vp10 does not have separate inverse transform
+      // but also contains adding to predicted image,
+      // pass blank dummy image to vp10_inv_txfm_add_*x*(), i.e. set dst as zeros
+
+      // transform block size in pixels
+      tx_blk_size = 1 << (tx_size + 2);
+
+      for (j=0; j < tx_blk_size; j++)
+        for (i=0; i < tx_blk_size; i++) {
+          pred[diff_stride * j + i] = dst[pd->dst.stride * j + i];
+        }
+
+      for (j=0; j < tx_blk_size; j++)
+        memset(dst + j * pd->dst.stride, 0, tx_blk_size);
+
+      switch (tx_size) {
+        case TX_32X32:
+          //forward transform of predicted image.
+          fwd_txfm_32x32(0, pred, pvq_ref_coeff, diff_stride, tx_type);
+          break;
+        case TX_16X16:
+          fwd_txfm_16x16(pred, pvq_ref_coeff, diff_stride, tx_type);
+          break;
+        case TX_8X8:
+          fwd_txfm_8x8(pred, pvq_ref_coeff, diff_stride, tx_type);
+          break;
+        case TX_4X4:
+          vp10_fwd_txfm_4x4(pred, pvq_ref_coeff, diff_stride, tx_type,
+                            xd->lossless[xd->mi[0]->mbmi.segment_id]);
+          break;
+        default: assert(0); break;
+      }
+
+      // Reconstruct residue + predicted signal in transform domain
+      for (i=0; i < tx_blk_size * tx_blk_size; i++)
+        dqcoeff[i] = pvq_ref_coeff[i] + dqcoeff[i];
+#endif
+
       switch (tx_size) {
         case TX_4X4:
           vp10_inv_txfm_add_4x4(dqcoeff, dst, stride, eob, tx_type,
@@ -1557,9 +1659,8 @@ static const uint8_t *decode_tiles(VP10Decoder *pbi, const uint8_t *data,
       setup_token_decoder(buf->data, data_end, buf->size, &cm->error,
                           &tile_data->bit_reader, pbi->decrypt_cb,
                           pbi->decrypt_state);
-      //tile_data->pvq_ref_coeff
-      vp10_init_macroblockd(cm, &tile_data->xd, tile_data->dqcoeff);//,
-                            //tile_data->pvq_ref_coeff);
+      vp10_init_macroblockd(cm, &tile_data->xd, tile_data->dqcoeff,
+                            tile_data->pvq_ref_coeff);
       tile_data->xd.plane[0].color_index_map = tile_data->color_index_map[0];
       tile_data->xd.plane[1].color_index_map = tile_data->color_index_map[1];
     }
@@ -1790,7 +1891,8 @@ static const uint8_t *decode_tiles_mt(VP10Decoder *pbi, const uint8_t *data,
       setup_token_decoder(buf->data, data_end, buf->size, &cm->error,
                           &tile_data->bit_reader, pbi->decrypt_cb,
                           pbi->decrypt_state);
-      vp10_init_macroblockd(cm, &tile_data->xd, tile_data->dqcoeff);
+      vp10_init_macroblockd(cm, &tile_data->xd, tile_data->dqcoeff,
+                            tile_data->pvq_ref_coeff);
       tile_data->xd.plane[0].color_index_map = tile_data->color_index_map[0];
       tile_data->xd.plane[1].color_index_map = tile_data->color_index_map[1];
 

@@ -385,11 +385,13 @@ static INLINE int frame_is_intra_only(const VP10_COMMON *const cm) {
 }
 
 static INLINE void vp10_init_macroblockd(VP10_COMMON *cm, MACROBLOCKD *xd,
-                                         tran_low_t *dqcoeff) {
+                                         tran_low_t *dqcoeff,
+                                         tran_low_t *pvq_ref_coeff) {
   int i;
 
   for (i = 0; i < MAX_MB_PLANE; ++i) {
     xd->plane[i].dqcoeff = dqcoeff;
+    xd->plane[i].pvq_ref_coeff = pvq_ref_coeff;
     xd->above_context[i] =
         cm->above_context +
         i * sizeof(*cm->above_context) * 2 * mi_cols_aligned_to_sb(cm->mi_cols);
