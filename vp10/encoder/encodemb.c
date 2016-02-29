@@ -1168,9 +1168,7 @@ static void encode_block(int plane, int block, int blk_row, int blk_col,
 
   for (j=0; j < tx_blk_size; j++)
     memset(dst + j * pd->dst.stride, 0, tx_blk_size);
-#endif
 
-#if 1
   switch (tx_size) {
     case TX_32X32:
       //forward transform of predicted image.
