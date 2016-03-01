@@ -258,7 +258,7 @@ static void inverse_transform_block_inter(MACROBLOCKD *xd, int plane,
     } else {
 #endif  // CONFIG_VPX_HIGHBITDEPTH
 
-#if 1//ENABLE_PVQ
+#if ENABLE_PVQ
       // Since vp10 does not have separate inverse transform
       // but also contains adding to predicted image,
       // pass blank dummy image to vp10_inv_txfm_add_*x*(), i.e. set dst as zeros
