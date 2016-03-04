@@ -511,7 +511,6 @@ void vp10_xform_quant_fp(MACROBLOCK *x, int plane, int block, int blk_row,
   tran_low_t *const coeff = BLOCK_OFFSET(p->coeff, block);
   tran_low_t *const qcoeff = BLOCK_OFFSET(p->qcoeff, block);
   tran_low_t *const dqcoeff = BLOCK_OFFSET(pd->dqcoeff, block);
-  tran_low_t *pvq_ref_coeff = BLOCK_OFFSET(pd->pvq_ref_coeff, block);
   uint16_t *const eob = &p->eobs[block];
   const int diff_stride = 4 * num_4x4_blocks_wide_lookup[plane_bsize];
 
@@ -527,6 +526,7 @@ void vp10_xform_quant_fp(MACROBLOCK *x, int plane, int block, int blk_row,
   const int16_t *src_diff;
   src_diff = &p->src_diff[4 * (blk_row * diff_stride + blk_col)];
 #else
+  tran_low_t *pvq_ref_coeff = BLOCK_OFFSET(pd->pvq_ref_coeff, block);
   int16_t *src_int16, *pred;
   const int src_stride = p->src.stride;
   const int dst_stride = pd->dst.stride;
@@ -696,7 +696,7 @@ void vp10_xform_quant_fp(MACROBLOCK *x, int plane, int block, int blk_row,
 
   // Difference of predicted and original in TRANSFORM domain
   for (i=0; i < tx_blk_size * tx_blk_size; i++)
-    coeff[i] = coeff[i] - pvq_ref_coeff[i];
+    coeff[i] -= pvq_ref_coeff[i];
 
   if (tx_size == TX_32X32)
     vp10_quantize_fp_32x32(coeff, 1024, x->skip_block, p->zbin, p->round_fp,
@@ -1024,7 +1024,7 @@ void vp10_xform_quant(MACROBLOCK *x, int plane, int block, int blk_row,
 
   // Difference of predicted and original in TRANSFORM domain
   for (i=0; i < tx_blk_size * tx_blk_size; i++)
-    coeff[i] = coeff[i] - pvq_ref_coeff[i];
+    coeff[i] -= pvq_ref_coeff[i];
 
   if (tx_size == TX_32X32)
     vpx_quantize_b_32x32(coeff, 1024, x->skip_block, p->zbin, p->round,
@@ -1150,10 +1150,6 @@ static void encode_block(int plane, int block, int blk_row, int blk_col,
 #endif  // CONFIG_VPX_HIGHBITDEPTH
 
 #if CONFIG_PVQ
-  // Since vp10 does not have inverse transform only function
-  // but contain adding the inverse transform to predicted image,
-  // pass blank dummy image to vp10_inv_txfm_add_*x*(), i.e. set dst as zeros
-
   // transform block size in pixels
   tx_blk_size = 1 << (tx_size + 2);
 
@@ -1161,9 +1157,6 @@ static void encode_block(int plane, int block, int blk_row, int blk_col,
     for (i=0; i < tx_blk_size; i++) {
       pred[diff_stride * j + i] = dst[pd->dst.stride * j + i];
     }
-
-  for (j=0; j < tx_blk_size; j++)
-    memset(dst + j * pd->dst.stride, 0, tx_blk_size);
 
   switch (tx_size) {
     case TX_32X32:
@@ -1185,7 +1178,13 @@ static void encode_block(int plane, int block, int blk_row, int blk_col,
 
   // Reconstruct residue + predicted signal in transform domain
   for (i=0; i < tx_blk_size * tx_blk_size; i++)
-    dqcoeff[i] = pvq_ref_coeff[i] + dqcoeff[i];
+    dqcoeff[i] += pvq_ref_coeff[i];
+
+  // Since vp10 does not have inverse transform only function
+  // but contain adding the inverse transform to predicted image,
+  // pass blank dummy image to vp10_inv_txfm_add_*x*(), i.e. set dst as zeros
+  for (j=0; j < tx_blk_size; j++)
+    memset(dst + j * pd->dst.stride, 0, tx_blk_size);
 #endif
 
   switch (tx_size) {

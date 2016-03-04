@@ -942,7 +942,9 @@ static void update_state(VP10_COMP *cpi, ThreadData *td, PICK_MODE_CONTEXT *ctx,
     p[i].coeff = ctx->coeff_pbuf[i][1];
     p[i].qcoeff = ctx->qcoeff_pbuf[i][1];
     pd[i].dqcoeff = ctx->dqcoeff_pbuf[i][1];
+#if CONFIG_PVQ
     pd[i].pvq_ref_coeff = ctx->pvq_ref_coeff_pbuf[i][1];
+#endif
     p[i].eobs = ctx->eobs_pbuf[i][1];
   }
 
@@ -950,7 +952,9 @@ static void update_state(VP10_COMP *cpi, ThreadData *td, PICK_MODE_CONTEXT *ctx,
     p[i].coeff = ctx->coeff_pbuf[i][2];
     p[i].qcoeff = ctx->qcoeff_pbuf[i][2];
     pd[i].dqcoeff = ctx->dqcoeff_pbuf[i][2];
+#if CONFIG_PVQ
     pd[i].pvq_ref_coeff = ctx->pvq_ref_coeff_pbuf[i][2];
+#endif
     p[i].eobs = ctx->eobs_pbuf[i][2];
   }
 
@@ -1074,7 +1078,9 @@ static void rd_pick_sb_modes(VP10_COMP *cpi, TileDataEnc *tile_data,
     p[i].coeff = ctx->coeff_pbuf[i][0];
     p[i].qcoeff = ctx->qcoeff_pbuf[i][0];
     pd[i].dqcoeff = ctx->dqcoeff_pbuf[i][0];
+#if CONFIG_PVQ
     pd[i].pvq_ref_coeff = ctx->pvq_ref_coeff_pbuf[i][0];
+#endif
     p[i].eobs = ctx->eobs_pbuf[i][0];
   }
 

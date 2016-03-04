@@ -150,9 +150,10 @@ struct macroblockd_plane {
   const qm_val_t *seg_qmatrix[MAX_SEGMENTS][2][TX_SIZES];
 #endif
 
-  // forward transformed predicted image, a reference for PVQ.
+#if CONFIG_PVQ
   // PVQ: forward transformed predicted image, a reference for PVQ.
   tran_low_t *pvq_ref_coeff;
+#endif
 };
 
 #define BLOCK_OFFSET(x, i) ((x) + (i)*16)

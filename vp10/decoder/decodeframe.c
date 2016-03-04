@@ -51,7 +51,6 @@
 #include "vp10/decoder/dsubexp.h"
 
 #define MAX_VP10_HEADER_SIZE 80
-#define CONFIG_PVQ (1)
 
 #if CONFIG_PVQ
 #include "vp10/encoder/encodemb.h"
