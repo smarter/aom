@@ -700,7 +700,11 @@ static void update_frame_size(VP10_COMP *cpi) {
 
   vp10_set_mb_mi(cm, cm->width, cm->height);
   vp10_init_context_buffers(cm);
+#if !CONFIG_PVQ
+  vp10_init_macroblockd(cm, xd, NULL);
+#else
   vp10_init_macroblockd(cm, xd, NULL, NULL);
+#endif
   memset(cpi->mbmi_ext_base, 0,
          cm->mi_rows * cm->mi_cols * sizeof(*cpi->mbmi_ext_base));
 

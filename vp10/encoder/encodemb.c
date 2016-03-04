@@ -522,10 +522,12 @@ void vp10_xform_quant_fp(MACROBLOCK *x, int plane, int block, int blk_row,
 #endif
 
   uint8_t *src, *dst;
+
 #if !CONFIG_PVQ
   const int16_t *src_diff;
   src_diff = &p->src_diff[4 * (blk_row * diff_stride + blk_col)];
 #else
+  uint8_t *src, *dst;
   tran_low_t *pvq_ref_coeff = BLOCK_OFFSET(pd->pvq_ref_coeff, block);
   int16_t *src_int16, *pred;
   const int src_stride = p->src.stride;
@@ -1051,9 +1053,9 @@ static void encode_block(int plane, int block, int blk_row, int blk_col,
   uint8_t *dst;
   ENTROPY_CONTEXT *a, *l;
   TX_TYPE tx_type = get_tx_type(pd->plane_type, xd, block);
+#if CONFIG_PVQ
   int tx_blk_size;
   int i, j;
-#if CONFIG_PVQ
   tran_low_t *pvq_ref_coeff = BLOCK_OFFSET(pd->pvq_ref_coeff, block);
   const int bwl = b_width_log2_lookup[plane_bsize];
   const int diff_stride = 4 * (1 << bwl);

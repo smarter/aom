@@ -384,9 +384,14 @@ static INLINE int frame_is_intra_only(const VP10_COMMON *const cm) {
   return cm->frame_type == KEY_FRAME || cm->intra_only;
 }
 
+#if !CONFIG_PVQ
 static INLINE void vp10_init_macroblockd(VP10_COMMON *cm, MACROBLOCKD *xd,
-                                         tran_low_t *dqcoeff,
-                                         tran_low_t *pvq_ref_coeff) {
+                                         tran_low_t *dqcoeff) {
+#else
+  static INLINE void vp10_init_macroblockd(VP10_COMMON *cm, MACROBLOCKD *xd,
+                                           tran_low_t *dqcoeff,
+                                           tran_low_t *pvq_ref_coeff) {
+#endif
   int i;
 
   for (i = 0; i < MAX_MB_PLANE; ++i) {
