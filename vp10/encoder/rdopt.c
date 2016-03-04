@@ -672,7 +672,15 @@ static void choose_tx_size_from_rd(VP10_COMP *cpi, MACROBLOCK *x, int *rate,
   *skip = 0;
   *psse = INT64_MAX;
 
+#if !CONFIG_PVQ
   for (tx_type = DCT_DCT; tx_type < TX_TYPES; ++tx_type) {
+#else
+    // For PVQ experiment, disable ADST
+    // since decoder cannot decode inter mode blocks correctly
+    // for some unknown reason.
+    // TODO: Investigate why this happens.
+    for (tx_type = DCT_DCT; tx_type < 1; ++tx_type) {
+#endif
     last_rd = INT64_MAX;
     for (n = start_tx; n >= end_tx; --n) {
       int r_tx_size = 0;
