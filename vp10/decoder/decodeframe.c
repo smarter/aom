@@ -51,9 +51,9 @@
 #include "vp10/decoder/dsubexp.h"
 
 #define MAX_VP10_HEADER_SIZE 80
-#define ENABLE_PVQ (1)
+#define CONFIG_PVQ (1)
 
-#if ENABLE_PVQ
+#if CONFIG_PVQ
 #include "vp10/encoder/encodemb.h"
 #endif
 
@@ -223,7 +223,7 @@ static void inverse_transform_block_inter(MACROBLOCKD *xd, int plane,
   struct macroblockd_plane *const pd = &xd->plane[plane];
   TX_TYPE tx_type = get_tx_type(pd->plane_type, xd, block);
   const int seg_id = xd->mi[0]->mbmi.segment_id;
-#if ENABLE_PVQ
+#if CONFIG_PVQ
   // transform block size in pixels
   int tx_blk_size = 1 << (tx_size + 2);
   int i, j;
@@ -258,7 +258,7 @@ static void inverse_transform_block_inter(MACROBLOCKD *xd, int plane,
     } else {
 #endif  // CONFIG_VPX_HIGHBITDEPTH
 
-#if ENABLE_PVQ
+#if CONFIG_PVQ
       // Since vp10 does not have separate inverse transform
       // but also contains adding to predicted image,
       // pass blank dummy image to vp10_inv_txfm_add_*x*(), i.e. set dst as zeros
@@ -335,7 +335,7 @@ static void inverse_transform_block_intra(MACROBLOCKD *xd, int plane,
                                           int stride, int eob) {
   struct macroblockd_plane *const pd = &xd->plane[plane];
   const int seg_id = xd->mi[0]->mbmi.segment_id;
-#if ENABLE_PVQ
+#if CONFIG_PVQ
   // transform block size in pixels
   int tx_blk_size = 1 << (tx_size + 2);
   int i, j;
@@ -370,7 +370,7 @@ static void inverse_transform_block_intra(MACROBLOCKD *xd, int plane,
     } else {
 #endif  // CONFIG_VPX_HIGHBITDEPTH
 
-#if ENABLE_PVQ
+#if CONFIG_PVQ
       // Since vp10 does not have separate inverse transform
       // but also contains adding to predicted image,
       // pass blank dummy image to vp10_inv_txfm_add_*x*(), i.e. set dst as zeros

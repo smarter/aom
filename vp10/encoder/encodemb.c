@@ -25,8 +25,6 @@
 #include "vp10/encoder/rd.h"
 #include "vp10/encoder/tokenize.h"
 
-#define ENABLE_PVQ (1)
-
 struct optimize_ctx {
   ENTROPY_CONTEXT ta[MAX_MB_PLANE][16];
   ENTROPY_CONTEXT tl[MAX_MB_PLANE][16];
@@ -500,7 +498,7 @@ static void highbd_fwd_txfm_32x32(int rd_transform, const int16_t *src_diff,
 void vp10_xform_quant_fp(MACROBLOCK *x, int plane, int block, int blk_row,
                          int blk_col, BLOCK_SIZE plane_bsize, TX_SIZE tx_size) {
   MACROBLOCKD *const xd = &x->e_mbd;
-#if !ENABLE_PVQ
+#if !CONFIG_PVQ
   const struct macroblock_plane *const p = &x->plane[plane];
   const struct macroblockd_plane *const pd = &xd->plane[plane];
 #else
@@ -525,7 +523,7 @@ void vp10_xform_quant_fp(MACROBLOCK *x, int plane, int block, int blk_row,
 #endif
 
   uint8_t *src, *dst;
-#if !ENABLE_PVQ
+#if !CONFIG_PVQ
   const int16_t *src_diff;
   src_diff = &p->src_diff[4 * (blk_row * diff_stride + blk_col)];
 #else
@@ -599,7 +597,7 @@ void vp10_xform_quant_fp(MACROBLOCK *x, int plane, int block, int blk_row,
   }
 #endif  // CONFIG_VPX_HIGHBITDEPTH
 
-#if !ENABLE_PVQ
+#if !CONFIG_PVQ
   switch (tx_size) {
     case TX_32X32:
       fdct32x32(x->use_lp32x32fdct, src_diff, coeff, diff_stride);
@@ -657,7 +655,7 @@ void vp10_xform_quant_fp(MACROBLOCK *x, int plane, int block, int blk_row,
       assert(0);
       break;
   }
-#else//#if !ENABLE_PVQ
+#else//#if !CONFIG_PVQ
   // transform block size in pixels
   tx_blk_size = 1 << (tx_size + 2);
 
@@ -710,7 +708,7 @@ void vp10_xform_quant_fp(MACROBLOCK *x, int plane, int block, int blk_row,
                      p->quant_fp, p->quant_shift, qcoeff, dqcoeff,
                      pd->dequant, eob, scan_order->scan, scan_order->iscan);
 
-#endif//#if !ENABLE_PVQ
+#endif//#if !CONFIG_PVQ
 }
 
 void vp10_xform_quant_dc(MACROBLOCK *x, int plane, int block, int blk_row,
@@ -841,7 +839,7 @@ void vp10_xform_quant_dc(MACROBLOCK *x, int plane, int block, int blk_row,
 void vp10_xform_quant(MACROBLOCK *x, int plane, int block, int blk_row,
                       int blk_col, BLOCK_SIZE plane_bsize, TX_SIZE tx_size) {
   MACROBLOCKD *const xd = &x->e_mbd;
-#if !ENABLE_PVQ
+#if !CONFIG_PVQ
   const struct macroblock_plane *const p = &x->plane[plane];
   const struct macroblockd_plane *const pd = &xd->plane[plane];
 #else
@@ -856,16 +854,15 @@ void vp10_xform_quant(MACROBLOCK *x, int plane, int block, int blk_row,
   tran_low_t *const dqcoeff = BLOCK_OFFSET(pd->dqcoeff, block);
   uint16_t *const eob = &p->eobs[block];
   const int diff_stride = 4 * num_4x4_blocks_wide_lookup[plane_bsize];
-<<<<<<< HEAD
+
   int seg_id = xd->mi[0]->mbmi.segment_id;
 #if CONFIG_AOM_QM
   int is_intra = !is_inter_block(&xd->mi[0]->mbmi);
   const qm_val_t *qmatrix = pd->seg_qmatrix[seg_id][is_intra][tx_size];
   const qm_val_t *iqmatrix = pd->seg_iqmatrix[seg_id][is_intra][tx_size];
 #endif
-=======
-#if !ENABLE_PVQ
->>>>>>> Use ENABLE_PVQ flag. Added applying transforms to other two functions. If pvq is on, use c version of quantize.
+
+#if !CONFIG_PVQ
   const int16_t *src_diff;
   src_diff = &p->src_diff[4 * (blk_row * diff_stride + blk_col)];
 #else
@@ -938,7 +935,7 @@ void vp10_xform_quant(MACROBLOCK *x, int plane, int block, int blk_row,
   }
 #endif  // CONFIG_VPX_HIGHBITDEPTH
 
-#if !ENABLE_PVQ
+#if !CONFIG_PVQ
   switch (tx_size) {
     case TX_32X32:
       fwd_txfm_32x32(x->use_lp32x32fdct, src_diff, coeff, diff_stride, tx_type);
@@ -989,7 +986,7 @@ void vp10_xform_quant(MACROBLOCK *x, int plane, int block, int blk_row,
       assert(0);
       break;
   }
-#else//#if !ENABLE_PVQ
+#else//#if !CONFIG_PVQ
   // transform block size in pixels
   tx_blk_size = 1 << (tx_size + 2);
 
@@ -1039,7 +1036,7 @@ void vp10_xform_quant(MACROBLOCK *x, int plane, int block, int blk_row,
                    p->quant_shift, qcoeff, dqcoeff, pd->dequant, eob,
                    scan_order->scan, scan_order->iscan);
 
-#endif//#if !ENABLE_PVQ
+#endif//#if !CONFIG_PVQ
 }
 
 static void encode_block(int plane, int block, int blk_row, int blk_col,
@@ -1056,7 +1053,7 @@ static void encode_block(int plane, int block, int blk_row, int blk_col,
   TX_TYPE tx_type = get_tx_type(pd->plane_type, xd, block);
   int tx_blk_size;
   int i, j;
-#if ENABLE_PVQ
+#if CONFIG_PVQ
   tran_low_t *pvq_ref_coeff = BLOCK_OFFSET(pd->pvq_ref_coeff, block);
   const int bwl = b_width_log2_lookup[plane_bsize];
   const int diff_stride = 4 * (1 << bwl);
@@ -1152,7 +1149,7 @@ static void encode_block(int plane, int block, int blk_row, int blk_col,
   }
 #endif  // CONFIG_VPX_HIGHBITDEPTH
 
-#if ENABLE_PVQ
+#if CONFIG_PVQ
   // Since vp10 does not have inverse transform only function
   // but contain adding the inverse transform to predicted image,
   // pass blank dummy image to vp10_inv_txfm_add_*x*(), i.e. set dst as zeros
@@ -1312,7 +1309,7 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
 #endif
   const int src_stride = p->src.stride;
   const int dst_stride = pd->dst.stride;
-#if !ENABLE_PVQ
+#if !CONFIG_PVQ
   int16_t *src_diff;
   src_diff = &p->src_diff[4 * (blk_row * diff_stride + blk_col)];
 #else
@@ -1422,7 +1419,7 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
   }
 #endif  // CONFIG_VPX_HIGHBITDEPTH
 
-#if !ENABLE_PVQ
+#if !CONFIG_PVQ
   switch (tx_size) {
     case TX_32X32:
       if (!x->skip_recode) {
@@ -1503,7 +1500,7 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
       assert(0);
       break;
   }
-#else//#if !ENABLE_PVQ
+#else//#if !CONFIG_PVQ
   // transform block size in pixels
   tx_blk_size = 1 << (tx_size + 2);
 
@@ -1610,7 +1607,7 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
       default: assert(0); break;
     }
   }
-#endif//#if !ENABLE_PVQ
+#endif//#if !CONFIG_PVQ
   if (*eob) *(args->skip) = 0;
 }
 

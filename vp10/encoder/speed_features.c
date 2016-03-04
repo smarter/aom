@@ -349,7 +349,10 @@ static void set_rt_speed_feature(VP10_COMP *cpi, SPEED_FEATURES *sf, int speed,
   }
 
   if (speed >= 5) {
-    //sf->use_quant_fp = !is_keyframe;
+    sf->use_quant_fp = !is_keyframe;
+#if CONFIG_PVQ
+    sf->use_quant_fp = 0;
+#endif
     sf->auto_min_max_partition_size =
         is_keyframe ? RELAXED_NEIGHBORING_MIN_MAX : STRICT_NEIGHBORING_MIN_MAX;
     sf->default_max_partition_size = BLOCK_32X32;
@@ -407,6 +410,7 @@ static void set_rt_speed_feature(VP10_COMP *cpi, SPEED_FEATURES *sf, int speed,
     sf->adaptive_rd_thresh = 4;
     sf->mv.subpel_force_stop = 2;
     sf->lpf_pick = LPF_PICK_MINIMAL_LPF;
+#if CONFIG_PVQ
     // For dev.
     sf->partition_search_type = FIXED_PARTITION;
     sf->always_this_block_size = BLOCK_32X32;
@@ -414,6 +418,7 @@ static void set_rt_speed_feature(VP10_COMP *cpi, SPEED_FEATURES *sf, int speed,
     //sf->default_min_partition_size = BLOCK_32X32;
     //cpi->partition_search_skippable_frame = 0;
     sf->disable_filter_search_var_thresh = 5000;
+#endif
   }
 }
 
