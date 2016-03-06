@@ -16,8 +16,17 @@
 
 #include "test/acm_random.h"
 #include "vpx/vpx_integer.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include "vpx_dsp/bitreader.h"
 #include "vpx_dsp/bitwriter.h"
+
+#ifdef __cplusplus
+}
+#endif
 
 using libvpx_test::ACMRandom;
 

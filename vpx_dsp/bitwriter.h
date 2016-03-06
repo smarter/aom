@@ -14,6 +14,9 @@
 #include "vpx_ports/mem.h"
 
 #include "vpx_dsp/prob.h"
+#if CONFIG_DAALA_EC
+#include "vpx_dsp/entenc.h"
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -25,12 +28,24 @@ typedef struct vpx_writer {
   int count;
   unsigned int pos;
   uint8_t *buffer;
+#if CONFIG_DAALA_EC
+  od_ec_enc ec;
+#endif
 } vpx_writer;
 
 void vpx_start_encode(vpx_writer *bc, uint8_t *buffer);
 void vpx_stop_encode(vpx_writer *bc);
 
 static INLINE void vpx_write(vpx_writer *br, int bit, int probability) {
+#if CONFIG_DAALA_EC
+  if (probability == 128) {
+    od_ec_enc_bits(&br->ec, bit, 1);
+  }
+  else {
+    int p = (32768*probability + (256 - probability)) >> 8;
+    od_ec_encode_bool_q15(&br->ec, bit, p);
+  }
+#else
   unsigned int split;
   int count = br->count;
   unsigned int range = br->range;
@@ -76,6 +91,7 @@ static INLINE void vpx_write(vpx_writer *br, int bit, int probability) {
   br->count = count;
   br->lowvalue = lowvalue;
   br->range = range;
+#endif
 }
 
 static INLINE void vpx_write_bit(vpx_writer *w, int bit) {
