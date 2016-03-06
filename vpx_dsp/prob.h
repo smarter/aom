@@ -92,6 +92,12 @@ static INLINE vpx_prob mode_mv_merge_probs(vpx_prob pre_prob,
 void vpx_tree_merge_probs(const vpx_tree_index *tree, const vpx_prob *pre_probs,
                           const unsigned int *counts, vpx_prob *probs);
 
+#if CONFIG_DAALA_EC
+int tree_to_cdf(const vpx_tree_index *tree, const vpx_prob *probs,
+                vpx_tree_index root, uint16_t *cdf, vpx_tree_index *ind,
+                int *pth, int *len);
+#endif
+
 DECLARE_ALIGNED(16, extern const uint8_t, vpx_norm[256]);
 
 #ifdef __cplusplus

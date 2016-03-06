@@ -137,9 +137,23 @@ static INLINE int vpx_read_literal(vpx_reader *r, int bits) {
 static INLINE int vpx_read_tree(vpx_reader *r, const vpx_tree_index *tree,
                                 const vpx_prob *probs) {
   vpx_tree_index i = 0;
-
+#if CONFIG_DAALA_EC
+  do {
+    uint16_t cdf[16];
+    vpx_tree_index index[16];
+    int path[16];
+    int dist[16];
+    int nsymbs;
+    int symb;
+    nsymbs = tree_to_cdf(tree, probs, i, cdf, index, path, dist);
+    symb = od_ec_decode_cdf_q15(&r->ec, cdf, nsymbs, "vpx");
+    OD_ASSERT(symb >= 0 && symb < nsymbs);
+    i = index[symb];
+  }
+  while (i > 0);
+#else
   while ((i = tree[i + vpx_read(r, probs[i >> 1])]) > 0) continue;
-
+#endif
   return -i;
 }
 
