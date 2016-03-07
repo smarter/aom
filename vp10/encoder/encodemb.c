@@ -25,6 +25,9 @@
 #include "vp10/encoder/rd.h"
 #include "vp10/encoder/tokenize.h"
 
+#include "vp10/encoder/encint.h"
+#include "vp10/encoder/pvq_encoder.h"
+
 struct optimize_ctx {
   ENTROPY_CONTEXT ta[MAX_MB_PLANE][16];
   ENTROPY_CONTEXT tl[MAX_MB_PLANE][16];
@@ -1294,9 +1297,9 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
   int tx_blk_size;
   int i, j;
   int16_t *pred = &pd->pred[4 * (blk_row * diff_stride + blk_col)];
-  src_int16 = &p->src_int16[4 * (blk_row * diff_stride + blk_col)];
   // TODO (yushin): Make use of this return flag from pvq_encode()
   int skip;
+  src_int16 = &p->src_int16[4 * (blk_row * diff_stride + blk_col)];
 #endif
   dst = &pd->dst.buf[4 * (blk_row * dst_stride + blk_col)];
   src = &p->src.buf[4 * (blk_row * src_stride + blk_col)];
@@ -1534,22 +1537,16 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
      + off);*/
 #if 0 //work in progress(yushin)
     {
-    daala_enc_ctx *enc;
-    int off;
-    off = od_qm_offset(bs, xdec);
-    skip = od_pvq_encode(enc, pred, coeff, dqcoeff,
-           p->quant[1],//scale/quantizer
-           plane, tx_size,
-           OD_PVQ_BETA[0/*use_masking*/][plane][tx_size],
-           1,//OD_ROBUST_STREAM
-           0,//key frame?
-           ctx->q_scaling, bx, by,
-           enc->state.qm + off, enc->state.qm_inv + off);
+    skip = pvq_encode_helper(pred, coeff, dqcoeff,
+                             p->quant[1],/*scale/quantizer*/
+                             plane, tx_size,
+                             0/*key frame?*/ );
     }
 #endif
     //od_init_skipped_coeffs(d, pred, ctx->is_keyframe, bo, n, w);
     // Back to original coefficient order
     //od_coding_order_to_raster(&d[bo], w, scalar_out, n);
+
     // Difference of predicted and original in TRANSFORM domain
     for (i=0; i < tx_blk_size * tx_blk_size; i++)
       coeff[i] = coeff[i] - pvq_ref_coeff[i];

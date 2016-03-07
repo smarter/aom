@@ -864,3 +864,54 @@ int od_pvq_encode(daala_enc_ctx *enc,
   }
   return 0;
 }
+
+/** Helper function to daala's PVQ encode function
+ *
+ * @param [in]     ref     'reference' (prediction) vector
+ * @param [in]     in      coefficient block to quantize and encode
+ * @param [out]    out     quantized coefficient block
+ * @param [in]     quant   scale/quantizer
+ * @param [in]     pli     plane index
+ * @param [in]     bs      log of the block size minus two
+ * @param [in]     is_keyframe whether we're encoding a keyframe
+ * @return         Returns 1 if the AC coefficients are skipped, zero otherwise
+ */
+int pvq_encode_helper(int16_t *ref,
+                   const int16_t *in,
+                   int16_t *out,
+                   int quant,
+                   int pli,
+                   int bs,
+                   int is_keyframe){
+  daala_enc_ctx enc_example;
+  daala_enc_ctx *enc = &enc_example;
+  int off = od_qm_offset(bs, pli ? 1 : 0);
+  int skip;
+  int i;
+  od_coeff ref_int32[64*64];
+  od_coeff in_int32[64*64];
+  od_coeff out_int32[64*64];
+  int blk_size = 1 << (bs + 2);
+
+  //copy int16 inputs to int32
+  for (i=0; i < blk_size*blk_size; i++)
+    ref_int32[i] = ref[i];
+
+  for (i=0; i < blk_size*blk_size; i++)
+    in_int32[i] = in[i];
+
+  skip = od_pvq_encode(enc, ref_int32, in_int32, out_int32,
+          quant,//scale/quantizer
+          pli, bs,
+          OD_PVQ_BETA[0/*use_masking*/][pli][bs],
+          1,//OD_ROBUST_STREAM
+          0,//key frame?
+          0, 0, 0, //q_scaling, bx, by,
+          enc->state.qm + off, enc->state.qm_inv + off);
+
+  //copy int32 result back to int16
+  for (i=0; i < blk_size*blk_size; i++)
+    out[i] = out_int32[i];
+
+  return skip;
+}

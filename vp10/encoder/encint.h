@@ -29,9 +29,9 @@ typedef struct daala_enc_ctx od_enc_ctx;
 typedef struct od_params_ctx od_params_ctx;
 typedef struct od_rollback_buffer od_rollback_buffer;
 
+# include "vp10/common/daala.h"
 # include "vp10/common/state.h"
 # include "vpx_dsp/entenc.h"
-# include "vp10/common/daala.h"
 //# include "block_size_enc.h"
 
 /*Constants for the packet state machine specific to the encoder.*/
@@ -60,6 +60,10 @@ struct daala_enc_ctx{
   int use_activity_masking;
   int qm;
 };
+
+// from daalaenc.h
+/**The encoder context.*/
+typedef struct daala_enc_ctx daala_enc_ctx;
 
 /** Holds important encoder information so we can roll back decisions */
 struct od_rollback_buffer {

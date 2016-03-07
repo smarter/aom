@@ -33,7 +33,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 #include <stdio.h>
 #include <math.h>
 #include <string.h>
-#include "filter.h"
+//#include "filter.h"
 
 /*These tables were generated using compute_basis.c. If OD_FILT_SIZE is
    changed, they have to be regenerated.*/

@@ -1,7 +1,8 @@
- #if !defined(_daala_H)
- # define _daala_H
+#if !defined(_daala_H)
+# define _daala_H
 
-#include "vpx/vpx_integer.h"
+# include "vpx/vpx_integer.h"
+//# include "vp10/encoder/encint.h"
 
 // from internal.h
 /*Smallest blocks are 4*/
@@ -27,10 +28,6 @@
 
 // fromn filter.h
 typedef int32_t od_coeff;
-
-// from daalaenc.h
-/**The encoder context.*/
-typedef struct daala_enc_ctx daala_enc_ctx;
 
 // from daaladec.h
 /**The decoder context.*/

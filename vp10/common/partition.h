@@ -28,8 +28,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 #include "vpx/vpx_integer.h"
 #include "daala.h"
 
-typedef int32_t od_coeff;
-
 typedef unsigned char index_pair[2];
 
 typedef struct {

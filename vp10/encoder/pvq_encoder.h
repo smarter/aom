@@ -45,4 +45,6 @@ int od_pvq_encode(daala_enc_ctx *enc, od_coeff *ref, const od_coeff *in,
  int is_keyframe, int q_scaling, int bx, int by, const int16_t *qm,
  const int16_t *qm_inv);
 
+int pvq_encode_helper(int16_t *ref, const int16_t *in, int16_t *out,
+ int quant, int pli, int bs, int is_keyframe);
 #endif
