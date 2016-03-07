@@ -30,6 +30,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 #include <stdio.h>
 #include "vp10/common/daala.h"
 #include "vp10/common/odintrin.h"
+#include "vp10/common/state.h"
 //#include "internal.h"
 //#include "block_size.h"
 #include "vpx_dsp/entenc.h"
