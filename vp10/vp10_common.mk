@@ -86,6 +86,7 @@ VP10_COMMON_SRCS-yes += common/generic_code.c
 VP10_COMMON_SRCS-yes += common/generic_code.h
 VP10_COMMON_SRCS-yes += common/daala.h
 VP10_COMMON_SRCS-yes += common/state.h
+VP10_COMMON_SRCS-yes += common/laplace_tables.c
 
 ifneq ($(CONFIG_VPX_HIGHBITDEPTH),yes)
 VP10_COMMON_SRCS-$(HAVE_DSPR2)  += common/mips/dspr2/itrans4_dspr2.c
