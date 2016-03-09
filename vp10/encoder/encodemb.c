@@ -1155,30 +1155,9 @@ static void encode_block(int plane, int block, int blk_row, int blk_col,
   // transform block size in pixels
   tx_blk_size = 1 << (tx_size + 2);
 
-  for (j=0; j < tx_blk_size; j++)
-    for (i=0; i < tx_blk_size; i++) {
-      pred[diff_stride * j + i] = dst[pd->dst.stride * j + i];
-    }
-
-  switch (tx_size) {
-    case TX_32X32:
-      //forward transform of predicted image.
-      fwd_txfm_32x32(x->use_lp32x32fdct, pred, pvq_ref_coeff, diff_stride, tx_type);
-      break;
-    case TX_16X16:
-      fwd_txfm_16x16(pred, pvq_ref_coeff, diff_stride, tx_type);
-      break;
-    case TX_8X8:
-      fwd_txfm_8x8(pred, pvq_ref_coeff, diff_stride, tx_type);
-      break;
-    case TX_4X4:
-      vp10_fwd_txfm_4x4(pred, pvq_ref_coeff, diff_stride, tx_type,
-                        xd->lossless[xd->mi[0]->mbmi.segment_id]);
-      break;
-    default: assert(0); break;
-  }
-
   // Reconstruct residue + predicted signal in transform domain
+  // Note that pvq_ref_coeff[] is already computed in vp10_xform_quant(),
+  // as like dqcoeff[].
   for (i=0; i < tx_blk_size * tx_blk_size; i++)
     dqcoeff[i] += pvq_ref_coeff[i];
 
