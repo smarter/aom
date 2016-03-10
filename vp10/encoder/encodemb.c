@@ -710,6 +710,8 @@ void vp10_xform_quant_fp(MACROBLOCK *x, int plane, int block, int blk_row,
                      p->quant_fp, p->quant_shift, qcoeff, dqcoeff,
                      pd->dequant, eob, scan_order->scan, scan_order->iscan);
 
+  if (*eob == 1)
+    dqcoeff[0] += pvq_ref_coeff[0];
 #endif//#if !CONFIG_PVQ
 }
 
@@ -1038,6 +1040,8 @@ void vp10_xform_quant(MACROBLOCK *x, int plane, int block, int blk_row,
                    p->quant_shift, qcoeff, dqcoeff, pd->dequant, eob,
                    scan_order->scan, scan_order->iscan);
 
+  if (*eob == 1)
+    dqcoeff[0] += pvq_ref_coeff[0];
 #endif//#if !CONFIG_PVQ
 }
 
@@ -1155,6 +1159,7 @@ static void encode_block(int plane, int block, int blk_row, int blk_col,
   // transform block size in pixels
   tx_blk_size = 1 << (tx_size + 2);
 
+  if (p->eobs[block] > 1) {
   // Reconstruct residue + predicted signal in transform domain
   // Note that pvq_ref_coeff[] is already computed in vp10_xform_quant(),
   // as like dqcoeff[].
@@ -1166,6 +1171,7 @@ static void encode_block(int plane, int block, int blk_row, int blk_col,
   // pass blank dummy image to vp10_inv_txfm_add_*x*(), i.e. set dst as zeros
   for (j=0; j < tx_blk_size; j++)
     memset(dst + j * pd->dst.stride, 0, tx_blk_size);
+  }
 #endif
 
   switch (tx_size) {
