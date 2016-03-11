@@ -261,7 +261,6 @@ static void inverse_transform_block_inter(MACROBLOCKD *xd, int plane,
       // transform block size in pixels
       tx_blk_size = 1 << (tx_size + 2);
 
-      if (eob > 1) {
       for (j=0; j < tx_blk_size; j++)
         for (i=0; i < tx_blk_size; i++) {
           pred[diff_stride * j + i] = dst[pd->dst.stride * j + i];
@@ -294,7 +293,6 @@ static void inverse_transform_block_inter(MACROBLOCKD *xd, int plane,
       // pass blank dummy image to vp10_inv_txfm_add_*x*(), i.e. set dst as zeros
       for (j=0; j < tx_blk_size; j++)
         memset(dst + j * pd->dst.stride, 0, tx_blk_size);
-      }
 #endif
       switch (tx_size) {
         case TX_4X4:
