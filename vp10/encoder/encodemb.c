@@ -521,8 +521,6 @@ void vp10_xform_quant_fp(MACROBLOCK *x, int plane, int block, int blk_row,
   const qm_val_t *iqmatrix = pd->seg_iqmatrix[seg_id][is_intra][tx_size];
 #endif
 
-  uint8_t *src, *dst;
-
 #if !CONFIG_PVQ
   const int16_t *src_diff;
   src_diff = &p->src_diff[4 * (blk_row * diff_stride + blk_col)];
