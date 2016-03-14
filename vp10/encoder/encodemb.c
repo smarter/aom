@@ -513,9 +513,8 @@ void vp10_xform_quant_fp(MACROBLOCK *x, int plane, int block, int blk_row,
   tran_low_t *const dqcoeff = BLOCK_OFFSET(pd->dqcoeff, block);
   uint16_t *const eob = &p->eobs[block];
   const int diff_stride = 4 * num_4x4_blocks_wide_lookup[plane_bsize];
-
-#if CONFIG_AOM_QM
   int seg_id = xd->mi[0]->mbmi.segment_id;
+#if CONFIG_AOM_QM
   int is_intra = !is_inter_block(&xd->mi[0]->mbmi);
   const qm_val_t *qmatrix = pd->seg_qmatrix[seg_id][is_intra][tx_size];
   const qm_val_t *iqmatrix = pd->seg_iqmatrix[seg_id][is_intra][tx_size];
@@ -576,7 +575,7 @@ void vp10_xform_quant_fp(MACROBLOCK *x, int plane, int block, int blk_row,
 #endif
         break;
       case TX_4X4:
-        if (xd->lossless[xd->mi[0]->mbmi.segment_id]) {
+        if (xd->lossless[seg_id]) {
           vp10_highbd_fwht4x4(src_diff, coeff, diff_stride);
         } else {
           vpx_highbd_fdct4x4(src_diff, coeff, diff_stride);
@@ -637,7 +636,7 @@ void vp10_xform_quant_fp(MACROBLOCK *x, int plane, int block, int blk_row,
 #endif
       break;
     case TX_4X4:
-      if (xd->lossless[xd->mi[0]->mbmi.segment_id]) {
+      if (xd->lossless[seg_id]) {
         vp10_fwht4x4(src_diff, coeff, diff_stride);
       } else {
         vpx_fdct4x4(src_diff, coeff, diff_stride);
@@ -683,7 +682,7 @@ void vp10_xform_quant_fp(MACROBLOCK *x, int plane, int block, int blk_row,
       vpx_fdct8x8(src_int16, coeff, diff_stride);
       break;
     case TX_4X4:
-      if (xd->lossless[xd->mi[0]->mbmi.segment_id]) {
+      if (xd->lossless[seg_id]) {
         vp10_fwht4x4(pred, pvq_ref_coeff, diff_stride);
         vp10_fwht4x4(src_int16, coeff, diff_stride);
       } else {
@@ -854,7 +853,6 @@ void vp10_xform_quant(MACROBLOCK *x, int plane, int block, int blk_row,
   tran_low_t *const dqcoeff = BLOCK_OFFSET(pd->dqcoeff, block);
   uint16_t *const eob = &p->eobs[block];
   const int diff_stride = 4 * num_4x4_blocks_wide_lookup[plane_bsize];
-
   int seg_id = xd->mi[0]->mbmi.segment_id;
 #if CONFIG_AOM_QM
   int is_intra = !is_inter_block(&xd->mi[0]->mbmi);
@@ -1015,9 +1013,9 @@ void vp10_xform_quant(MACROBLOCK *x, int plane, int block, int blk_row,
       break;
     case TX_4X4:
       vp10_fwd_txfm_4x4(pred, pvq_ref_coeff, diff_stride, tx_type,
-                        xd->lossless[xd->mi[0]->mbmi.segment_id]);
+                        xd->lossless[seg_id]);
       vp10_fwd_txfm_4x4(src_int16, coeff, diff_stride, tx_type,
-                        xd->lossless[xd->mi[0]->mbmi.segment_id]);
+                        xd->lossless[seg_id]);
       break;
     default: assert(0); break;
   }
@@ -1051,6 +1049,7 @@ static void encode_block(int plane, int block, int blk_row, int blk_col,
   uint8_t *dst;
   ENTROPY_CONTEXT *a, *l;
   TX_TYPE tx_type = get_tx_type(pd->plane_type, xd, block);
+  int seg_id = xd->mi[0]->mbmi.segment_id;
 #if CONFIG_PVQ
   int tx_blk_size;
   int i, j;
@@ -1138,7 +1137,7 @@ static void encode_block(int plane, int block, int blk_row, int blk_col,
         // case.
         vp10_highbd_inv_txfm_add_4x4(dqcoeff, dst, pd->dst.stride,
                                      p->eobs[block], xd->bd, tx_type,
-                                     xd->lossless[xd->mi[0]->mbmi.segment_id]);
+                                     xd->lossless[seg_id]);
         break;
       default:
         assert(0 && "Invalid transform size");
@@ -1184,7 +1183,7 @@ static void encode_block(int plane, int block, int blk_row, int blk_col,
       // which is significant (not just an optimization) for the lossless
       // case.
       vp10_inv_txfm_add_4x4(dqcoeff, dst, pd->dst.stride, p->eobs[block],
-                            tx_type, xd->lossless[xd->mi[0]->mbmi.segment_id]);
+                            tx_type, xd->lossless[seg_id]);
       break;
     default:
       assert(0 && "Invalid transform size");
@@ -1519,9 +1518,9 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
         break;
       case TX_4X4:
         vp10_fwd_txfm_4x4(pred, pvq_ref_coeff, diff_stride, tx_type,
-                          xd->lossless[mbmi->segment_id]);
+                          xd->lossless[seg_id]);
         vp10_fwd_txfm_4x4(src_int16, coeff, diff_stride, tx_type,
-                          xd->lossless[mbmi->segment_id]);
+                          xd->lossless[seg_id]);
         break;
       default: assert(0); break;
     }
@@ -1580,7 +1579,7 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
         // which is significant (not just an optimization) for the lossless
         // case.
         vp10_inv_txfm_add_4x4(dqcoeff, dst, dst_stride, *eob, tx_type,
-                              xd->lossless[mbmi->segment_id]);
+                              xd->lossless[seg_id]);
         break;
       default: assert(0); break;
     }
