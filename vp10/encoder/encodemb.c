@@ -531,10 +531,21 @@ void vp10_xform_quant_fp(MACROBLOCK *x, int plane, int block, int blk_row,
   const int dst_stride = pd->dst.stride;
   int tx_blk_size;
   int i, j;
+
   dst = &pd->dst.buf[4 * (blk_row * dst_stride + blk_col)];
   src = &p->src.buf[4 * (blk_row * src_stride + blk_col)];
   src_int16 = &p->src_int16[4 * (blk_row * diff_stride + blk_col)];
   pred = &pd->pred[4 * (blk_row * diff_stride + blk_col)];
+  // transform block size in pixels
+  tx_blk_size = 1 << (tx_size + 2);
+
+  // copy uint8 orig and predicted block to int16 buffer
+  // in order to use existing VP10 transform functions
+  for (j = 0; j < tx_blk_size; j++)
+    for (i = 0; i < tx_blk_size; i++) {
+      src_int16[diff_stride * j + i] = src[src_stride * j + i];
+      pred[diff_stride * j + i] = dst[dst_stride * j + i];
+    }
 #endif
 
 #if CONFIG_VPX_HIGHBITDEPTH
@@ -655,17 +666,6 @@ void vp10_xform_quant_fp(MACROBLOCK *x, int plane, int block, int blk_row,
       break;
   }
 #else//#if !CONFIG_PVQ
-  // transform block size in pixels
-  tx_blk_size = 1 << (tx_size + 2);
-
-  // copy uint8 orig and predicted block to int16 buffer
-  // in order to use existing VP10 transform functions
-  for (j = 0; j < tx_blk_size; j++)
-    for (i = 0; i < tx_blk_size; i++) {
-      src_int16[diff_stride * j + i] = src[src_stride * j + i];
-      pred[diff_stride * j + i] = dst[dst_stride * j + i];
-    }
-
   switch (tx_size) {
     case TX_32X32:
       //forward transform of predicted image.
@@ -877,6 +877,19 @@ void vp10_xform_quant(MACROBLOCK *x, int plane, int block, int blk_row,
   src_int16 = &p->src_int16[4 * (blk_row * diff_stride + blk_col)];
 #endif
 
+#if CONFIG_PVQ
+  // transform block size in pixels
+  tx_blk_size = 1 << (tx_size + 2);
+
+  // copy uint8 orig and predicted block to int16 buffer
+  // in order to use existing VP10 transform functions
+  for (j = 0; j < tx_blk_size; j++)
+    for (i = 0; i < tx_blk_size; i++) {
+      src_int16[diff_stride * j + i] = src[src_stride * j + i];
+      pred[diff_stride * j + i] = dst[dst_stride * j + i];
+    }
+#endif
+
 #if CONFIG_VPX_HIGHBITDEPTH
   if (xd->cur_buf->flags & YV12_FLAG_HIGHBITDEPTH) {
     switch (tx_size) {
@@ -985,17 +998,6 @@ void vp10_xform_quant(MACROBLOCK *x, int plane, int block, int blk_row,
       break;
   }
 #else//#if !CONFIG_PVQ
-  // transform block size in pixels
-  tx_blk_size = 1 << (tx_size + 2);
-
-  // copy uint8 orig and predicted block to int16 buffer
-  // in order to use existing VP10 transform functions
-  for (j = 0; j < tx_blk_size; j++)
-    for (i = 0; i < tx_blk_size; i++) {
-      src_int16[diff_stride * j + i] = src[src_stride * j + i];
-      pred[diff_stride * j + i] = dst[dst_stride * j + i];
-    }
-
   switch (tx_size) {
     case TX_32X32:
       //forward transform of predicted image.
@@ -1033,7 +1035,6 @@ void vp10_xform_quant(MACROBLOCK *x, int plane, int block, int blk_row,
     vpx_quantize_b(coeff, tx_blk_size * tx_blk_size, x->skip_block, p->zbin, p->round, p->quant,
                    p->quant_shift, qcoeff, dqcoeff, pd->dequant, eob,
                    scan_order->scan, scan_order->iscan);
-
 #endif//#if !CONFIG_PVQ
 }
 
@@ -1056,7 +1057,6 @@ static void encode_block(int plane, int block, int blk_row, int blk_col,
   tran_low_t *pvq_ref_coeff = BLOCK_OFFSET(pd->pvq_ref_coeff, block);
   const int bwl = b_width_log2_lookup[plane_bsize];
   const int diff_stride = 4 * (1 << bwl);
-  int16_t *pred = &pd->pred[4 * (blk_row * diff_stride + blk_col)];
 #endif
   dst = &pd->dst.buf[4 * blk_row * pd->dst.stride + 4 * blk_col];
   a = &ctx->ta[plane][blk_col];
@@ -1116,6 +1116,23 @@ static void encode_block(int plane, int block, int blk_row, int blk_col,
   if (p->eobs[block]) *(args->skip) = 0;
 
   if (p->eobs[block] == 0) return;
+
+#if CONFIG_PVQ
+  // transform block size in pixels
+  tx_blk_size = 1 << (tx_size + 2);
+
+  // Reconstruct residue + predicted signal in transform domain
+  // Note that pvq_ref_coeff[] is already computed in vp10_xform_quant(),
+  // as like dqcoeff[].
+  for (i=0; i < tx_blk_size * tx_blk_size; i++)
+    dqcoeff[i] += pvq_ref_coeff[i];
+
+  // Since vp10 does not have inverse transform only function
+  // but contain adding the inverse transform to predicted image,
+  // pass blank dummy image to vp10_inv_txfm_add_*x*(), i.e. set dst as zeros
+  for (j=0; j < tx_blk_size; j++)
+    memset(dst + j * pd->dst.stride, 0, tx_blk_size);
+#endif
 #if CONFIG_VPX_HIGHBITDEPTH
   if (xd->cur_buf->flags & YV12_FLAG_HIGHBITDEPTH) {
     switch (tx_size) {
@@ -1147,24 +1164,6 @@ static void encode_block(int plane, int block, int blk_row, int blk_col,
     return;
   }
 #endif  // CONFIG_VPX_HIGHBITDEPTH
-
-#if CONFIG_PVQ
-  // transform block size in pixels
-  tx_blk_size = 1 << (tx_size + 2);
-
-  // Reconstruct residue + predicted signal in transform domain
-  // Note that pvq_ref_coeff[] is already computed in vp10_xform_quant(),
-  // as like dqcoeff[].
-  for (i=0; i < tx_blk_size * tx_blk_size; i++)
-    dqcoeff[i] += pvq_ref_coeff[i];
-
-  // Since vp10 does not have inverse transform only function
-  // but contain adding the inverse transform to predicted image,
-  // pass blank dummy image to vp10_inv_txfm_add_*x*(), i.e. set dst as zeros
-  for (j=0; j < tx_blk_size; j++)
-    memset(dst + j * pd->dst.stride, 0, tx_blk_size);
-#endif
-
   switch (tx_size) {
     case TX_32X32:
       vp10_inv_txfm_add_32x32(dqcoeff, dst, pd->dst.stride, p->eobs[block],
