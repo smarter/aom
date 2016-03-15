@@ -1535,7 +1535,7 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
      OD_PVQ_BETA[use_masking][pli][bs], OD_ROBUST_STREAM, 0,
      ctx->q_scaling, bx, by, enc->state.qm + off, enc->state.qm_inv
      + off);*/
-#if 1 //work in progress(yushin)
+#if 0 //work in progress(yushin)
     {
     skip = pvq_encode_helper(pred, coeff, dqcoeff,
                              p->quant[1],/*scale/quantizer*/

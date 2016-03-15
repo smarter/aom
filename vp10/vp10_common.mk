@@ -70,6 +70,7 @@ VP10_COMMON_SRCS-yes += common/dering.h
 VP10_COMMON_SRCS-yes += common/odintrin.h
 endif
 
+ifeq ($(CONFIG_PVQ),yes)
 # PVQ from daala
 VP10_COMMON_SRCS-yes += common/pvq.c
 VP10_COMMON_SRCS-yes += common/pvq.h
@@ -86,6 +87,7 @@ VP10_COMMON_SRCS-yes += common/generic_code.c
 VP10_COMMON_SRCS-yes += common/generic_code.h
 VP10_COMMON_SRCS-yes += common/state.h
 VP10_COMMON_SRCS-yes += common/laplace_tables.c
+endif
 
 ifneq ($(CONFIG_VPX_HIGHBITDEPTH),yes)
 VP10_COMMON_SRCS-$(HAVE_DSPR2)  += common/mips/dspr2/itrans4_dspr2.c

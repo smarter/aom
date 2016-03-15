@@ -81,12 +81,14 @@ VP10_CX_SRCS-yes += encoder/mbgraph.c
 VP10_CX_SRCS-yes += encoder/mbgraph.h
 VP10_CX_SRCS-yes += encoder/pickdering.c
 
+ifeq ($(CONFIG_PVQ),yes)
 # PVQ from daala
 VP10_CX_SRCS-yes += encoder/pvq_encoder.c
 VP10_CX_SRCS-yes += encoder/pvq_encoder.h
 VP10_CX_SRCS-yes += encoder/encint.h
 VP10_CX_SRCS-yes += encoder/generic_encoder.c
 VP10_CX_SRCS-yes += encoder/laplace_encoder.c
+endif
 
 VP10_CX_SRCS-$(HAVE_SSE2) += encoder/x86/temporal_filter_apply_sse2.asm
 VP10_CX_SRCS-$(HAVE_SSE2) += encoder/x86/quantize_sse2.c
