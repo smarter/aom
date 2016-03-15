@@ -26,6 +26,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 # include "config.h"
 #endif
 
+#include "odintrin.h"
 #include "pvq.h"
 #include "partition.h"
 #include <stdlib.h>
@@ -349,16 +350,48 @@ int od_qm_get_index(int bs, int band) {
   return bs*(bs + 1) + band - band/3;
 }
 
-/* Approximates sin(x) for 0 <= x < pi. */
-int16_t od_pvq_sin(int32_t x) {
-  return (int16_t)OD_MINI(32767,
-   (int32_t)floor(.5 + OD_TRIG_SCALE*sin(OD_THETA_SCALE_1*x)));
+/*See celt/mathops.c in Opus and tools/cos_search.c.*/
+static int16_t od_pvq_cos_pi_2(int16_t x)
+{
+  int16_t x2;
+  x2 = OD_MULT16_16_Q15(x, x);
+  return OD_MINI(32767, (1073758164 - x*x + x2*(-7654 + OD_MULT16_16_Q16(x2,
+   16573 + OD_MULT16_16_Q16(-2529, x2)))) >> 15);
 }
 
-/* Approximates cos(x) for -pi < x < pi. */
+/*Approximates cos(x) for -pi < x < pi.
+  Input is in OD_THETA_SCALE.*/
 int16_t od_pvq_cos(int32_t x) {
-  return (int16_t)OD_MINI(32767,
-   (int32_t)floor(.5 + OD_TRIG_SCALE*cos(OD_THETA_SCALE_1*abs(x))));
+  /*Wrap x around by masking, since cos is periodic.*/
+  x = x & 0x0001ffff;
+  if (x > (1 << 16)) {
+    x = (1 << 17) - x;
+  }
+  if (x & 0x00007fff) {
+    if (x < (1 << 15)) {
+       return od_pvq_cos_pi_2((int16_t)x);
+    }
+    else {
+      return -od_pvq_cos_pi_2((int16_t)(65536 - x));
+    }
+  }
+  else {
+    if (x & 0x0000ffff) {
+      return 0;
+    }
+    else if (x & 0x0001ffff) {
+      return -32767;
+    }
+    else {
+      return 32767;
+    }
+  }
+}
+
+/*Approximates sin(x) for 0 <= x < pi.
+  Input is in OD_THETA_SCALE.*/
+int16_t od_pvq_sin(int32_t x) {
+  return od_pvq_cos(32768 - x);
 }
 
 /* Computes an upper-bound on the number of bits required to store the L2 norm
@@ -468,7 +501,11 @@ static int32_t od_gain_compand(int32_t g, int q0, double beta) {
 int32_t od_gain_expand(int32_t cg0, int q0, double beta) {
   double cg;
   cg = cg0 * OD_CGAIN_SCALE_1;
-  if (beta == 1) return (int32_t)floor(.5 + cg*q0);
+  if (beta == 1) {
+    /*The multiply fits into 28 bits because the expanded gain has a range from
+       0 to 2^20.*/
+    return OD_SHR_ROUND(cg0*q0, OD_CGAIN_SHIFT);
+  }
   else if (beta == 1.5) {
     cg *= q0*OD_COMPAND_SCALE_1;
     return (int32_t)floor(.5 + OD_COMPAND_SCALE*cg*sqrt(cg));
@@ -573,6 +610,55 @@ int od_pvq_compute_k(int32_t qcg, int itheta, int32_t theta, int noref, int n,
   }
 }
 
+#define OD_RSQRT_INSHIFT 16
+#define OD_RSQRT_OUTSHIFT 14
+/** Reciprocal sqrt approximation where the input is in the range [0.25,1) in
+     Q16 and the output is in the range (1.0, 2.0] in Q14).
+    Error is always within +/1 of round(1/sqrt(t))*/
+static int32_t od_rsqrt_norm(int32_t t)
+{
+  int16_t n;
+  int32_t r;
+  int32_t r2;
+  int32_t ry;
+  int32_t y;
+  /* Range of n is [-16384,32767] ([-0.5,1) in Q15).*/
+  n = t - 32768;
+  /*Get a rough initial guess for the root.
+    The optimal minimax quadratic approximation (using relative error) is
+     r = 1.437799046117536+n*(-0.823394375837328+n*0.4096419668459485).
+    Coefficients here, and the final result r, are Q14.*/
+  r = (23565 + OD_MULT16_16_Q15(n, (-13481 + OD_MULT16_16_Q15(n, 6711))));
+  /*We want y = t*r*r-1 in Q15, but t is 32-bit Q16 and r is Q14.
+    We can compute the result from n and r using Q15 multiplies with some
+     adjustment, carefully done to avoid overflow.*/
+  r2 = r*r;
+  y = (((r2 >> 15)*n + r2) >> 12) - 131077;
+  ry = r*y;
+  /*Apply a 2nd-order Householder iteration: r += r*y*(y*0.375-0.5).
+    This yields the Q14 reciprocal square root of the Q16 t, with a maximum
+     relative error of 1.04956E-4, a (relative) RMSE of 2.80979E-5, and a peak
+     absolute error of 2.26591/16384.*/
+  return r + ((((ry >> 16)*(3*y) >> 3) - ry) >> 18);
+}
+
+static int32_t od_rsqrt(int32_t x, int *rsqrt_shift)
+{
+   int k;
+   int s;
+   int32_t t;
+   k = (OD_ILOG(x) - 1) >> 1;
+   /*t is x in the range [0.25, 1) in Q16, or x*2^(-s).*/
+   s = 2*k - OD_RSQRT_OUTSHIFT;
+   t = OD_VSHR(x, s);
+   /*We want to express od_rsqrt() in terms of od_rsqrt_norm(), which is
+      defined as (2^OUTSHIFT)/sqrt(t*(2^-INSHIFT)) with t=x*(2^-s).
+     This simplifies to 2^(OUTSHIFT+(INSHIFT/2)+(s/2))/sqrt(x), so the caller
+      needs to shift right by OUTSHIFT + INSHIFT/2 + s/2.*/
+   *rsqrt_shift = OD_RSQRT_OUTSHIFT + ((s + OD_RSQRT_INSHIFT) >> 1);
+   return od_rsqrt_norm(t);
+}
+
 /** Synthesizes one parition of coefficient values from a PVQ-encoded
  * vector.  This 'partial' version is called by the encode loop where
  * the Householder reflection has already been computed and there's no
@@ -613,10 +699,17 @@ void od_pvq_synthesis_partial(od_coeff *xcoeff, const od_coeff *ypulse,
      most of the time. */
   gshift = OD_MAXI(0, OD_ILOG(g) - 14);
   grnd = 1 << gshift >> 1;
-  /* scale is in Q(16-gshift) so that x[]*scale has a norm that fits in 16
-     bits. */
+  /*scale is g/sqrt(yy) in Q(16-gshift) so that x[]*scale has a norm that fits
+     in 16 bits.*/
   if (yy == 0) scale = 0;
-  else scale = (int32_t)floor(.5 + g*((1 << 16 >> gshift)/sqrt(yy)));
+  else {
+    int rsqrt_shift;
+    int32_t rsqrt;
+    int64_t tmp;
+    rsqrt = od_rsqrt(yy, &rsqrt_shift);
+    tmp = rsqrt*(int64_t)g;
+    scale = OD_VSHR_ROUND(tmp, rsqrt_shift + gshift - 16);
+  }
   /* Shift to apply after multiplying by the inverse QM, taking into account
      gshift. */
   qshift = OD_QM_INV_SHIFT - gshift;
