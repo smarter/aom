@@ -1055,8 +1055,6 @@ static void encode_block(int plane, int block, int blk_row, int blk_col,
   int tx_blk_size;
   int i, j;
   tran_low_t *pvq_ref_coeff = BLOCK_OFFSET(pd->pvq_ref_coeff, block);
-  const int bwl = b_width_log2_lookup[plane_bsize];
-  const int diff_stride = 4 * (1 << bwl);
 #endif
   dst = &pd->dst.buf[4 * blk_row * pd->dst.stride + 4 * blk_col];
   a = &ctx->ta[plane][blk_col];
