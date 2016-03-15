@@ -70,6 +70,23 @@ VP10_COMMON_SRCS-yes += common/dering.h
 VP10_COMMON_SRCS-yes += common/odintrin.h
 endif
 
+# PVQ from daala
+VP10_COMMON_SRCS-yes += common/pvq.c
+VP10_COMMON_SRCS-yes += common/pvq.h
+VP10_COMMON_SRCS-yes += common/partition.c
+VP10_COMMON_SRCS-yes += common/partition.h
+VP10_COMMON_SRCS-yes += common/zigzag4.c
+VP10_COMMON_SRCS-yes += common/zigzag8.c
+VP10_COMMON_SRCS-yes += common/zigzag16.c
+VP10_COMMON_SRCS-yes += common/zigzag32.c
+VP10_COMMON_SRCS-yes += common/zigzag64.c
+VP10_COMMON_SRCS-yes += common/zigzag.h
+VP10_COMMON_SRCS-yes += common/odintrin.h
+VP10_COMMON_SRCS-yes += common/generic_code.c
+VP10_COMMON_SRCS-yes += common/generic_code.h
+VP10_COMMON_SRCS-yes += common/daala.h
+VP10_COMMON_SRCS-yes += common/state.h
+
 ifneq ($(CONFIG_VPX_HIGHBITDEPTH),yes)
 VP10_COMMON_SRCS-$(HAVE_DSPR2)  += common/mips/dspr2/itrans4_dspr2.c
 VP10_COMMON_SRCS-$(HAVE_DSPR2)  += common/mips/dspr2/itrans8_dspr2.c
