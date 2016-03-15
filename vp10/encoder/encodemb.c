@@ -1025,6 +1025,11 @@ void vp10_xform_quant(MACROBLOCK *x, int plane, int block, int blk_row,
     default: assert(0); break;
   }
 
+#if 0 //work in progress(yushin)
+  // pvq of daala will be called here.
+
+
+#else
   // Difference of predicted and original in TRANSFORM domain
   for (i=0; i < tx_blk_size * tx_blk_size; i++)
     coeff[i] -= pvq_ref_coeff[i];
@@ -1038,6 +1043,8 @@ void vp10_xform_quant(MACROBLOCK *x, int plane, int block, int blk_row,
     vpx_quantize_b(coeff, tx_blk_size * tx_blk_size, x->skip_block, p->zbin, p->round, p->quant,
                    p->quant_shift, qcoeff, dqcoeff, pd->dequant, eob,
                    scan_order->scan, scan_order->iscan);
+#endif
+
 #endif//#if !CONFIG_PVQ
 }
 
@@ -1526,27 +1533,27 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
         break;
       default: assert(0); break;
     }
+#if 0 //work in progress(yushin)
+    // pvq of daala will be called here.
+
     // Change coefficient ordering for pvq encoding.
     //od_raster_to_coding_order(dblock,  n, &d[bo], w);
     //od_raster_to_coding_order(predt,  n, &pred[0], n);
 
-    // pvq of daala will be called here.
-    /*skip = od_pvq_encode(enc, pred, coeff, dqcoeff, quant, pli, tx_size,
-     OD_PVQ_BETA[use_masking][pli][bs], OD_ROBUST_STREAM, 0,
-     ctx->q_scaling, bx, by, enc->state.qm + off, enc->state.qm_inv
-     + off);*/
-#if 0 //work in progress(yushin)
     {
-    skip = pvq_encode_helper(pred, coeff, dqcoeff,
-                             p->quant[1],/*scale/quantizer*/
-                             plane, tx_size,
-                             0/*key frame?*/ );
+    skip = pvq_encode_helper(pvq_ref_coeff, // reference vector
+                             coeff,         // target original vector
+                             dqcoeff,       // de-quantized vector
+                             p->quant[1],   // AC quantizer, p->quant[1] is vpx's AC quantizer
+                             plane,         // image plane
+                             tx_size,       // transform size in log_2 - 2, ex: 0 is for 4x4
+                             0);            // key frame?
     }
-#endif
     //od_init_skipped_coeffs(d, pred, ctx->is_keyframe, bo, n, w);
     // Back to original coefficient order
-    //od_coding_order_to_raster(&d[bo], w, scalar_out, n);
 
+    //od_coding_order_to_raster(&d[bo], w, scalar_out, n);
+#else
     // Difference of predicted and original in TRANSFORM domain
     for (i=0; i < tx_blk_size * tx_blk_size; i++)
       coeff[i] = coeff[i] - pvq_ref_coeff[i];
@@ -1564,6 +1571,7 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
     // Reconstruct residue + predicted signal in transform domain
     for (i=0; i < tx_blk_size * tx_blk_size; i++)
       dqcoeff[i] = pvq_ref_coeff[i] + dqcoeff[i];
+#endif
   }//if (!x->skip_recode) {
 
   // Since vp10 does not have inverse transform only function

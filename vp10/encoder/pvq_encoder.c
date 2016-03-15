@@ -754,7 +754,7 @@ int od_pvq_encode(daala_enc_ctx *enc,
   for (i = 0; i < nb_bands; i++) size[i] = off[i+1] - off[i];
   skip_diff = 0;
   flip = 0;
-#if 0
+#if 0 //disabled CfL since AOM does not use it.
   /*If we are coding a chroma block of a keyframe, we are doing CfL.*/
   if (pli != 0 && is_keyframe) {
     int32_t xy;
