@@ -6,6 +6,7 @@
 #include "vpx/vpx_integer.h"
 #include "vpx_dsp/vpx_dsp_common.h"
 #include "vpx_ports/bitops.h"
+#include "vpx_mem/vpx_mem.h"
 
 # if !defined(M_LOG2E)
 #  define M_LOG2E (1.4426950408889634073599246810019)
@@ -107,5 +108,40 @@ void od_fatal_impl(const char *_str, const char *_file, int _line);
  (memmove((dst), (src), sizeof(*(dst))*(n) + 0*((dst) - (src)) ))
 #endif
 
+/** Linkage will break without this if using a C++ compiler, and will issue
+ * warnings without this for a C compiler*/
+#if defined(__cplusplus)
+# define OD_EXTERN extern
+#else
+# define OD_EXTERN
+#endif
+
+/* Multiplies 16-bit a by 32-bit b and keeps bits [16:47]. */
+# define OD_MULT16_32_Q16(a, b) ((int16_t)(a)*(int64_t)(int32_t)(b) >> 16)
+
+/*All of these macros should expect floats as arguments.*/
+/*These two should compile as a single SSE instruction.*/
+# define OD_MINF(a, b) ((a) < (b) ? (a) : (b))
+# define OD_MAXF(a, b) ((a) > (b) ? (a) : (b))
+
+# define OD_DIV_R0(x, y) (((x) + OD_FLIPSIGNI((((y) + 1) >> 1) - 1, (x)))/(y))
+
+# define OD_SIGNMASK(a) (-((a) < 0))
+# define OD_FLIPSIGNI(a, b) (((a) + OD_SIGNMASK(b)) ^ OD_SIGNMASK(b))
+
+/** Copy n elements of memory from src to dst. The 0* term provides
+    compile-time type checking  */
+#if !defined(OVERRIDE_OD_COPY)
+# define OD_COPY(dst, src, n) \
+  (memcpy((dst), (src), sizeof(*(dst))*(n) + 0*((dst) - (src))))
+#endif
+
+/** Set n elements of dst to zero */
+#if !defined(OVERRIDE_OD_CLEAR)
+# define OD_CLEAR(dst, n) (memset((dst), 0, sizeof(*(dst))*(n)))
+#endif
+
+/** Silence unused parameter/variable warnings */
+# define OD_UNUSED(expr) (void)(expr)
 
 #endif
