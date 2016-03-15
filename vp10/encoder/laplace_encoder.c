@@ -34,7 +34,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 #include "vpx_dsp/entdec.h"
 //#include "logging.h"
 //#include "odintrin.h"
-#include "vp10/common/daala.h"
+#include "vp10/common/odintrin.h"
 
 /** Encodes the tail of a Laplace-distributed variable, i.e. it doesn't
  * do anything special for the zero case.

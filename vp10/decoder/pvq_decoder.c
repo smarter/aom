@@ -29,7 +29,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 #include <stdlib.h>
 #include <stdio.h>
 //#include "internal.h"
-#include "vp10/common/daala.h"
 #include "vp10/common/state.h"
 #include "vp10/decoder/decint.h"
 #include "vpx_dsp/entdec.h"

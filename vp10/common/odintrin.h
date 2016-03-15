@@ -21,11 +21,24 @@
 /*The maximum length of the side of a block.*/
 # define OD_BSIZE_MAX     (1 << OD_LOG_BSIZE_MAX)
 
+# define OD_COEFF_SHIFT (4)
+# define OD_COEFF_SCALE (1 << OD_COEFF_SHIFT)
+
+# define OD_LIMIT_BSIZE_MIN (OD_BLOCK_4X4)
+# define OD_LIMIT_BSIZE_MAX (OD_BLOCK_64X64)
+
+# define OD_DISABLE_CFL (1)
+
+# define OD_DIVU_DMAX (1024)
+
 typedef int od_coeff;
 
 typedef int16_t od_dering_in;
 
 #define OD_DIVU_SMALL(_x, _d) ((_x) / (_d))
+
+# define OD_DIVU(_x, _d) \
+  (((_d) < OD_DIVU_DMAX)?(OD_DIVU_SMALL((_x),(_d))):((_x)/(_d)))
 
 #define OD_MINI VPXMIN
 #define OD_MAXI VPXMAX
@@ -125,6 +138,16 @@ void od_fatal_impl(const char *_str, const char *_file, int _line);
 /*Shift x right by shift (with rounding)*/
 # define OD_SHR_ROUND(x, shift) \
   ((int32_t)(((x) + (1 << (shift) >> 1)) >> (shift)))
+/*Shift x right by shift (without rounding) or left by -shift if shift
+  is negative.*/
+# define OD_VSHR(x, shift) \
+  ((shift) > 0 ? (int32_t)((x) >> (shift)) \
+  : (int32_t)((x) << -(shift)))
+/*Shift x right by shift (with rounding) or left by -shift if shift
+  is negative.*/
+# define OD_VSHR_ROUND(x, shift) \
+  ((shift) > 0 ? (int32_t)(((x) + (1 << (shift) >> 1)) >> (shift)) \
+  : (int32_t)((x) << -(shift)))
 
 /*All of these macros should expect floats as arguments.*/
 /*These two should compile as a single SSE instruction.*/
@@ -138,6 +161,9 @@ void od_fatal_impl(const char *_str, const char *_file, int _line);
 
 # define OD_MULT16_16_Q15(a,b) \
   (((int16_t)(a)*((int32_t)(int16_t)(b))) >> 15)
+
+/* Multiplies 16-bit a by 32-bit b and keeps bits [16:47]. */
+# define OD_MULT16_32_Q16(a, b) ((int16_t)(a)*(int64_t)(int32_t)(b) >> 16)
 
 /** Copy n elements of memory from src to dst. The 0* term provides
     compile-time type checking  */
@@ -153,5 +179,25 @@ void od_fatal_impl(const char *_str, const char *_file, int _line);
 
 /** Silence unused parameter/variable warnings */
 # define OD_UNUSED(expr) (void)(expr)
+
+// from codec.h
+/**The maximum number of color planes allowed in a single frame.*/
+# define OD_NPLANES_MAX (4)
+
+// fromn filter.h
+typedef int32_t od_coeff;
+
+// from daaladec.h
+/**The decoder context.*/
+typedef struct daala_dec_ctx daala_dec_ctx;
+
+// from block_size.h
+/*Possible block sizes, note that OD_BLOCK_NXN = log2(N) - 2.*/
+#define OD_BLOCK_4X4 (0)
+#define OD_BLOCK_8X8 (1)
+#define OD_BLOCK_16X16 (2)
+#define OD_BLOCK_32X32 (3)
+#define OD_BLOCK_64X64 (4)
+#define OD_BLOCK_SIZES (OD_BLOCK_64X64 + 1)
 
 #endif

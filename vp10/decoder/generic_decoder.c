@@ -33,7 +33,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 #include "vpx_dsp/entdec.h"
 //#include "logging.h"
 //#include "odintrin.h"
-#include "vp10/common/daala.h"
+#include "vp10/common/odintrin.h"
 
 /** Decodes a value from 0 to N-1 (with N up to 16) based on a cdf and adapts
  * the cdf accordingly.

@@ -26,7 +26,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 # define _partition_H
 
 #include "vpx/vpx_integer.h"
-#include "daala.h"
+#include "odintrin.h"
 
 typedef unsigned char index_pair[2];
 

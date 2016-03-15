@@ -28,7 +28,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 
 #include <stdlib.h>
 #include <stdio.h>
-#include "vp10/common/daala.h"
 #include "vp10/common/odintrin.h"
 #include "vp10/common/state.h"
 //#include "internal.h"

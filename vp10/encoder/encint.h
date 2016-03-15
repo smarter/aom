@@ -29,7 +29,7 @@ typedef struct daala_enc_ctx od_enc_ctx;
 typedef struct od_params_ctx od_params_ctx;
 typedef struct od_rollback_buffer od_rollback_buffer;
 
-# include "vp10/common/daala.h"
+# include "vp10/common/odintrin.h"
 # include "vp10/common/state.h"
 # include "vpx_dsp/entenc.h"
 //# include "block_size_enc.h"

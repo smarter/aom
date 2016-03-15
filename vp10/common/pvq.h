@@ -26,7 +26,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 # define _pvq_H (1)
 /*# include "internal.h"
 # include "filter.h"*/
-# include "daala.h"
 # include "odintrin.h"
 # include "generic_code.h"
 

@@ -26,7 +26,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 # include "config.h"
 #endif
 
-#include "vp10/common/daala.h"
+#include "vp10/common/odintrin.h"
 #include "vp10/common/partition.h"
 #include "vp10/common/zigzag.h"
 

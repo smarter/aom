@@ -29,7 +29,7 @@ typedef struct od_state          od_state;
 typedef struct od_adapt_ctx      od_adapt_ctx;
 
 # include <stdio.h>
-# include "daala.h"
+# include "odintrin.h"
 # include "pvq.h"
 # include "generic_code.h"
 

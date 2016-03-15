@@ -84,7 +84,6 @@ VP10_COMMON_SRCS-yes += common/zigzag.h
 VP10_COMMON_SRCS-yes += common/odintrin.h
 VP10_COMMON_SRCS-yes += common/generic_code.c
 VP10_COMMON_SRCS-yes += common/generic_code.h
-VP10_COMMON_SRCS-yes += common/daala.h
 VP10_COMMON_SRCS-yes += common/state.h
 VP10_COMMON_SRCS-yes += common/laplace_tables.c
 
