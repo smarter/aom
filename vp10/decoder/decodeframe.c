@@ -2224,6 +2224,12 @@ static size_t read_uncompressed_header(VP10Decoder *pbi,
   if (frame_is_intra_only(cm) || cm->error_resilient_mode)
     vp10_setup_past_independence(cm);
 
+#if CONFIG_PVQ
+  od_adapt_pvq_ctx_reset(&cm->pvq, frame_is_intra_only(cm));
+  cm->skip_increment = 128;
+  OD_CDFS_INIT(cm->skip_cdf, cm->skip_increment >> 2);
+#endif
+
   setup_loopfilter(&cm->lf, rb);
 #if CONFIG_CLPF
   setup_clpf(cm, rb);
