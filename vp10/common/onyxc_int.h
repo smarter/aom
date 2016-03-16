@@ -22,6 +22,8 @@
 #include "vp10/common/entropymode.h"
 #include "vp10/common/frame_buffers.h"
 #include "vp10/common/tile_common.h"
+#include "odintrin.h"
+#include "pvq.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -314,6 +316,13 @@ typedef struct VP10Common {
   vpx_prob kf_y_prob[INTRA_MODES][INTRA_MODES][INTRA_MODES - 1];
 #if CONFIG_DERING
   int dering_level;
+#endif
+#if CONFIG_PVQ
+  /* Support for PVQ encode/decode */
+  od_pvq_adapt_ctx pvq;
+  /* Joint skip flag for DC and AC */
+  uint16_t skip_cdf[OD_NBSIZES*2][5];
+  int skip_increment;
 #endif
 } VP10_COMMON;
 

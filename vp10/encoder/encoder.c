@@ -248,6 +248,11 @@ static void setup_frame(VP10_COMP *cpi) {
     *cm->fc = cm->frame_contexts[cm->frame_context_idx];
     vp10_zero(cpi->interp_filter_selected[0]);
   }
+#if CONFIG_PVQ
+  od_adapt_pvq_ctx_reset(&cm->pvq, frame_is_intra_only(cm));
+  cm->skip_increment = 128;
+  OD_CDFS_INIT(cm->skip_cdf, cm->skip_increment >> 2);
+#endif
 }
 
 static void vp10_enc_setup_mi(VP10_COMMON *cm) {
