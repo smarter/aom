@@ -1537,8 +1537,8 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
     // pvq of daala will be called here for intra mode block
 
     // Change coefficient ordering for pvq encoding.
-    //od_raster_to_coding_order(dblock,  n, &d[bo], w);
-    //od_raster_to_coding_order(predt,  n, &pred[0], n);
+    //od_raster_to_coding_order(coeff,  n, &d[bo], w);
+    //od_raster_to_coding_order(pvq_ref_coeff,  n, &pred[0], n);
 
     {
     skip = pvq_encode_helper(pvq_ref_coeff, // reference vector
@@ -1552,7 +1552,7 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
     //od_init_skipped_coeffs(d, pred, ctx->is_keyframe, bo, n, w);
     // Back to original coefficient order
 
-    //od_coding_order_to_raster(&d[bo], w, scalar_out, n);
+    //od_coding_order_to_raster(dqcoeff, w, dqcoeff, n);
 #else
     // Difference of predicted and original in TRANSFORM domain
     for (i=0; i < tx_blk_size * tx_blk_size; i++)

@@ -45,15 +45,6 @@ typedef struct od_rollback_buffer od_rollback_buffer;
    \lambda*R.*/
 # define OD_ERROR_SCALE        (OD_LAMBDA_SCALE + OD_BITRES)
 
-
-/*Unsanitized user parameters*/
-struct od_params_ctx {
-  /*Set using OD_SET_MV_LEVEL_MIN*/
-  int mv_level_min;
-  /*Set using OD_SET_MV_LEVEL_MAX*/
-  int mv_level_max;
-};
-
 struct daala_enc_ctx{
   od_state state;
   od_ec_enc ec;
