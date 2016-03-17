@@ -54,6 +54,7 @@
 
 #if CONFIG_PVQ
 #include "vp10/encoder/encodemb.h"
+#include "vp10/decoder/decint.h"
 #endif
 
 static int is_compound_reference_allowed(const VP10_COMMON *cm) {
@@ -2225,11 +2226,14 @@ static size_t read_uncompressed_header(VP10Decoder *pbi,
     vp10_setup_past_independence(cm);
 
 #if CONFIG_PVQ
-  od_adapt_pvq_ctx_reset(&cm->pvq, frame_is_intra_only(cm));
-  cm->skip_increment = 128;
-  OD_CDFS_INIT(cm->skip_cdf, cm->skip_increment >> 2);
+  {
+  extern daala_dec_ctx daala_dec;
+  od_adapt_ctx *adapt = &daala_dec.state.adapt;
+  od_adapt_pvq_ctx_reset(&adapt->pvq, frame_is_intra_only(cm));
+  adapt->skip_increment = 128;
+  OD_CDFS_INIT(adapt->skip_cdf, adapt->skip_increment >> 2);
+  }
 #endif
-
   setup_loopfilter(&cm->lf, rb);
 #if CONFIG_CLPF
   setup_clpf(cm, rb);

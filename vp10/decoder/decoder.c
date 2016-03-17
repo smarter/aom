@@ -33,6 +33,11 @@
 #include "vp10/decoder/decoder.h"
 #include "vp10/decoder/detokenize.h"
 
+#if CONFIG_PVQ
+#include "vp10/decoder/decint.h"
+daala_dec_ctx daala_dec;
+#endif
+
 static void initialize_dec(void) {
   static volatile int init_done = 0;
 

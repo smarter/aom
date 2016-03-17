@@ -13,6 +13,7 @@
 
 #include "./vpx_config.h"
 #include "vp10/encoder/block.h"
+#include "vp10/encoder/encint.h"
 
 #ifdef __cplusplus
 extern "C" {

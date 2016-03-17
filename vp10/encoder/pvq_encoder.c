@@ -889,15 +889,14 @@ int od_pvq_encode(daala_enc_ctx *enc,
  * @param [in]     is_keyframe whether we're encoding a keyframe
  * @return         Returns 1 if the AC coefficients are skipped, zero otherwise
  */
-int pvq_encode_helper(int16_t *ref,
+int pvq_encode_helper(daala_enc_ctx *daala_enc,
+                   int16_t *ref,
                    const int16_t *in,
                    int16_t *out,
                    int quant,
                    int pli,
                    int bs,
                    int is_keyframe){
-  daala_enc_ctx enc_example;
-  daala_enc_ctx *enc = &enc_example;
   int off = od_qm_offset(bs, pli ? 1 : 0);
   int skip;
   int i;
@@ -913,14 +912,14 @@ int pvq_encode_helper(int16_t *ref,
   for (i=0; i < blk_size*blk_size; i++)
     in_int32[i] = in[i];
 
-  skip = od_pvq_encode(enc, ref_int32, in_int32, out_int32,
+  skip = od_pvq_encode(daala_enc, ref_int32, in_int32, out_int32,
           quant,//scale/quantizer
           pli, bs,
           OD_PVQ_BETA[0/*use_masking*/][pli][bs],
           1,//OD_ROBUST_STREAM
           is_keyframe,
           0, 0, 0, //q_scaling, bx, by,
-          enc->state.qm + off, enc->state.qm_inv + off);
+          daala_enc->state.qm + off, daala_enc->state.qm_inv + off);
 
   //copy int32 result back to int16
   for (i=0; i < blk_size*blk_size; i++)

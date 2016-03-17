@@ -33,27 +33,12 @@ typedef struct od_adapt_ctx      od_adapt_ctx;
 # include "pvq.h"
 # include "generic_code.h"
 
-
-
 extern const od_coeff OD_DC_QM[OD_NBSIZES - 1][2];
 
 extern const int OD_HAAR_QM[2][OD_LOG_BSIZE_MAX];
 
 /*Adaptation speed of scalar Laplace encoding.*/
 # define OD_SCALAR_ADAPT_SPEED (4)
-
-
-/*This should be a power of 2, and at least 8.*/
-# define OD_UMV_CLAMP (32)
-/*Half the value of OD_SUBPEL_FILTER_TAP_SIZE in mc.h.*/
-# define OD_RESAMPLE_PADDING (3)
-/*Buffer padding alignment dictated by SIMD.*/
-# define OD_PADDING_ALIGN (32)
-/*Actual size of padding on all sides of reference buffers.*/
-# define OD_BUFFER_PADDING \
- ((OD_UMV_CLAMP + OD_RESAMPLE_PADDING + OD_PADDING_ALIGN - 1) \
- /OD_PADDING_ALIGN*OD_PADDING_ALIGN)
-
 
 struct od_adapt_ctx {
   /* Support for PVQ encode/decode */
@@ -76,15 +61,7 @@ struct od_adapt_ctx {
 
 struct od_state{
   od_adapt_ctx        adapt;
-  int32_t         frame_width;
-  int32_t         frame_height;
 
-  /** Number of horizontal motion-vector blocks. */
-  int                 nhmvbs;
-  /** Number of vertical motion-vector blocks. */
-  int                 nvmvbs;
-  int                 nhsb;
-  int                 nvsb;
   /** Each 8x8 block of pixels in the image (+ one superblock of
       padding on each side) has a corresponding byte in this array, and
       every 64x64 superblock is represented by 64 (8 by 8) entries

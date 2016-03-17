@@ -32,18 +32,6 @@ typedef struct od_rollback_buffer od_rollback_buffer;
 # include "vp10/common/odintrin.h"
 # include "vp10/common/state.h"
 # include "vpx_dsp/entenc.h"
-//# include "block_size_enc.h"
-
-/*Constants for the packet state machine specific to the encoder.*/
-/*No packet currently ready to output.*/
-# define OD_PACKET_EMPTY       (0)
-/*A packet ready to output.*/
-# define OD_PACKET_READY       (1)
-/*The number of fractional bits of precision in our \lambda values.*/
-# define OD_LAMBDA_SCALE       (2)
-/*The number of bits of precision to add to distortion values to match
-   \lambda*R.*/
-# define OD_ERROR_SCALE        (OD_LAMBDA_SCALE + OD_BITRES)
 
 struct daala_enc_ctx{
   od_state state;

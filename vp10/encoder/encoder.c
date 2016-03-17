@@ -90,6 +90,11 @@ FILE *kf_list;
 FILE *keyfile;
 #endif
 
+#if CONFIG_PVQ
+#include "vp10/encoder/encint.h"
+daala_enc_ctx daala_enc;
+#endif
+
 static INLINE void Scale2Ratio(VPX_SCALING mode, int *hr, int *hs) {
   switch (mode) {
     case NORMAL:
@@ -249,9 +254,12 @@ static void setup_frame(VP10_COMP *cpi) {
     vp10_zero(cpi->interp_filter_selected[0]);
   }
 #if CONFIG_PVQ
-  od_adapt_pvq_ctx_reset(&cm->pvq, frame_is_intra_only(cm));
-  cm->skip_increment = 128;
-  OD_CDFS_INIT(cm->skip_cdf, cm->skip_increment >> 2);
+  {
+  od_adapt_ctx *adapt = &daala_enc.state.adapt;
+  od_adapt_pvq_ctx_reset(&adapt->pvq, frame_is_intra_only(cm));
+  adapt->skip_increment = 128;
+  OD_CDFS_INIT(adapt->skip_cdf, adapt->skip_increment >> 2);
+  }
 #endif
 }
 

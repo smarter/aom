@@ -317,13 +317,6 @@ typedef struct VP10Common {
 #if CONFIG_DERING
   int dering_level;
 #endif
-#if CONFIG_PVQ
-  /* Support for PVQ encode/decode */
-  od_pvq_adapt_ctx pvq;
-  /* Joint skip flag for DC and AC */
-  uint16_t skip_cdf[OD_NBSIZES*2][5];
-  int skip_increment;
-#endif
 } VP10_COMMON;
 
 // TODO(hkuang): Don't need to lock the whole pool after implementing atomic

@@ -1299,12 +1299,12 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
   int16_t *src_diff;
   src_diff = &p->src_diff[4 * (blk_row * diff_stride + blk_col)];
 #else
-  tran_low_t *pvq_ref_coeff = BLOCK_OFFSET(pd->pvq_ref_coeff, block);
+  extern daala_enc_ctx daala_enc;
+   tran_low_t *pvq_ref_coeff = BLOCK_OFFSET(pd->pvq_ref_coeff, block);
   int16_t *src_int16;
   int tx_blk_size;
   int i, j;
   int16_t *pred = &pd->pred[4 * (blk_row * diff_stride + blk_col)];
-  // TODO (yushin): Make use of this return flag from pvq_encode()
   int skip;
   src_int16 = &p->src_int16[4 * (blk_row * diff_stride + blk_col)];
 #endif
@@ -1533,15 +1533,15 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
         break;
       default: assert(0); break;
     }
-#if 0 //work in progress(yushin)
+#if 1 //work in progress(yushin)
     // pvq of daala will be called here for intra mode block
 
     // Change coefficient ordering for pvq encoding.
     //od_raster_to_coding_order(coeff,  n, &d[bo], w);
     //od_raster_to_coding_order(pvq_ref_coeff,  n, &pred[0], n);
-
     {
-    skip = pvq_encode_helper(pvq_ref_coeff, // reference vector
+    skip = pvq_encode_helper(&daala_enc,    // daala encoder
+                             pvq_ref_coeff, // reference vector
                              coeff,         // target original vector
                              dqcoeff,       // de-quantized vector
                              p->quant[1],   // AC quantizer, p->quant[1] is vpx's AC quantizer

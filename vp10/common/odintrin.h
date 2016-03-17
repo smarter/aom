@@ -187,10 +187,6 @@ void od_fatal_impl(const char *_str, const char *_file, int _line);
 // fromn filter.h
 typedef int32_t od_coeff;
 
-// from daaladec.h
-/**The decoder context.*/
-typedef struct daala_dec_ctx daala_dec_ctx;
-
 // from block_size.h
 /*Possible block sizes, note that OD_BLOCK_NXN = log2(N) - 2.*/
 #define OD_BLOCK_4X4 (0)
