@@ -37,6 +37,7 @@ typedef struct daala_dec_ctx od_dec_ctx;
 struct daala_dec_ctx {
   od_state state;
   od_ec_dec ec;
+  int qm;
 };
 
 #endif

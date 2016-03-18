@@ -1639,6 +1639,21 @@ VP10_COMP *vp10_create_compressor(VP10EncoderConfig *oxcf,
 
   vp10_loop_filter_init(cm);
 
+#if CONFIG_PVQ
+  {
+  extern daala_enc_ctx daala_enc;
+  daala_enc.state.qm =
+    (int16_t *)malloc(OD_QM_BUFFER_SIZE * sizeof(daala_enc.state.qm[0]));
+  daala_enc.state.qm_inv =
+    (int16_t *)malloc(OD_QM_BUFFER_SIZE * sizeof(daala_enc.state.qm_inv[0]));
+
+  daala_enc.qm = OD_HVS_QM;
+
+  od_init_qm(daala_enc.state.qm, daala_enc.state.qm_inv,
+      daala_enc.qm == OD_HVS_QM ? OD_QM8_Q4_HVS : OD_QM8_Q4_FLAT);
+  }
+#endif
+
   cm->error.setjmp = 0;
 
   return cpi;
@@ -1782,6 +1797,14 @@ void vp10_remove_compressor(VP10_COMP *cpi) {
 #endif
 #ifdef OUTPUT_YUV_REC
   fclose(yuv_rec_file);
+#endif
+
+#if CONFIG_PVQ
+  {
+  extern daala_enc_ctx daala_enc;
+  vpx_free(daala_enc.state.qm);
+  vpx_free(daala_enc.state.qm_inv);
+  }
 #endif
 
 #if 0
