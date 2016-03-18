@@ -1540,11 +1540,12 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
     //od_raster_to_coding_order(coeff,  n, &d[bo], w);
     //od_raster_to_coding_order(pvq_ref_coeff,  n, &pred[0], n);
     {
+    int quant = pd->dequant[1];
     skip = pvq_encode_helper(&daala_enc,    // daala encoder
                              pvq_ref_coeff, // reference vector
                              coeff,         // target original vector
                              dqcoeff,       // de-quantized vector
-                             p->quant[1],   // AC quantizer, p->quant[1] is vpx's AC quantizer
+                             quant,   // AC quantizer, p->quant[1] is vpx's AC quantizer
                              plane,         // image plane
                              tx_size,       // transform size in log_2 - 2, ex: 0 is for 4x4
                              0);            // key frame?
