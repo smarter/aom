@@ -875,6 +875,7 @@ void vp10_xform_quant(MACROBLOCK *x, int plane, int block, int blk_row,
   const int dst_stride = pd->dst.stride;
   int tx_blk_size;
   int i, j;
+  int skip;
   dst = &pd->dst.buf[4 * (blk_row * dst_stride + blk_col)];
   src = &p->src.buf[4 * (blk_row * src_stride + blk_col)];
   src_int16 = &p->src_int16[4 * (blk_row * diff_stride + blk_col)];
@@ -1025,10 +1026,28 @@ void vp10_xform_quant(MACROBLOCK *x, int plane, int block, int blk_row,
     default: assert(0); break;
   }
 
-#if 0 //work in progress(yushin)
+#if 1 //work in progress(yushin)
   // pvq of daala will be called here for inter mode block
 
+  // Change coefficient ordering for pvq encoding.
+  //od_raster_to_coding_order(coeff,  n, &d[bo], w);
+  //od_raster_to_coding_order(pvq_ref_coeff,  n, &pred[0], n);
+  {
+  extern daala_enc_ctx daala_enc;
+  int quant = pd->dequant[1];
+  skip = pvq_encode_helper(&daala_enc,    // daala encoder
+                           pvq_ref_coeff, // reference vector
+                           coeff,         // target original vector
+                           dqcoeff,       // de-quantized vector
+                           quant,         // AC quantizer
+                           plane,         // image plane
+                           tx_size,       // transform size in log_2 - 2, ex: 0 is for 4x4
+                           0);            // key frame?
+  }
+  //od_init_skipped_coeffs(d, pred, ctx->is_keyframe, bo, n, w);
+  // Back to original coefficient order
 
+  //od_coding_order_to_raster(dqcoeff, w, dqcoeff, n);
 #else
   // Difference of predicted and original in TRANSFORM domain
   for (i=0; i < tx_blk_size * tx_blk_size; i++)
@@ -1299,7 +1318,6 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
   int16_t *src_diff;
   src_diff = &p->src_diff[4 * (blk_row * diff_stride + blk_col)];
 #else
-  extern daala_enc_ctx daala_enc;
    tran_low_t *pvq_ref_coeff = BLOCK_OFFSET(pd->pvq_ref_coeff, block);
   int16_t *src_int16;
   int tx_blk_size;
@@ -1540,12 +1558,13 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
     //od_raster_to_coding_order(coeff,  n, &d[bo], w);
     //od_raster_to_coding_order(pvq_ref_coeff,  n, &pred[0], n);
     {
+    extern daala_enc_ctx daala_enc;
     int quant = pd->dequant[1];
     skip = pvq_encode_helper(&daala_enc,    // daala encoder
                              pvq_ref_coeff, // reference vector
                              coeff,         // target original vector
                              dqcoeff,       // de-quantized vector
-                             quant,   // AC quantizer, p->quant[1] is vpx's AC quantizer
+                             quant,         // AC quantizer
                              plane,         // image plane
                              tx_size,       // transform size in log_2 - 2, ex: 0 is for 4x4
                              0);            // key frame?
