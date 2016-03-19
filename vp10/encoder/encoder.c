@@ -1641,12 +1641,8 @@ VP10_COMP *vp10_create_compressor(VP10EncoderConfig *oxcf,
 
 #if CONFIG_PVQ
   {
-  extern daala_enc_ctx daala_enc;
-  daala_enc.state.qm =
-    (int16_t *)malloc(OD_QM_BUFFER_SIZE * sizeof(daala_enc.state.qm[0]));
-  daala_enc.state.qm_inv =
-    (int16_t *)malloc(OD_QM_BUFFER_SIZE * sizeof(daala_enc.state.qm_inv[0]));
-
+  daala_enc.state.qm = (int16_t *)vpx_calloc(OD_QM_BUFFER_SIZE, sizeof(daala_enc.state.qm[0]));
+  daala_enc.state.qm_inv = (int16_t *)vpx_calloc(OD_QM_BUFFER_SIZE, sizeof(daala_enc.state.qm_inv[0]));
   daala_enc.qm = OD_HVS_QM;
 
   od_init_qm(daala_enc.state.qm, daala_enc.state.qm_inv,

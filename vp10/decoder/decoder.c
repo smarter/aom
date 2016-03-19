@@ -120,12 +120,8 @@ VP10Decoder *vp10_decoder_create(BufferPool *const pool) {
 
 #if CONFIG_PVQ
   {
-  extern daala_dec_ctx daala_enc;
-  daala_dec.state.qm =
-    (int16_t *)malloc(OD_QM_BUFFER_SIZE * sizeof(daala_dec.state.qm[0]));
-  daala_dec.state.qm_inv =
-    (int16_t *)malloc(OD_QM_BUFFER_SIZE * sizeof(daala_dec.state.qm_inv[0]));
-
+  daala_dec.state.qm = (int16_t *)vpx_calloc(OD_QM_BUFFER_SIZE, sizeof(daala_dec.state.qm[0]));
+  daala_dec.state.qm_inv = (int16_t *)vpx_calloc(OD_QM_BUFFER_SIZE, sizeof(daala_dec.state.qm_inv[0]));
   daala_dec.qm = OD_HVS_QM;
 
   od_init_qm(daala_dec.state.qm, daala_dec.state.qm_inv,
