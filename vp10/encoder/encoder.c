@@ -255,6 +255,7 @@ static void setup_frame(VP10_COMP *cpi) {
   }
 #if CONFIG_PVQ
   {
+  od_ec_enc_reset(&daala_enc.ec);
   od_adapt_ctx *adapt = &daala_enc.state.adapt;
   od_adapt_pvq_ctx_reset(&adapt->pvq, frame_is_intra_only(cm));
   adapt->skip_increment = 128;
@@ -1640,14 +1641,13 @@ VP10_COMP *vp10_create_compressor(VP10EncoderConfig *oxcf,
   vp10_loop_filter_init(cm);
 
 #if CONFIG_PVQ
-  {
   daala_enc.state.qm = (int16_t *)vpx_calloc(OD_QM_BUFFER_SIZE, sizeof(daala_enc.state.qm[0]));
   daala_enc.state.qm_inv = (int16_t *)vpx_calloc(OD_QM_BUFFER_SIZE, sizeof(daala_enc.state.qm_inv[0]));
   daala_enc.qm = OD_HVS_QM;
 
   od_init_qm(daala_enc.state.qm, daala_enc.state.qm_inv,
       daala_enc.qm == OD_HVS_QM ? OD_QM8_Q4_HVS : OD_QM8_Q4_FLAT);
-  }
+  od_ec_enc_init(&daala_enc.ec, 65025);
 #endif
 
   cm->error.setjmp = 0;

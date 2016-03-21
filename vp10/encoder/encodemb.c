@@ -1042,7 +1042,7 @@ void vp10_xform_quant(MACROBLOCK *x, int plane, int block, int blk_row,
                            quant,         // AC quantizer
                            plane,         // image plane
                            tx_size,       // transform size in log_2 - 2, ex: 0 is for 4x4
-                           0);            // key frame?
+                           0);            // key frame? 0 for always check noref mode == 0
   }
   //od_init_skipped_coeffs(d, pred, ctx->is_keyframe, bo, n, w);
   // Back to original coefficient order
@@ -1567,7 +1567,7 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
                              quant,         // AC quantizer
                              plane,         // image plane
                              tx_size,       // transform size in log_2 - 2, ex: 0 is for 4x4
-                             0);            // key frame?
+                             0);            // key frame? 0 for always check noref mode == 0
     }
     //od_init_skipped_coeffs(d, pred, ctx->is_keyframe, bo, n, w);
     // Back to original coefficient order
