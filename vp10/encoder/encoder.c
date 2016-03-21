@@ -1800,6 +1800,7 @@ void vp10_remove_compressor(VP10_COMP *cpi) {
   extern daala_enc_ctx daala_enc;
   vpx_free(daala_enc.state.qm);
   vpx_free(daala_enc.state.qm_inv);
+  od_ec_enc_clear(&daala_enc.ec);
   }
 #endif
 
