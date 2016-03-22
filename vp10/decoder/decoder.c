@@ -157,7 +157,6 @@ void vp10_decoder_remove(VP10Decoder *pbi) {
 
 #if CONFIG_PVQ
   {
-  extern daala_dec_ctx daala_enc;
   vpx_free(daala_dec.state.qm);
   vpx_free(daala_dec.state.qm_inv);
   }

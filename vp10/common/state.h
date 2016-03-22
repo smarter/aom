@@ -97,7 +97,7 @@ struct od_state{
 };
 
 void od_adapt_ctx_reset(od_adapt_ctx *state, int is_keyframe);
-void od_init_skipped_coeffs(od_coeff *d, od_coeff *pred, int is_keyframe,
+void od_init_skipped_coeffs(int16_t *d, int16_t *pred, int is_keyframe,
  int bo, int n, int w);
 
 

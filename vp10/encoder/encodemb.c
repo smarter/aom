@@ -528,7 +528,7 @@ void vp10_xform_quant_fp(MACROBLOCK *x, int plane, int block, int blk_row,
   src_diff = &p->src_diff[4 * (blk_row * diff_stride + blk_col)];
 #else
   uint8_t *src, *dst;
-  tran_low_t *pvq_ref_coeff = BLOCK_OFFSET(pd->pvq_ref_coeff, block);
+  tran_low_t *ref_coeff = BLOCK_OFFSET(pd->pvq_ref_coeff, block);
   int16_t *src_int16, *pred;
   const int src_stride = p->src.stride;
   const int dst_stride = pd->dst.stride;
@@ -672,24 +672,24 @@ void vp10_xform_quant_fp(MACROBLOCK *x, int plane, int block, int blk_row,
   switch (tx_size) {
     case TX_32X32:
       //forward transform of predicted image.
-      fdct32x32(x->use_lp32x32fdct, pred, pvq_ref_coeff, diff_stride);
+      fdct32x32(x->use_lp32x32fdct, pred, ref_coeff, diff_stride);
       //forward transform of original image.
       fdct32x32(x->use_lp32x32fdct, src_int16, coeff, diff_stride);
       break;
     case TX_16X16:
-      vpx_fdct16x16(pred, pvq_ref_coeff, diff_stride);
+      vpx_fdct16x16(pred, ref_coeff, diff_stride);
       vpx_fdct16x16(src_int16, coeff, diff_stride);
       break;
     case TX_8X8:
-      vpx_fdct8x8(pred, pvq_ref_coeff, diff_stride);
+      vpx_fdct8x8(pred, ref_coeff, diff_stride);
       vpx_fdct8x8(src_int16, coeff, diff_stride);
       break;
     case TX_4X4:
       if (xd->lossless[seg_id]) {
-        vp10_fwht4x4(pred, pvq_ref_coeff, diff_stride);
+        vp10_fwht4x4(pred, ref_coeff, diff_stride);
         vp10_fwht4x4(src_int16, coeff, diff_stride);
       } else {
-        vpx_fdct4x4(pred, pvq_ref_coeff, diff_stride);
+        vpx_fdct4x4(pred, ref_coeff, diff_stride);
         vpx_fdct4x4(src_int16, coeff, diff_stride);
       }
       break;
@@ -698,7 +698,7 @@ void vp10_xform_quant_fp(MACROBLOCK *x, int plane, int block, int blk_row,
 
   // Difference of predicted and original in TRANSFORM domain
   for (i=0; i < tx_blk_size * tx_blk_size; i++)
-    coeff[i] -= pvq_ref_coeff[i];
+    coeff[i] -= ref_coeff[i];
 
   if (tx_size == TX_32X32)
     vp10_quantize_fp_32x32(coeff, 1024, x->skip_block, p->zbin, p->round_fp,
@@ -867,7 +867,7 @@ void vp10_xform_quant(MACROBLOCK *x, int plane, int block, int blk_row,
   const int16_t *src_diff;
   src_diff = &p->src_diff[4 * (blk_row * diff_stride + blk_col)];
 #else
-  tran_low_t *pvq_ref_coeff = BLOCK_OFFSET(pd->pvq_ref_coeff, block);
+  tran_low_t *ref_coeff = BLOCK_OFFSET(pd->pvq_ref_coeff, block);
   int16_t *pred = &pd->pred[4 * (blk_row * diff_stride + blk_col)];
   uint8_t *src, *dst;
   int16_t *src_int16;
@@ -1005,20 +1005,20 @@ void vp10_xform_quant(MACROBLOCK *x, int plane, int block, int blk_row,
   switch (tx_size) {
     case TX_32X32:
       //forward transform of predicted image.
-      fwd_txfm_32x32(x->use_lp32x32fdct, pred, pvq_ref_coeff, diff_stride, tx_type);
+      fwd_txfm_32x32(x->use_lp32x32fdct, pred, ref_coeff, diff_stride, tx_type);
       //forward transform of original image.
       fwd_txfm_32x32(x->use_lp32x32fdct, src_int16, coeff, diff_stride, tx_type);
       break;
     case TX_16X16:
-      fwd_txfm_16x16(pred, pvq_ref_coeff, diff_stride, tx_type);
+      fwd_txfm_16x16(pred, ref_coeff, diff_stride, tx_type);
       fwd_txfm_16x16(src_int16, coeff, diff_stride, tx_type);
       break;
     case TX_8X8:
-      fwd_txfm_8x8(pred, pvq_ref_coeff, diff_stride, tx_type);
+      fwd_txfm_8x8(pred, ref_coeff, diff_stride, tx_type);
       fwd_txfm_8x8(src_int16, coeff, diff_stride, tx_type);
       break;
     case TX_4X4:
-      vp10_fwd_txfm_4x4(pred, pvq_ref_coeff, diff_stride, tx_type,
+      vp10_fwd_txfm_4x4(pred, ref_coeff, diff_stride, tx_type,
                         xd->lossless[seg_id]);
       vp10_fwd_txfm_4x4(src_int16, coeff, diff_stride, tx_type,
                         xd->lossless[seg_id]);
@@ -1031,12 +1031,12 @@ void vp10_xform_quant(MACROBLOCK *x, int plane, int block, int blk_row,
 
   // Change coefficient ordering for pvq encoding.
   //od_raster_to_coding_order(coeff,  n, &d[bo], w);
-  //od_raster_to_coding_order(pvq_ref_coeff,  n, &pred[0], n);
+  //od_raster_to_coding_order(ref_coeff,  n, &pred[0], n);
   {
   extern daala_enc_ctx daala_enc;
   int quant = pd->dequant[1];
   skip = pvq_encode_helper(&daala_enc,    // daala encoder
-                           pvq_ref_coeff, // reference vector
+                           ref_coeff, // reference vector
                            coeff,         // target original vector
                            dqcoeff,       // de-quantized vector
                            quant,         // AC quantizer
@@ -1051,7 +1051,7 @@ void vp10_xform_quant(MACROBLOCK *x, int plane, int block, int blk_row,
 #else
   // Difference of predicted and original in TRANSFORM domain
   for (i=0; i < tx_blk_size * tx_blk_size; i++)
-    coeff[i] -= pvq_ref_coeff[i];
+    coeff[i] -= ref_coeff[i];
 
   if (tx_size == TX_32X32)
     vpx_quantize_b_32x32(coeff, 1024, x->skip_block, p->zbin, p->round,
@@ -1083,7 +1083,7 @@ static void encode_block(int plane, int block, int blk_row, int blk_col,
 #if CONFIG_PVQ
   int tx_blk_size;
   int i, j;
-  tran_low_t *pvq_ref_coeff = BLOCK_OFFSET(pd->pvq_ref_coeff, block);
+  tran_low_t *ref_coeff = BLOCK_OFFSET(pd->pvq_ref_coeff, block);
 #endif
   dst = &pd->dst.buf[4 * blk_row * pd->dst.stride + 4 * blk_col];
   a = &ctx->ta[plane][blk_col];
@@ -1150,10 +1150,10 @@ static void encode_block(int plane, int block, int blk_row, int blk_col,
     tx_blk_size = 1 << (tx_size + 2);
 
     // Reconstruct residue + predicted signal in transform domain
-    // Note that pvq_ref_coeff[] is already computed in vp10_xform_quant(),
+    // Note that ref_coeff[] is already computed in vp10_xform_quant(),
     // as like dqcoeff[].
     for (i=0; i < tx_blk_size * tx_blk_size; i++)
-      dqcoeff[i] += pvq_ref_coeff[i];
+      dqcoeff[i] += ref_coeff[i];
 
     // Since vp10 does not have inverse transform only function
     // but contain adding the inverse transform to predicted image,
@@ -1318,12 +1318,15 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
   int16_t *src_diff;
   src_diff = &p->src_diff[4 * (blk_row * diff_stride + blk_col)];
 #else
-   tran_low_t *pvq_ref_coeff = BLOCK_OFFSET(pd->pvq_ref_coeff, block);
+   tran_low_t *ref_coeff = BLOCK_OFFSET(pd->pvq_ref_coeff, block);
   int16_t *src_int16;
   int tx_blk_size;
   int i, j;
   int16_t *pred = &pd->pred[4 * (blk_row * diff_stride + blk_col)];
   int skip;
+  DECLARE_ALIGNED(16, int16_t, coeff_pvq[64 * 64]);
+  DECLARE_ALIGNED(16, int16_t, dqcoeff_pvq[64 * 64]);
+  DECLARE_ALIGNED(16, int16_t, ref_coeff_pvq[64 * 64]);
   src_int16 = &p->src_int16[4 * (blk_row * diff_stride + blk_col)];
 #endif
   dst = &pd->dst.buf[4 * (blk_row * dst_stride + blk_col)];
@@ -1515,9 +1518,6 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
   // Note that pvq in decoder also need to apply forward transform
   // to predicted image to obtain reference vector.
   if (!x->skip_recode) {
-    //assert(pred + diff_stride * tx_blk_size < (int16_t *) &pd->pred + 64 * 64);
-    //assert(src_diff + diff_stride * tx_blk_size < (int16_t *) &p->src_diff + 64 * 64);
-
     // copy uint8 orig and predicted block to int16 buffer
     // in order to use existing VP10 transform functions
     for (j = 0; j < tx_blk_size; j++)
@@ -1529,22 +1529,22 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
     switch (tx_size) {
       case TX_32X32:
         //forward transform of predicted image.
-        fwd_txfm_32x32(x->use_lp32x32fdct, pred, pvq_ref_coeff, diff_stride,
+        fwd_txfm_32x32(x->use_lp32x32fdct, pred, ref_coeff, diff_stride,
                        tx_type);
         //forward transform of original image.
         fwd_txfm_32x32(x->use_lp32x32fdct, src_int16, coeff, diff_stride,
                        tx_type);
         break;
       case TX_16X16:
-        fwd_txfm_16x16(pred, pvq_ref_coeff, diff_stride, tx_type);
+        fwd_txfm_16x16(pred, ref_coeff, diff_stride, tx_type);
         fwd_txfm_16x16(src_int16, coeff, diff_stride, tx_type);
         break;
       case TX_8X8:
-        fwd_txfm_8x8(pred, pvq_ref_coeff, diff_stride, tx_type);
+        fwd_txfm_8x8(pred, ref_coeff, diff_stride, tx_type);
         fwd_txfm_8x8(src_int16, coeff, diff_stride, tx_type);
         break;
       case TX_4X4:
-        vp10_fwd_txfm_4x4(pred, pvq_ref_coeff, diff_stride, tx_type,
+        vp10_fwd_txfm_4x4(pred, ref_coeff, diff_stride, tx_type,
                           xd->lossless[seg_id]);
         vp10_fwd_txfm_4x4(src_int16, coeff, diff_stride, tx_type,
                           xd->lossless[seg_id]);
@@ -1555,28 +1555,30 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
     // pvq of daala will be called here for intra mode block
 
     // Change coefficient ordering for pvq encoding.
-    //od_raster_to_coding_order(coeff,  n, &d[bo], w);
-    //od_raster_to_coding_order(pvq_ref_coeff,  n, &pred[0], n);
+    od_raster_to_coding_order(coeff_pvq, tx_blk_size, coeff, tx_blk_size);
+    od_raster_to_coding_order(ref_coeff_pvq, tx_blk_size, ref_coeff, tx_blk_size);
     {
     extern daala_enc_ctx daala_enc;
     int quant = pd->dequant[1];
     skip = pvq_encode_helper(&daala_enc,    // daala encoder
-                             pvq_ref_coeff, // reference vector
-                             coeff,         // target original vector
-                             dqcoeff,       // de-quantized vector
+                             ref_coeff_pvq, // reference vector
+                             coeff_pvq,     // target original vector
+                             dqcoeff_pvq,   // de-quantized vector
                              quant,         // AC quantizer
                              plane,         // image plane
                              tx_size,       // transform size in log_2 - 2, ex: 0 is for 4x4
                              0);            // key frame? 0 for always check noref mode == 0
     }
-    //od_init_skipped_coeffs(d, pred, ctx->is_keyframe, bo, n, w);
-    // Back to original coefficient order
+    // Safely initialize dqcoeff since some coeffs (band size > 128 coeffs)
+    // are skipped by PVQ.
+    od_init_skipped_coeffs(dqcoeff, ref_coeff, 0, 0, tx_blk_size, tx_blk_size);
 
-    //od_coding_order_to_raster(dqcoeff, w, dqcoeff, n);
+    // Back to original coefficient order
+    od_coding_order_to_raster(dqcoeff, tx_blk_size, dqcoeff_pvq, tx_blk_size);
 #else
     // Difference of predicted and original in TRANSFORM domain
     for (i=0; i < tx_blk_size * tx_blk_size; i++)
-      coeff[i] = coeff[i] - pvq_ref_coeff[i];
+      coeff[i] = coeff[i] - ref_coeff[i];
 
     if (tx_size == TX_32X32)
       vpx_quantize_b_32x32(coeff, 1024, x->skip_block, p->zbin, p->round,
@@ -1590,7 +1592,7 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
 
     // Reconstruct residue + predicted signal in transform domain
     for (i=0; i < tx_blk_size * tx_blk_size; i++)
-      dqcoeff[i] = pvq_ref_coeff[i] + dqcoeff[i];
+      dqcoeff[i] = ref_coeff[i] + dqcoeff[i];
 #endif
   }//if (!x->skip_recode) {
 
