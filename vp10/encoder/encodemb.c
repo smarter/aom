@@ -876,6 +876,9 @@ void vp10_xform_quant(MACROBLOCK *x, int plane, int block, int blk_row,
   int tx_blk_size;
   int i, j;
   int skip;
+  DECLARE_ALIGNED(16, int16_t, coeff_pvq[64 * 64]);
+  DECLARE_ALIGNED(16, int16_t, dqcoeff_pvq[64 * 64]);
+  DECLARE_ALIGNED(16, int16_t, ref_coeff_pvq[64 * 64]);
   dst = &pd->dst.buf[4 * (blk_row * dst_stride + blk_col)];
   src = &p->src.buf[4 * (blk_row * src_stride + blk_col)];
   src_int16 = &p->src_int16[4 * (blk_row * diff_stride + blk_col)];
@@ -1030,24 +1033,26 @@ void vp10_xform_quant(MACROBLOCK *x, int plane, int block, int blk_row,
   // pvq of daala will be called here for inter mode block
 
   // Change coefficient ordering for pvq encoding.
-  //od_raster_to_coding_order(coeff,  n, &d[bo], w);
-  //od_raster_to_coding_order(ref_coeff,  n, &pred[0], n);
+  od_raster_to_coding_order(coeff_pvq, tx_blk_size, coeff, tx_blk_size);
+  od_raster_to_coding_order(ref_coeff_pvq, tx_blk_size, ref_coeff, tx_blk_size);
   {
   extern daala_enc_ctx daala_enc;
   int quant = pd->dequant[1];
   skip = pvq_encode_helper(&daala_enc,    // daala encoder
-                           ref_coeff, // reference vector
-                           coeff,         // target original vector
-                           dqcoeff,       // de-quantized vector
+                           ref_coeff_pvq, // reference vector
+                           coeff_pvq,     // target original vector
+                           dqcoeff_pvq,   // de-quantized vector
                            quant,         // AC quantizer
                            plane,         // image plane
                            tx_size,       // transform size in log_2 - 2, ex: 0 is for 4x4
                            0);            // key frame? 0 for always check noref mode == 0
   }
-  //od_init_skipped_coeffs(d, pred, ctx->is_keyframe, bo, n, w);
-  // Back to original coefficient order
+  // Safely initialize dqcoeff since some coeffs (band size > 128 coeffs)
+  // are skipped by PVQ.
+  od_init_skipped_coeffs(dqcoeff, ref_coeff, 0, 0, tx_blk_size, tx_blk_size);
 
-  //od_coding_order_to_raster(dqcoeff, w, dqcoeff, n);
+  // Back to original coefficient order
+  od_coding_order_to_raster(dqcoeff, tx_blk_size, dqcoeff_pvq, tx_blk_size);
 #else
   // Difference of predicted and original in TRANSFORM domain
   for (i=0; i < tx_blk_size * tx_blk_size; i++)
