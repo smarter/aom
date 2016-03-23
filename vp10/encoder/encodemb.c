@@ -1038,6 +1038,7 @@ void vp10_xform_quant(MACROBLOCK *x, int plane, int block, int blk_row,
   {
   extern daala_enc_ctx daala_enc;
   int quant = pd->dequant[1];
+  assert(x->skip_block == 0);
   skip = pvq_encode_helper(&daala_enc,    // daala encoder
                            ref_coeff_pvq, // reference vector
                            coeff_pvq,     // target original vector
@@ -1046,13 +1047,19 @@ void vp10_xform_quant(MACROBLOCK *x, int plane, int block, int blk_row,
                            plane,         // image plane
                            tx_size,       // transform size in log_2 - 2, ex: 0 is for 4x4
                            0);            // key frame? 0 for always check noref mode == 0
-  }
+
   // Safely initialize dqcoeff since some coeffs (band size > 128 coeffs)
   // are skipped by PVQ.
   od_init_skipped_coeffs(dqcoeff, ref_coeff, 0, 0, tx_blk_size, tx_blk_size);
 
   // Back to original coefficient order
   od_coding_order_to_raster(dqcoeff, tx_blk_size, dqcoeff_pvq, tx_blk_size);
+
+  // NOTE: this info is not available with pvq,
+  // but put this here since otherwise it crashes for unknown reason!
+  for (j = 0; j < tx_blk_size*tx_blk_size; j++)
+    qcoeff[j] = dqcoeff[j] / quant;
+  }
 #else
   // Difference of predicted and original in TRANSFORM domain
   for (i=0; i < tx_blk_size * tx_blk_size; i++)
@@ -1565,6 +1572,7 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
     {
     extern daala_enc_ctx daala_enc;
     int quant = pd->dequant[1];
+    assert(x->skip_block == 0);
     skip = pvq_encode_helper(&daala_enc,    // daala encoder
                              ref_coeff_pvq, // reference vector
                              coeff_pvq,     // target original vector
@@ -1573,18 +1581,26 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
                              plane,         // image plane
                              tx_size,       // transform size in log_2 - 2, ex: 0 is for 4x4
                              0);            // key frame? 0 for always check noref mode == 0
-    }
+
     // Safely initialize dqcoeff since some coeffs (band size > 128 coeffs)
     // are skipped by PVQ.
     od_init_skipped_coeffs(dqcoeff, ref_coeff, 0, 0, tx_blk_size, tx_blk_size);
 
     // Back to original coefficient order
     od_coding_order_to_raster(dqcoeff, tx_blk_size, dqcoeff_pvq, tx_blk_size);
+
+    // NOTE: this info is not available with pvq,
+    // but put this here since otherwise it crashes for unknown reason!
+    for (j = 0; j < tx_blk_size*tx_blk_size; j++)
+      qcoeff[j] = dqcoeff[j] / quant;
+    }
+
+    *eob = tx_blk_size*tx_blk_size;
 #else
     // Difference of predicted and original in TRANSFORM domain
     for (i=0; i < tx_blk_size * tx_blk_size; i++)
       coeff[i] = coeff[i] - ref_coeff[i];
-
+#if 1
     if (tx_size == TX_32X32)
       vpx_quantize_b_32x32(coeff, 1024, x->skip_block, p->zbin, p->round,
                            p->quant, p->quant_shift, qcoeff, dqcoeff,
@@ -1594,10 +1610,12 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
       vpx_quantize_b(coeff, tx_blk_size * tx_blk_size, x->skip_block, p->zbin, p->round, p->quant,
                      p->quant_shift, qcoeff, dqcoeff, pd->dequant, eob,
                      scan_order->scan, scan_order->iscan);
-
+#endif
     // Reconstruct residue + predicted signal in transform domain
     for (i=0; i < tx_blk_size * tx_blk_size; i++)
       dqcoeff[i] = ref_coeff[i] + dqcoeff[i];
+
+    *eob = 2;
 #endif
   }//if (!x->skip_recode) {
 
