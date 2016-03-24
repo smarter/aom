@@ -1049,6 +1049,9 @@ void vp10_xform_quant(MACROBLOCK *x, int plane, int block, int blk_row,
                            tx_size,       // transform size in log_2 - 2, ex: 0 is for 4x4
                            0);            // key frame? 0 for always check noref mode == 0
 
+  // TODO: Need to verify if this skip info is properly used upward during RDO search
+  x->skip_block = skip;
+
   // Safely initialize dqcoeff since some coeffs (band size > 128 coeffs)
   // are skipped by PVQ.
   od_init_skipped_coeffs(dqcoeff, ref_coeff, 0, 0, tx_blk_size, tx_blk_size);
@@ -1586,6 +1589,9 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
                              tx_size,       // transform size in log_2 - 2, ex: 0 is for 4x4
                              0);            // key frame? 0 for always check noref mode == 0
 
+    // TODO: Need to verify if this skip info is properly used upward during RDO search
+    x->skip_block = skip;
+
     // Safely initialize dqcoeff since some coeffs (band size > 128 coeffs)
     // are skipped by PVQ.
     od_init_skipped_coeffs(dqcoeff, ref_coeff, 0, 0, tx_blk_size, tx_blk_size);
@@ -1650,6 +1656,11 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
   }
 #endif//#if !CONFIG_PVQ
   if (*eob) *(args->skip) = 0;
+
+#if CONFIG_PVQ
+  // TODO: Need to verify if this skip info is properly used upward during RDO search
+  *(args->skip) = skip;
+#endif
 }
 
 void vp10_encode_intra_block_plane(MACROBLOCK *x, BLOCK_SIZE bsize, int plane) {

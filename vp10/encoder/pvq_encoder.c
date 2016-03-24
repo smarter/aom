@@ -832,7 +832,7 @@ int od_pvq_encode(daala_enc_ctx *enc,
     }
     if (encode_flip) cfl_encoded = 1;
   }
-#if 0 // TODO: Enable this block later to enable 'skip' mode.
+#if 1 // TODO: Enable this block later to enable 'skip' mode.
   tell = od_ec_enc_tell_frac(&enc->ec) - tell;
   /* Account for the rate of skipping the AC, based on the same DC decision
      we made when trying to not skip AC. */
