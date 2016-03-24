@@ -524,6 +524,8 @@ static void write_modes_b(VP10_COMP *cpi, const TileInfo *const tile,
     pack_inter_mode_mvs(cpi, m, w);
   }
 
+#if !CONFIG_PVQ
+  //NOTE: if pvq encoder is used, this should not be called.
   if (!m->mbmi.skip) {
     assert(*tok < tok_end);
     for (plane = 0; plane < MAX_MB_PLANE; ++plane) {
@@ -534,6 +536,7 @@ static void write_modes_b(VP10_COMP *cpi, const TileInfo *const tile,
       (*tok)++;
     }
   }
+#endif
 }
 
 static void write_partition(const VP10_COMMON *const cm,

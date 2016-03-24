@@ -38,7 +38,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 #include "pvq_encoder.h"
 #include "vp10/common/partition.h"
 
-#define OD_PVQ_RATE_APPROX (0)
+#define OD_PVQ_RATE_APPROX (1)
 /*Shift to ensure that the upper bound (i.e. for the max blocksize) of the
    dot-product of the 1st band of chroma with the luma ref doesn't overflow.*/
 #define OD_CFL_FLIP_SHIFT (OD_LIMIT_BSIZE_MAX + 0)

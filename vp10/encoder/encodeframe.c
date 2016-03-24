@@ -2853,7 +2853,10 @@ static void encode_superblock(VP10_COMP *cpi, ThreadData *td, TOKENEXTRA **t,
     if (output_enabled)
       sum_intra_stats(td->counts, mi, xd->above_mi, xd->left_mi,
                       frame_is_intra_only(cm));
+#if !CONFIG_PVQ
+    //NOTE: if pvq encoder is used, this should not be called.
     vp10_tokenize_sb(cpi, td, t, !output_enabled, VPXMAX(bsize, BLOCK_8X8));
+#endif
   } else {
     int ref;
     const int is_compound = has_second_ref(mbmi);
@@ -2872,7 +2875,10 @@ static void encode_superblock(VP10_COMP *cpi, ThreadData *td, TOKENEXTRA **t,
                                      VPXMAX(bsize, BLOCK_8X8));
 
     vp10_encode_sb(x, VPXMAX(bsize, BLOCK_8X8));
+#if !CONFIG_PVQ
+    //NOTE: if pvq encoder is used, this should not be called.
     vp10_tokenize_sb(cpi, td, t, !output_enabled, VPXMAX(bsize, BLOCK_8X8));
+#endif
   }
 
   if (output_enabled) {

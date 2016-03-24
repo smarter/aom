@@ -1031,7 +1031,7 @@ void vp10_xform_quant(MACROBLOCK *x, int plane, int block, int blk_row,
 
 #if 1 //work in progress(yushin)
   // pvq of daala will be called here for inter mode block
-
+  *eob = -1;
   // Change coefficient ordering for pvq encoding.
   od_raster_to_coding_order(coeff_pvq, tx_blk_size, coeff, tx_blk_size);
   od_raster_to_coding_order(ref_coeff_pvq, tx_blk_size, ref_coeff, tx_blk_size);
@@ -1039,6 +1039,7 @@ void vp10_xform_quant(MACROBLOCK *x, int plane, int block, int blk_row,
   extern daala_enc_ctx daala_enc;
   int quant = pd->dequant[1];
   assert(x->skip_block == 0);
+
   skip = pvq_encode_helper(&daala_enc,    // daala encoder
                            ref_coeff_pvq, // reference vector
                            coeff_pvq,     // target original vector
@@ -1055,13 +1056,13 @@ void vp10_xform_quant(MACROBLOCK *x, int plane, int block, int blk_row,
   // Back to original coefficient order
   od_coding_order_to_raster(dqcoeff, tx_blk_size, dqcoeff_pvq, tx_blk_size);
 
-  // NOTE: this info is not available with pvq,
-  // but put this here since otherwise it crashes for unknown reason!
-  for (j = 0; j < tx_blk_size*tx_blk_size; j++)
+  // NOTE: *eob setting is temporary, currently does not affect anything at all.
+  for (j = 0; j < tx_blk_size*tx_blk_size; j++) {
     qcoeff[j] = dqcoeff[j] / quant;
+    if (qcoeff[j]) *eob = j;
   }
 
-  *eob = tx_blk_size*tx_blk_size;
+  }
 #else
   // Difference of predicted and original in TRANSFORM domain
   for (i=0; i < tx_blk_size * tx_blk_size; i++)
@@ -1567,7 +1568,7 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
     }
 #if 1 //work in progress(yushin)
     // pvq of daala will be called here for intra mode block
-
+    *eob = -1;
     // Change coefficient ordering for pvq encoding.
     od_raster_to_coding_order(coeff_pvq, tx_blk_size, coeff, tx_blk_size);
     od_raster_to_coding_order(ref_coeff_pvq, tx_blk_size, ref_coeff, tx_blk_size);
@@ -1575,6 +1576,7 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
     extern daala_enc_ctx daala_enc;
     int quant = pd->dequant[1];
     assert(x->skip_block == 0);
+
     skip = pvq_encode_helper(&daala_enc,    // daala encoder
                              ref_coeff_pvq, // reference vector
                              coeff_pvq,     // target original vector
@@ -1591,13 +1593,12 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
     // Back to original coefficient order
     od_coding_order_to_raster(dqcoeff, tx_blk_size, dqcoeff_pvq, tx_blk_size);
 
-    // NOTE: this info is not available with pvq,
-    // but put this here since otherwise it crashes for unknown reason!
-    for (j = 0; j < tx_blk_size*tx_blk_size; j++)
+    // NOTE: *eob setting is temporary, currently does not affect anything at all.
+    for (j = 0; j < tx_blk_size*tx_blk_size; j++) {
       qcoeff[j] = dqcoeff[j] / quant;
+      if (qcoeff[j]) *eob = j;
     }
-
-    *eob = tx_blk_size*tx_blk_size;
+    }
 #else
     // Difference of predicted and original in TRANSFORM domain
     for (i=0; i < tx_blk_size * tx_blk_size; i++)

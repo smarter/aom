@@ -351,6 +351,7 @@ static int cost_coeffs(MACROBLOCK *x, int plane, int block, ENTROPY_CONTEXT *A,
   assert(type == PLANE_TYPE_Y ? mbmi->tx_size == tx_size
                               : get_uv_tx_size(mbmi, pd) == tx_size);
 
+#if !CONFIG_PVQ
   if (eob == 0) {
     // single eob token
     cost = token_costs[0][0][pt][EOB_TOKEN];
@@ -405,7 +406,9 @@ static int cost_coeffs(MACROBLOCK *x, int plane, int block, ENTROPY_CONTEXT *A,
 
   // is eob first coefficient;
   *A = *L = (c > 0);
+#else
 
+#endif
   return cost;
 }
 
