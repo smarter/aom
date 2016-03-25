@@ -1038,7 +1038,10 @@ void vp10_xform_quant(MACROBLOCK *x, int plane, int block, int blk_row,
   {
   extern daala_enc_ctx daala_enc;
   int quant = pd->dequant[1];
+  int tell;
   assert(x->skip_block == 0);
+
+  tell = od_ec_enc_tell(&daala_enc.ec);
 
   skip = pvq_encode_helper(&daala_enc,    // daala encoder
                            ref_coeff_pvq, // reference vector
@@ -1049,6 +1052,8 @@ void vp10_xform_quant(MACROBLOCK *x, int plane, int block, int blk_row,
                            tx_size,       // transform size in log_2 - 2, ex: 0 is for 4x4
                            0);            // key frame? 0 for always check noref mode == 0
 
+  x->rate = od_ec_enc_tell(&daala_enc.ec) - tell;
+
   // TODO: Need to verify if this skip info is properly used upward during RDO search
   x->skip_block = skip;
 
@@ -1058,13 +1063,6 @@ void vp10_xform_quant(MACROBLOCK *x, int plane, int block, int blk_row,
 
   // Back to original coefficient order
   od_coding_order_to_raster(dqcoeff, tx_blk_size, dqcoeff_pvq, tx_blk_size);
-
-  // NOTE: *eob setting is temporary, currently does not affect anything at all.
-  for (j = 0; j < tx_blk_size*tx_blk_size; j++) {
-    qcoeff[j] = dqcoeff[j] / quant;
-    if (qcoeff[j]) *eob = j;
-  }
-
   }
 #else
   // Difference of predicted and original in TRANSFORM domain
@@ -1578,7 +1576,10 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
     {
     extern daala_enc_ctx daala_enc;
     int quant = pd->dequant[1];
+    int tell;
     assert(x->skip_block == 0);
+
+    tell = od_ec_enc_tell(&daala_enc.ec);
 
     skip = pvq_encode_helper(&daala_enc,    // daala encoder
                              ref_coeff_pvq, // reference vector
@@ -1589,6 +1590,8 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
                              tx_size,       // transform size in log_2 - 2, ex: 0 is for 4x4
                              0);            // key frame? 0 for always check noref mode == 0
 
+    x->rate = od_ec_enc_tell(&daala_enc.ec) - tell;
+    //x->dist;
     // TODO: Need to verify if this skip info is properly used upward during RDO search
     x->skip_block = skip;
 
@@ -1598,12 +1601,6 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
 
     // Back to original coefficient order
     od_coding_order_to_raster(dqcoeff, tx_blk_size, dqcoeff_pvq, tx_blk_size);
-
-    // NOTE: *eob setting is temporary, currently does not affect anything at all.
-    for (j = 0; j < tx_blk_size*tx_blk_size; j++) {
-      qcoeff[j] = dqcoeff[j] / quant;
-      if (qcoeff[j]) *eob = j;
-    }
     }
 #else
     // Difference of predicted and original in TRANSFORM domain

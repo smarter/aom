@@ -141,6 +141,11 @@ struct macroblock {
   // Strong color activity detection. Used in RTC coding mode to enhance
   // the visual quality at the boundary of moving color objects.
   uint8_t color_sensitivity[2];
+
+#if CONFIG_PVQ
+  int rate;
+  int64_t dist;
+#endif
 };
 
 #ifdef __cplusplus

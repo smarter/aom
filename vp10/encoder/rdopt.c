@@ -503,8 +503,11 @@ static void block_rd_txfm(int plane, int block, int blk_row, int blk_col,
     args->exit_early = 1;
     return;
   }
-
+#if !CONFIG_PVQ
   rate = rate_block(plane, block, blk_row, blk_col, tx_size, args);
+#else
+  rate = x->rate;
+#endif
   rd1 = RDCOST(x->rdmult, x->rddiv, rate, dist);
   rd2 = RDCOST(x->rdmult, x->rddiv, 0, sse);
 
