@@ -1233,6 +1233,9 @@ static void encode_block(int plane, int block, int blk_row, int blk_col,
       assert(0 && "Invalid transform size");
       break;
   }
+#if CONFIG_PVQ
+  *(args->skip) = 1;
+#endif
 }
 
 static void encode_block_pass1(int plane, int block, int blk_row, int blk_col,
@@ -1656,7 +1659,8 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
 
 #if CONFIG_PVQ
   // TODO: Need to verify if this skip info is properly used upward during RDO search
-  *(args->skip) = skip;
+  //*(args->skip) = skip;
+  *(args->skip) = 1;
 #endif
 }
 
