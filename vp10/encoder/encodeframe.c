@@ -1952,7 +1952,11 @@ static void rd_pick_partition(VP10_COMP *cpi, ThreadData *td,
   int i, pl;
   BLOCK_SIZE subsize;
   RD_COST this_rdc, sum_rdc, best_rdc;
+#if !CONFIG_PVQ
   int do_split = bsize >= BLOCK_8X8;
+#else
+  int do_split = bsize > x->min_partition_size;
+#endif
   int do_rect = 1;
 
   // Override skipping rectangular partition operations for edge blocks
@@ -1970,10 +1974,17 @@ static void rd_pick_partition(VP10_COMP *cpi, ThreadData *td,
 #endif
 
   int partition_none_allowed = !force_horz_split && !force_vert_split;
+#if !CONFIG_PVQ
   int partition_horz_allowed =
       !force_vert_split && yss <= xss && bsize >= BLOCK_8X8;
   int partition_vert_allowed =
       !force_horz_split && xss <= yss && bsize >= BLOCK_8X8;
+#else
+  int partition_horz_allowed =
+      !force_vert_split && yss <= xss && bsize > x->min_partition_size;
+  int partition_vert_allowed =
+      !force_horz_split && xss <= yss && bsize > x->min_partition_size;
+#endif
   (void)*tp_orig;
 
   assert(num_8x8_blocks_wide_lookup[bsize] ==
