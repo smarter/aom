@@ -1031,7 +1031,7 @@ void vp10_xform_quant(MACROBLOCK *x, int plane, int block, int blk_row,
 
 #if 1 //work in progress(yushin)
   // pvq of daala will be called here for inter mode block
-  *eob = -1;
+  *eob = 0;
   // Change coefficient ordering for pvq encoding.
   od_raster_to_coding_order(coeff_pvq, tx_blk_size, coeff, tx_blk_size);
   od_raster_to_coding_order(ref_coeff_pvq, tx_blk_size, ref_coeff, tx_blk_size);
@@ -1571,7 +1571,7 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
     }
 #if 1 //work in progress(yushin)
     // pvq of daala will be called here for intra mode block
-    *eob = -1;
+    *eob = 0;
     // Change coefficient ordering for pvq encoding.
     od_raster_to_coding_order(coeff_pvq, tx_blk_size, coeff, tx_blk_size);
     od_raster_to_coding_order(ref_coeff_pvq, tx_blk_size, ref_coeff, tx_blk_size);
