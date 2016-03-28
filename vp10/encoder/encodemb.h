@@ -53,6 +53,10 @@ void fwd_txfm_16x16(const int16_t *src_diff, tran_low_t *coeff,
 void fwd_txfm_32x32(int rd_transform, const int16_t *src_diff,
                     tran_low_t *coeff, int diff_stride, TX_TYPE tx_type);
 
+int pvq_encode_helper2(tran_low_t *const coeff, tran_low_t *ref_coeff,
+    tran_low_t *const dqcoeff,
+    uint16_t *eob, int quant, int plane, int tx_size, int *rate);
+
 #if CONFIG_VPX_HIGHBITDEPTH
 void vp10_highbd_fwd_txfm_4x4(const int16_t *src_diff, tran_low_t *coeff,
                               int diff_stride, TX_TYPE tx_type, int lossless);

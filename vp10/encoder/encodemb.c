@@ -20,6 +20,7 @@
 #include "vp10/common/reconinter.h"
 #include "vp10/common/reconintra.h"
 #include "vp10/common/scan.h"
+#include "vp10/common/partition.h"
 
 #include "vp10/encoder/encodemb.h"
 #include "vp10/encoder/rd.h"
@@ -837,6 +838,51 @@ void vp10_xform_quant_dc(MACROBLOCK *x, int plane, int block, int blk_row,
       break;
   }
 }
+
+#if CONFIG_PVQ
+int pvq_encode_helper2(tran_low_t *const coeff, tran_low_t *ref_coeff,
+    tran_low_t *const dqcoeff,
+    uint16_t *eob, int quant, int plane, int tx_size, int *rate)
+{
+  const int tx_blk_size = 1 << (tx_size + 2);
+  int skip;
+  DECLARE_ALIGNED(16, int16_t, coeff_pvq[64 * 64]);
+  DECLARE_ALIGNED(16, int16_t, dqcoeff_pvq[64 * 64]);
+  DECLARE_ALIGNED(16, int16_t, ref_coeff_pvq[64 * 64]);
+
+  // pvq of daala will be called here for inter mode block
+  *eob = 0;
+  // Change coefficient ordering for pvq encoding.
+  od_raster_to_coding_order(coeff_pvq, tx_blk_size, coeff, tx_blk_size);
+  od_raster_to_coding_order(ref_coeff_pvq, tx_blk_size, ref_coeff, tx_blk_size);
+  {
+  extern daala_enc_ctx daala_enc;
+  int tell;
+
+  tell = od_ec_enc_tell(&daala_enc.ec);
+
+  skip = pvq_encode_helper(&daala_enc,    // daala encoder
+                           ref_coeff_pvq, // reference vector
+                           coeff_pvq,     // target original vector
+                           dqcoeff_pvq,   // de-quantized vector
+                           quant,         // AC quantizer
+                           plane,         // image plane
+                           tx_size,       // transform size in log_2 - 2, ex: 0 is for 4x4
+                           0);            // key frame? 0 for always check noref mode == 0
+
+  *rate = od_ec_enc_tell(&daala_enc.ec) - tell;
+
+  // Safely initialize dqcoeff since some coeffs (band size > 128 coeffs)
+  // are skipped by PVQ.
+  od_init_skipped_coeffs(dqcoeff, ref_coeff, 0, 0, tx_blk_size, tx_blk_size);
+
+  // Back to original coefficient order
+  od_coding_order_to_raster(dqcoeff, tx_blk_size, dqcoeff_pvq, tx_blk_size);
+  }
+
+  return skip;
+}
+#endif
 
 void vp10_xform_quant(MACROBLOCK *x, int plane, int block, int blk_row,
                       int blk_col, BLOCK_SIZE plane_bsize, TX_SIZE tx_size) {

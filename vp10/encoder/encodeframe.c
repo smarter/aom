@@ -2336,7 +2336,13 @@ static void rd_pick_partition(VP10_COMP *cpi, ThreadData *td,
   }
 
   if (bsize == BLOCK_64X64) {
+#if !CONFIG_PVQ
+    // TODO: Can enable this later, if pvq actually generates tokens
+    // in vpx format, otherwise pvq don't really need to use vpx's token format
+    // but directly writes to bitstream in packing and keep below assert
+    // disabled.
     assert(tp_orig < *tp || (tp_orig == *tp && xd->mi[0]->mbmi.skip));
+#endif
     assert(best_rdc.rate < INT_MAX);
     assert(best_rdc.dist < INT64_MAX);
   } else {

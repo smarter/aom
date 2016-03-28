@@ -422,6 +422,7 @@ static void set_rt_speed_feature(VP10_COMP *cpi, SPEED_FEATURES *sf, int speed,
   }
 
 #if CONFIG_PVQ
+  // NOTE:
   //sf->default_min_partition_size = BLOCK_8X8;
 #endif
 }
