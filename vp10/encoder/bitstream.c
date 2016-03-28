@@ -536,6 +536,12 @@ static void write_modes_b(VP10_COMP *cpi, const TileInfo *const tile,
       (*tok)++;
     }
   }
+#else
+  // PVQ writes its tokens (i.e. symbols) here.
+
+
+
+
 #endif
 }
 
