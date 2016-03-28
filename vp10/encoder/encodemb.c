@@ -1039,7 +1039,6 @@ void vp10_xform_quant(MACROBLOCK *x, int plane, int block, int blk_row,
   extern daala_enc_ctx daala_enc;
   int quant = pd->dequant[1];
   int tell;
-  assert(x->skip_block == 0);
 
   tell = od_ec_enc_tell(&daala_enc.ec);
 
@@ -1580,7 +1579,6 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
     extern daala_enc_ctx daala_enc;
     int quant = pd->dequant[1];
     int tell;
-    assert(x->skip_block == 0);
 
     tell = od_ec_enc_tell(&daala_enc.ec);
 
