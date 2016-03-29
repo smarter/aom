@@ -928,23 +928,3 @@ int pvq_encode_helper(daala_enc_ctx *daala_enc,
 
   return skip;
 }
-
-void od_init_skipped_coeffs(int16_t *d, int16_t *pred, int is_keyframe,
- int bo, int n, int w) {
-  int i;
-  int j;
-  if (is_keyframe) {
-    for (i = 0; i < n; i++) {
-      for (j = 0; j < n; j++) {
-        /* skip DC */
-        if (i || j) d[bo + i*w + j] = 0;
-      }
-    }
-  } else {
-    for (i = 0; i < n; i++) {
-      for (j = 0; j < n; j++) {
-        d[bo + i*w + j] = pred[i*n + j];
-      }
-    }
-  }
-}

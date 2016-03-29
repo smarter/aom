@@ -993,7 +993,8 @@ static int64_t rd_pick_intra4x4block(VP10_COMP *cpi, MACROBLOCK *x, int row,
 #else
 #if 1
           skip = pvq_encode_helper2(coeff, ref_coeff, dqcoeff,
-              &p->eobs[block], pd->dequant[1], 0, TX_4X4, &rate_pvq);
+              &p->eobs[block], pd->dequant[0], pd->dequant[1],
+              0, TX_4X4, &rate_pvq);
           //TODO: Check this. Do we ever use skip flag for lossless mode.
           x->skip_block = skip;
           ratey += rate_pvq;
@@ -1029,7 +1030,8 @@ static int64_t rd_pick_intra4x4block(VP10_COMP *cpi, MACROBLOCK *x, int row,
 #else
 #if 1
           skip = pvq_encode_helper2(coeff, ref_coeff, dqcoeff,
-              &p->eobs[block], pd->dequant[1], 0, TX_4X4, &rate_pvq);
+              &p->eobs[block], pd->dequant[0], pd->dequant[1],
+              0, TX_4X4, &rate_pvq);
           x->skip_block = skip;
           ratey += rate_pvq;
 #else

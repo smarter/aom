@@ -26,8 +26,12 @@
 #include "vp10/encoder/rd.h"
 #include "vp10/encoder/tokenize.h"
 
+#if CONFIG_PVQ
 #include "vp10/encoder/encint.h"
 #include "vp10/encoder/pvq_encoder.h"
+
+extern daala_enc_ctx daala_enc;
+#endif
 
 struct optimize_ctx {
   ENTROPY_CONTEXT ta[MAX_MB_PLANE][16];
@@ -842,25 +846,28 @@ void vp10_xform_quant_dc(MACROBLOCK *x, int plane, int block, int blk_row,
 #if CONFIG_PVQ
 int pvq_encode_helper2(tran_low_t *const coeff, tran_low_t *ref_coeff,
     tran_low_t *const dqcoeff,
-    uint16_t *eob, int dc_quant, int plane, int tx_size, int *rate)
+    uint16_t *eob, int dc_quant, int ac_quant,
+    int plane, int tx_size, int *rate)
 {
   const int tx_blk_size = 1 << (tx_size + 2);
   int skip;
   int j;
+  int pvq_dc_quant = OD_MAXI(1,
+    dc_quant * daala_enc.state.pvq_qm_q4[plane][od_qm_get_index(tx_size, 0)] >> 4);
+  int tell;
+  int has_dc_skip = 1;
+
   DECLARE_ALIGNED(16, int16_t, coeff_pvq[64 * 64]);
   DECLARE_ALIGNED(16, int16_t, dqcoeff_pvq[64 * 64]);
   DECLARE_ALIGNED(16, int16_t, ref_coeff_pvq[64 * 64]);
 
-  // pvq of daala will be called here for inter mode block
   *eob = 0;
+
   // Change coefficient ordering for pvq encoding.
   od_raster_to_coding_order(coeff_pvq, tx_blk_size, coeff, tx_blk_size);
   od_raster_to_coding_order(ref_coeff_pvq, tx_blk_size, ref_coeff, tx_blk_size);
-  {
-  extern daala_enc_ctx daala_enc;
-  int tell;
 
-  if (abs(coeff_pvq[0] - ref_coeff_pvq[0]) < dc_quant*141/256) { /* 0.55 */
+  if (abs(coeff_pvq[0] - ref_coeff_pvq[0]) < dc_quant * 141/256) { /* 0.55 */
     dqcoeff_pvq[0] = 0;
   }
   else {
@@ -873,26 +880,22 @@ int pvq_encode_helper2(tran_low_t *const coeff, tran_low_t *ref_coeff,
                            ref_coeff_pvq, // reference vector
                            coeff_pvq,     // target original vector
                            dqcoeff_pvq,   // de-quantized vector
-                           dc_quant,         // AC quantizer
+                           ac_quant,         // AC quantizer
                            plane,         // image plane
                            tx_size,       // transform size in log_2 - 2, ex: 0 is for 4x4
                            0);            // key frame? 0 for always check noref mode == 0
 
-  {
-    int has_dc_skip;
-    has_dc_skip = 1;
-    if (!has_dc_skip || dqcoeff_pvq[0]) {
-      generic_encode(&daala_enc.ec, &daala_enc.state.adapt.model_dc[plane],
-       abs(dqcoeff_pvq[0]) - has_dc_skip, -1,
-       &daala_enc.state.adapt.ex_dc[plane][tx_size][0], 2);
-    }
-    if (dqcoeff_pvq[0]) {
-      od_ec_enc_bits(&daala_enc.ec, dqcoeff_pvq[0] < 0, 1);
-      skip = 0;
-    }
-    dqcoeff_pvq[0] = dqcoeff_pvq[0]*dc_quant;
-    dqcoeff_pvq[0] += ref_coeff_pvq[0];
+  if (!has_dc_skip || dqcoeff_pvq[0]) {
+    generic_encode(&daala_enc.ec, &daala_enc.state.adapt.model_dc[plane],
+     abs(dqcoeff_pvq[0]) - has_dc_skip, -1,
+     &daala_enc.state.adapt.ex_dc[plane][tx_size][0], 2);
   }
+  if (dqcoeff_pvq[0]) {
+    od_ec_enc_bits(&daala_enc.ec, dqcoeff_pvq[0] < 0, 1);
+    skip = 0;
+  }
+  dqcoeff_pvq[0] = dqcoeff_pvq[0]*dc_quant;
+  dqcoeff_pvq[0] += ref_coeff_pvq[0];
 
   *rate = od_ec_enc_tell(&daala_enc.ec) - tell;
 
@@ -906,7 +909,6 @@ int pvq_encode_helper2(tran_low_t *const coeff, tran_low_t *ref_coeff,
   // Mark last nonzero coeff position via *eob.
   for (j = 0; j < tx_blk_size*tx_blk_size; j++) {
     if (dqcoeff[j]) *eob = j;
-  }
   }
 
   return skip;
@@ -1111,10 +1113,9 @@ void vp10_xform_quant(MACROBLOCK *x, int plane, int block, int blk_row,
   od_raster_to_coding_order(coeff_pvq, tx_blk_size, coeff, tx_blk_size);
   od_raster_to_coding_order(ref_coeff_pvq, tx_blk_size, ref_coeff, tx_blk_size);
   {
-  extern daala_enc_ctx daala_enc;
   int dc_quant = pd->dequant[0];
   int pvq_dc_quant = OD_MAXI(1,
-    dc_quant*daala_enc.state.pvq_qm_q4[plane][od_qm_get_index(tx_size, 0)] >> 4);
+    dc_quant * daala_enc.state.pvq_qm_q4[plane][od_qm_get_index(tx_size, 0)] >> 4);
   int ac_quant = pd->dequant[1];
   int tell;
 
@@ -1682,7 +1683,6 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
     od_raster_to_coding_order(coeff_pvq, tx_blk_size, coeff, tx_blk_size);
     od_raster_to_coding_order(ref_coeff_pvq, tx_blk_size, ref_coeff, tx_blk_size);
     {
-    extern daala_enc_ctx daala_enc;
     int dc_quant = pd->dequant[0];
     int pvq_dc_quant = OD_MAXI(1,
       dc_quant * daala_enc.state.pvq_qm_q4[plane][od_qm_get_index(tx_size, 0)] >> 4);
