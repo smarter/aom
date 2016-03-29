@@ -538,6 +538,13 @@ static void write_modes_b(VP10_COMP *cpi, const TileInfo *const tile,
   }
 #else
   // PVQ writes its tokens (i.e. symbols) here.
+  /* i.e.
+     for (i = 0; i < nb_bands; i++) {
+       pvq_encode_partition(...);
+       od_encode_cdf_adapt(...);
+     }
+  */
+
 
 
 
