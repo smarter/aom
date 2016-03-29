@@ -867,11 +867,11 @@ int pvq_encode_helper2(tran_low_t *const coeff, tran_low_t *ref_coeff,
   od_raster_to_coding_order(coeff_pvq, tx_blk_size, coeff, tx_blk_size);
   od_raster_to_coding_order(ref_coeff_pvq, tx_blk_size, ref_coeff, tx_blk_size);
 
-  if (abs(coeff_pvq[0] - ref_coeff_pvq[0]) < dc_quant * 141/256) { /* 0.55 */
+  if (abs(coeff_pvq[0] - ref_coeff_pvq[0]) < pvq_dc_quant * 141/256) { /* 0.55 */
     dqcoeff_pvq[0] = 0;
   }
   else {
-    dqcoeff_pvq[0] = OD_DIV_R0(coeff_pvq[0] - ref_coeff_pvq[0], dc_quant);
+    dqcoeff_pvq[0] = OD_DIV_R0(coeff_pvq[0] - ref_coeff_pvq[0], pvq_dc_quant);
   }
 
   tell = od_ec_enc_tell(&daala_enc.ec);
@@ -894,7 +894,7 @@ int pvq_encode_helper2(tran_low_t *const coeff, tran_low_t *ref_coeff,
     od_ec_enc_bits(&daala_enc.ec, dqcoeff_pvq[0] < 0, 1);
     skip = 0;
   }
-  dqcoeff_pvq[0] = dqcoeff_pvq[0]*dc_quant;
+  dqcoeff_pvq[0] = dqcoeff_pvq[0] * pvq_dc_quant;
   dqcoeff_pvq[0] += ref_coeff_pvq[0];
 
   *rate = od_ec_enc_tell(&daala_enc.ec) - tell;
@@ -1678,6 +1678,7 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
     }
 #if 1 //work in progress(yushin)
     // pvq of daala will be called here for intra mode block
+#if 0
     *eob = 0;
     // Change coefficient ordering for pvq encoding.
     od_raster_to_coding_order(coeff_pvq, tx_blk_size, coeff, tx_blk_size);
@@ -1740,6 +1741,16 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
       if (dqcoeff[j]) *eob = j;
     }
     }
+#else
+    skip = pvq_encode_helper2(coeff,
+                              ref_coeff,
+                              dqcoeff,
+                              &p->eobs[block],
+                              pd->dequant[0], pd->dequant[1],
+                              0,
+                              tx_size,
+                              &x->rate);
+#endif
 #else
     // Difference of predicted and original in TRANSFORM domain
     for (i=0; i < tx_blk_size * tx_blk_size; i++)
