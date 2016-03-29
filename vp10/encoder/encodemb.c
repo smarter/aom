@@ -539,6 +539,7 @@ void vp10_xform_quant_fp(MACROBLOCK *x, int plane, int block, int blk_row,
   const int dst_stride = pd->dst.stride;
   int tx_blk_size;
   int i, j;
+  int skip;
 
   dst = &pd->dst.buf[4 * (blk_row * dst_stride + blk_col)];
   src = &p->src.buf[4 * (blk_row * src_stride + blk_col)];
@@ -700,7 +701,17 @@ void vp10_xform_quant_fp(MACROBLOCK *x, int plane, int block, int blk_row,
       break;
     default: assert(0); break;
   }
-
+#if 1 //work in progress(yushin)
+  // pvq of daala will be called here for inter mode block
+  skip = pvq_encode_helper2(coeff,          // target original vector
+                            ref_coeff,      // reference vector
+                            dqcoeff,        // de-quantized vector
+                            &p->eobs[block],// End of Block marker
+                            pd->dequant[0], pd->dequant[1], // vpx's DC and AC quantization step size
+                            0,  // keyframe (daala's definition)? Must be always 0 for use in aom since it has intra prediction
+                            tx_size,        // block size in log_2 - 2, 0 for 4x4.
+                            &x->rate);      // rate measured
+#else
   // Difference of predicted and original in TRANSFORM domain
   for (i=0; i < tx_blk_size * tx_blk_size; i++)
     coeff[i] -= ref_coeff[i];
@@ -714,7 +725,7 @@ void vp10_xform_quant_fp(MACROBLOCK *x, int plane, int block, int blk_row,
     vp10_quantize_fp(coeff, tx_blk_size * tx_blk_size, x->skip_block, p->zbin, p->round_fp,
                      p->quant_fp, p->quant_shift, qcoeff, dqcoeff,
                      pd->dequant, eob, scan_order->scan, scan_order->iscan);
-
+#endif
 #endif//#if !CONFIG_PVQ
 }
 
@@ -842,78 +853,6 @@ void vp10_xform_quant_dc(MACROBLOCK *x, int plane, int block, int blk_row,
       break;
   }
 }
-
-#if CONFIG_PVQ
-int pvq_encode_helper2(tran_low_t *const coeff, tran_low_t *ref_coeff,
-    tran_low_t *const dqcoeff,
-    uint16_t *eob, int dc_quant, int ac_quant,
-    int plane, int tx_size, int *rate)
-{
-  const int tx_blk_size = 1 << (tx_size + 2);
-  int skip;
-  int j;
-  int pvq_dc_quant = OD_MAXI(1,
-    dc_quant * daala_enc.state.pvq_qm_q4[plane][od_qm_get_index(tx_size, 0)] >> 4);
-  int tell;
-  int has_dc_skip = 1;
-
-  DECLARE_ALIGNED(16, int16_t, coeff_pvq[64 * 64]);
-  DECLARE_ALIGNED(16, int16_t, dqcoeff_pvq[64 * 64]);
-  DECLARE_ALIGNED(16, int16_t, ref_coeff_pvq[64 * 64]);
-
-  *eob = 0;
-
-  // Change coefficient ordering for pvq encoding.
-  od_raster_to_coding_order(coeff_pvq, tx_blk_size, coeff, tx_blk_size);
-  od_raster_to_coding_order(ref_coeff_pvq, tx_blk_size, ref_coeff, tx_blk_size);
-
-  if (abs(coeff_pvq[0] - ref_coeff_pvq[0]) < pvq_dc_quant * 141/256) { /* 0.55 */
-    dqcoeff_pvq[0] = 0;
-  }
-  else {
-    dqcoeff_pvq[0] = OD_DIV_R0(coeff_pvq[0] - ref_coeff_pvq[0], pvq_dc_quant);
-  }
-
-  tell = od_ec_enc_tell(&daala_enc.ec);
-
-  skip = pvq_encode_helper(&daala_enc,    // daala encoder
-                           ref_coeff_pvq, // reference vector
-                           coeff_pvq,     // target original vector
-                           dqcoeff_pvq,   // de-quantized vector
-                           ac_quant,         // AC quantizer
-                           plane,         // image plane
-                           tx_size,       // transform size in log_2 - 2, ex: 0 is for 4x4
-                           0);            // key frame? 0 for always check noref mode == 0
-
-  if (!has_dc_skip || dqcoeff_pvq[0]) {
-    generic_encode(&daala_enc.ec, &daala_enc.state.adapt.model_dc[plane],
-     abs(dqcoeff_pvq[0]) - has_dc_skip, -1,
-     &daala_enc.state.adapt.ex_dc[plane][tx_size][0], 2);
-  }
-  if (dqcoeff_pvq[0]) {
-    od_ec_enc_bits(&daala_enc.ec, dqcoeff_pvq[0] < 0, 1);
-    skip = 0;
-  }
-  dqcoeff_pvq[0] = dqcoeff_pvq[0] * pvq_dc_quant;
-  dqcoeff_pvq[0] += ref_coeff_pvq[0];
-
-  *rate = od_ec_enc_tell(&daala_enc.ec) - tell;
-
-  // Safely initialize dqcoeff since some coeffs (band size > 128 coeffs)
-  // are skipped by PVQ.
-  od_init_skipped_coeffs(dqcoeff, ref_coeff, 0, 0, tx_blk_size, tx_blk_size);
-
-  // Back to original coefficient order
-  od_coding_order_to_raster(dqcoeff, tx_blk_size, dqcoeff_pvq, tx_blk_size);
-
-  // Mark last nonzero coeff position via *eob.
-  for (j = 0; j < tx_blk_size*tx_blk_size; j++) {
-    if (dqcoeff[j]) *eob = j;
-  }
-
-  return skip;
-}
-#endif
 
 void vp10_xform_quant(MACROBLOCK *x, int plane, int block, int blk_row,
                       int blk_col, BLOCK_SIZE plane_bsize, TX_SIZE tx_size) {
@@ -1108,68 +1047,14 @@ void vp10_xform_quant(MACROBLOCK *x, int plane, int block, int blk_row,
 
 #if 1 //work in progress(yushin)
   // pvq of daala will be called here for inter mode block
-  *eob = 0;
-  // Change coefficient ordering for pvq encoding.
-  od_raster_to_coding_order(coeff_pvq, tx_blk_size, coeff, tx_blk_size);
-  od_raster_to_coding_order(ref_coeff_pvq, tx_blk_size, ref_coeff, tx_blk_size);
-  {
-  int dc_quant = pd->dequant[0];
-  int pvq_dc_quant = OD_MAXI(1,
-    dc_quant * daala_enc.state.pvq_qm_q4[plane][od_qm_get_index(tx_size, 0)] >> 4);
-  int ac_quant = pd->dequant[1];
-  int tell;
-
-  if (abs(coeff_pvq[0] - ref_coeff_pvq[0]) < pvq_dc_quant * 141/256) { /* 0.55 */
-    dqcoeff_pvq[0] = 0;
-  }
-  else {
-    dqcoeff_pvq[0] = OD_DIV_R0(coeff_pvq[0] - ref_coeff_pvq[0], pvq_dc_quant);
-  }
-
-  tell = od_ec_enc_tell(&daala_enc.ec);
-
-  skip = pvq_encode_helper(&daala_enc,    // daala encoder
-                           ref_coeff_pvq, // reference vector
-                           coeff_pvq,     // target original vector
-                           dqcoeff_pvq,   // de-quantized vector
-                           ac_quant,         // AC quantizer
-                           plane,         // image plane
-                           tx_size,       // transform size in log_2 - 2, ex: 0 is for 4x4
-                           0);            // key frame? 0 for always check noref mode == 0
-
-  {
-    int has_dc_skip;
-    has_dc_skip = 1;
-    if (!has_dc_skip || dqcoeff_pvq[0]) {
-      generic_encode(&daala_enc.ec, &daala_enc.state.adapt.model_dc[plane],
-       abs(dqcoeff_pvq[0]) - has_dc_skip, -1,
-       &daala_enc.state.adapt.ex_dc[plane][tx_size][0], 2);
-    }
-    if (dqcoeff_pvq[0]) {
-      od_ec_enc_bits(&daala_enc.ec, dqcoeff_pvq[0] < 0, 1);
-      skip = 0;
-    }
-    dqcoeff_pvq[0] = dqcoeff_pvq[0] * pvq_dc_quant;
-    dqcoeff_pvq[0] += ref_coeff_pvq[0];
-  }
-
-  x->rate = od_ec_enc_tell(&daala_enc.ec) - tell;
-
-  // TODO: Need to verify if this skip info is properly used upward during RDO search
-  x->skip_block = skip;
-
-  // Safely initialize dqcoeff since some coeffs (band size > 128 coeffs)
-  // are skipped by PVQ.
-  od_init_skipped_coeffs(dqcoeff, ref_coeff, 0, 0, tx_blk_size, tx_blk_size);
-
-  // Back to original coefficient order
-  od_coding_order_to_raster(dqcoeff, tx_blk_size, dqcoeff_pvq, tx_blk_size);
-
-  // Mark last nonzero coeff position via *eob.
-  for (j = 0; j < tx_blk_size*tx_blk_size; j++) {
-    if (dqcoeff[j]) *eob = j;
-  }
-  }
+  skip = pvq_encode_helper2(coeff,          // target original vector
+                            ref_coeff,      // reference vector
+                            dqcoeff,        // de-quantized vector
+                            &p->eobs[block],// End of Block marker
+                            pd->dequant[0], pd->dequant[1], // vpx's DC and AC quantization step size
+                            0,  // keyframe (daala's definition)? Must be always 0 for use in aom since it has intra prediction
+                            tx_size,        // block size in log_2 - 2, 0 for 4x4.
+                            &x->rate);      // rate measured
 #else
   // Difference of predicted and original in TRANSFORM domain
   for (i=0; i < tx_blk_size * tx_blk_size; i++)
@@ -1339,9 +1224,6 @@ static void encode_block(int plane, int block, int blk_row, int blk_col,
       assert(0 && "Invalid transform size");
       break;
   }
-#if CONFIG_PVQ
-  *(args->skip) = 1;
-#endif
 }
 
 static void encode_block_pass1(int plane, int block, int blk_row, int blk_col,
@@ -1678,79 +1560,14 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
     }
 #if 1 //work in progress(yushin)
     // pvq of daala will be called here for intra mode block
-#if 0
-    *eob = 0;
-    // Change coefficient ordering for pvq encoding.
-    od_raster_to_coding_order(coeff_pvq, tx_blk_size, coeff, tx_blk_size);
-    od_raster_to_coding_order(ref_coeff_pvq, tx_blk_size, ref_coeff, tx_blk_size);
-    {
-    int dc_quant = pd->dequant[0];
-    int pvq_dc_quant = OD_MAXI(1,
-      dc_quant * daala_enc.state.pvq_qm_q4[plane][od_qm_get_index(tx_size, 0)] >> 4);
-    int ac_quant = pd->dequant[1];
-    int tell;
-
-    if (abs(coeff_pvq[0] - ref_coeff_pvq[0]) < pvq_dc_quant * 141/256) { /* 0.55 */
-      dqcoeff_pvq[0] = 0;
-    }
-    else {
-      dqcoeff_pvq[0] = OD_DIV_R0(coeff_pvq[0] - ref_coeff_pvq[0], pvq_dc_quant);
-    }
-
-    tell = od_ec_enc_tell(&daala_enc.ec);
-
-    skip = pvq_encode_helper(&daala_enc,    // daala encoder
-                             ref_coeff_pvq, // reference vector
-                             coeff_pvq,     // target original vector
-                             dqcoeff_pvq,   // de-quantized vector
-                             ac_quant,         // AC quantizer
-                             plane,         // image plane
-                             tx_size,       // transform size in log_2 - 2, ex: 0 is for 4x4
-                             0);            // key frame? 0 for always check noref mode == 0
-
-    {
-      int has_dc_skip;
-      has_dc_skip = 1;
-      if (!has_dc_skip || dqcoeff_pvq[0]) {
-        generic_encode(&daala_enc.ec, &daala_enc.state.adapt.model_dc[plane],
-         abs(dqcoeff_pvq[0]) - has_dc_skip, -1,
-         &daala_enc.state.adapt.ex_dc[plane][tx_size][0], 2);
-      }
-      if (dqcoeff_pvq[0]) {
-        od_ec_enc_bits(&daala_enc.ec, dqcoeff_pvq[0] < 0, 1);
-        skip = 0;
-      }
-      dqcoeff_pvq[0] = dqcoeff_pvq[0] * pvq_dc_quant;
-      dqcoeff_pvq[0] += ref_coeff_pvq[0];
-    }
-
-    x->rate = od_ec_enc_tell(&daala_enc.ec) - tell;
-
-    // TODO: Need to verify if this skip info is properly used upward during RDO search
-    x->skip_block = skip;
-
-    // Safely initialize dqcoeff since some coeffs (band size > 128 coeffs)
-    // are skipped by PVQ.
-    od_init_skipped_coeffs(dqcoeff, ref_coeff, 0, 0, tx_blk_size, tx_blk_size);
-
-    // Back to original coefficient order
-    od_coding_order_to_raster(dqcoeff, tx_blk_size, dqcoeff_pvq, tx_blk_size);
-
-    // Mark last nonzero coeff position via *eob.
-    for (j = 0; j < tx_blk_size*tx_blk_size; j++) {
-      if (dqcoeff[j]) *eob = j;
-    }
-    }
-#else
-    skip = pvq_encode_helper2(coeff,
-                              ref_coeff,
-                              dqcoeff,
-                              &p->eobs[block],
-                              pd->dequant[0], pd->dequant[1],
-                              0,
-                              tx_size,
-                              &x->rate);
-#endif
+    skip = pvq_encode_helper2(coeff,          // target original vector
+                              ref_coeff,      // reference vector
+                              dqcoeff,        // de-quantized vector
+                              &p->eobs[block],// End of Block marker
+                              pd->dequant[0], pd->dequant[1], // vpx's DC and AC quantization step size
+                              0,  // keyframe (daala's definition)? Must be always 0 for use in aom since it has intra prediction
+                              tx_size,        // block size in log_2 - 2, 0 for 4x4.
+                              &x->rate);      // rate measured
 #else
     // Difference of predicted and original in TRANSFORM domain
     for (i=0; i < tx_blk_size * tx_blk_size; i++)
@@ -1805,8 +1622,7 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
 
 #if CONFIG_PVQ
   // TODO: Need to verify if this skip info is properly used upward during RDO search
-  //*(args->skip) = skip;
-  *(args->skip) = 1;
+  *(args->skip) = skip;
 #endif
 }
 
@@ -1817,3 +1633,124 @@ void vp10_encode_intra_block_plane(MACROBLOCK *x, BLOCK_SIZE bsize, int plane) {
   vp10_foreach_transformed_block_in_plane(xd, bsize, plane,
                                           vp10_encode_block_intra, &arg);
 }
+
+#if CONFIG_PVQ
+/** Helper function to daala's PVQ encode function
+ *
+ * @param [in]     ref     'reference' (prediction) vector
+ * @param [in]     in      coefficient block to quantize and encode
+ * @param [out]    out     quantized coefficient block
+ * @param [in]     quant   scale/quantizer
+ * @param [in]     pli     plane index
+ * @param [in]     bs      log of the block size minus two
+ * @param [in]     is_keyframe whether we're encoding a keyframe
+ * @return         Returns 1 if the AC coefficients are skipped, zero otherwise
+ */
+int pvq_encode_helper(daala_enc_ctx *daala_enc,
+                   int16_t *ref,
+                   const int16_t *in,
+                   int16_t *out,
+                   int quant,
+                   int pli,
+                   int bs,
+                   int is_keyframe){
+  int off = od_qm_offset(bs, pli ? 1 : 0);
+  int skip;
+  int i;
+  od_coeff ref_int32[64*64];
+  od_coeff in_int32[64*64];
+  od_coeff out_int32[64*64];
+  int blk_size = 1 << (bs + 2);
+
+  //copy int16 inputs to int32
+  for (i=0; i < blk_size*blk_size; i++)
+    ref_int32[i] = ref[i];
+
+  for (i=0; i < blk_size*blk_size; i++)
+    in_int32[i] = in[i];
+
+  skip = od_pvq_encode(daala_enc, ref_int32, in_int32, out_int32,
+          quant,//scale/quantizer
+          pli, bs,
+          OD_PVQ_BETA[0/*use_masking*/][pli][bs],
+          1,//OD_ROBUST_STREAM
+          is_keyframe,
+          0, 0, 0, //q_scaling, bx, by,
+          daala_enc->state.qm + off, daala_enc->state.qm_inv + off);
+
+  //copy int32 result back to int16
+  for (i=0; i < blk_size*blk_size; i++)
+    out[i] = out_int32[i];
+
+  return skip;
+}
+
+int pvq_encode_helper2(tran_low_t *const coeff, tran_low_t *ref_coeff,
+    tran_low_t *const dqcoeff,
+    uint16_t *eob, int dc_quant, int ac_quant,
+    int plane, int tx_size, int *rate)
+{
+  const int tx_blk_size = 1 << (tx_size + 2);
+  int skip;
+  int j;
+  int pvq_dc_quant = OD_MAXI(1,
+    dc_quant * daala_enc.state.pvq_qm_q4[plane][od_qm_get_index(tx_size, 0)] >> 4);
+  int tell;
+  int has_dc_skip = 1;
+
+  DECLARE_ALIGNED(16, int16_t, coeff_pvq[64 * 64]);
+  DECLARE_ALIGNED(16, int16_t, dqcoeff_pvq[64 * 64]);
+  DECLARE_ALIGNED(16, int16_t, ref_coeff_pvq[64 * 64]);
+
+  *eob = 0;
+
+  // Change coefficient ordering for pvq encoding.
+  od_raster_to_coding_order(coeff_pvq, tx_blk_size, coeff, tx_blk_size);
+  od_raster_to_coding_order(ref_coeff_pvq, tx_blk_size, ref_coeff, tx_blk_size);
+
+  if (abs(coeff_pvq[0] - ref_coeff_pvq[0]) < pvq_dc_quant * 141/256) { /* 0.55 */
+    dqcoeff_pvq[0] = 0;
+  }
+  else {
+    dqcoeff_pvq[0] = OD_DIV_R0(coeff_pvq[0] - ref_coeff_pvq[0], pvq_dc_quant);
+  }
+
+  tell = od_ec_enc_tell(&daala_enc.ec);
+
+  skip = pvq_encode_helper(&daala_enc,    // daala encoder
+                           ref_coeff_pvq, // reference vector
+                           coeff_pvq,     // target original vector
+                           dqcoeff_pvq,   // de-quantized vector
+                           ac_quant,         // AC quantizer
+                           plane,         // image plane
+                           tx_size,       // transform size in log_2 - 2, ex: 0 is for 4x4
+                           0);            // key frame? 0 for always check noref mode == 0
+
+  if (!has_dc_skip || dqcoeff_pvq[0]) {
+    generic_encode(&daala_enc.ec, &daala_enc.state.adapt.model_dc[plane],
+     abs(dqcoeff_pvq[0]) - has_dc_skip, -1,
+     &daala_enc.state.adapt.ex_dc[plane][tx_size][0], 2);
+  }
+  if (dqcoeff_pvq[0]) {
+    od_ec_enc_bits(&daala_enc.ec, dqcoeff_pvq[0] < 0, 1);
+    skip = 0;
+  }
+  dqcoeff_pvq[0] = dqcoeff_pvq[0] * pvq_dc_quant;
+  dqcoeff_pvq[0] += ref_coeff_pvq[0];
+
+  *rate = od_ec_enc_tell(&daala_enc.ec) - tell;
+
+  // Safely initialize dqcoeff since some coeffs (band size > 128 coeffs)
+  // are skipped by PVQ.
+  od_init_skipped_coeffs(dqcoeff, ref_coeff, 0, 0, tx_blk_size, tx_blk_size);
+
+  // Back to original coefficient order
+  od_coding_order_to_raster(dqcoeff, tx_blk_size, dqcoeff_pvq, tx_blk_size);
+
+  // Mark last nonzero coeff position.
+  for (j = 0; j < tx_blk_size*tx_blk_size; j++)
+    if (dqcoeff[j]) *eob = j;
+
+  return skip;
+}
+#endif
