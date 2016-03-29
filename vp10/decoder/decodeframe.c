@@ -2228,8 +2228,8 @@ static size_t read_uncompressed_header(VP10Decoder *pbi,
 #if CONFIG_PVQ
   {
   extern daala_dec_ctx daala_dec;
-  od_adapt_ctx_reset(&daala_dec.state, 0);
   od_adapt_ctx *adapt = &daala_dec.state.adapt;
+  od_adapt_ctx_reset(adapt, 0);
   od_adapt_pvq_ctx_reset(&adapt->pvq, frame_is_intra_only(cm));
   adapt->skip_increment = 128;
   OD_CDFS_INIT(adapt->skip_cdf, adapt->skip_increment >> 2);

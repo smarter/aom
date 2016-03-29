@@ -710,7 +710,8 @@ void vp10_xform_quant_fp(MACROBLOCK *x, int plane, int block, int blk_row,
                             pd->dequant[0], pd->dequant[1], // vpx's DC and AC quantization step size
                             0,  // keyframe (daala's definition)? Must be always 0 for use in aom since it has intra prediction
                             tx_size,        // block size in log_2 - 2, 0 for 4x4.
-                            &x->rate);      // rate measured
+                            &x->rate,       // rate measured
+                            &xd->mi[0]->mbmi.pvq); // PVQ info for a block
 #else
   // Difference of predicted and original in TRANSFORM domain
   for (i=0; i < tx_blk_size * tx_blk_size; i++)
@@ -1054,7 +1055,8 @@ void vp10_xform_quant(MACROBLOCK *x, int plane, int block, int blk_row,
                             pd->dequant[0], pd->dequant[1], // vpx's DC and AC quantization step size
                             0,  // keyframe (daala's definition)? Must be always 0 for use in aom since it has intra prediction
                             tx_size,        // block size in log_2 - 2, 0 for 4x4.
-                            &x->rate);      // rate measured
+                            &x->rate,       // rate measured
+                            &xd->mi[0]->mbmi.pvq); // PVQ info for a block
 #else
   // Difference of predicted and original in TRANSFORM domain
   for (i=0; i < tx_blk_size * tx_blk_size; i++)
@@ -1567,7 +1569,8 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
                               pd->dequant[0], pd->dequant[1], // vpx's DC and AC quantization step size
                               0,  // keyframe (daala's definition)? Must be always 0 for use in aom since it has intra prediction
                               tx_size,        // block size in log_2 - 2, 0 for 4x4.
-                              &x->rate);      // rate measured
+                              &x->rate,       // rate measured
+                              &xd->mi[0]->mbmi.pvq); // PVQ info for a block
 #else
     // Difference of predicted and original in TRANSFORM domain
     for (i=0; i < tx_blk_size * tx_blk_size; i++)
@@ -1653,7 +1656,8 @@ int pvq_encode_helper(daala_enc_ctx *daala_enc,
                    int quant,
                    int pli,
                    int bs,
-                   int is_keyframe){
+                   int is_keyframe,
+                   PVQ_INFO *pvq_info) {
   int off = od_qm_offset(bs, pli ? 1 : 0);
   int skip;
   int i;
@@ -1676,7 +1680,7 @@ int pvq_encode_helper(daala_enc_ctx *daala_enc,
           1,//OD_ROBUST_STREAM
           is_keyframe,
           0, 0, 0, //q_scaling, bx, by,
-          daala_enc->state.qm + off, daala_enc->state.qm_inv + off);
+          daala_enc->state.qm + off, daala_enc->state.qm_inv + off, pvq_info);
 
   //copy int32 result back to int16
   for (i=0; i < blk_size*blk_size; i++)
@@ -1688,8 +1692,7 @@ int pvq_encode_helper(daala_enc_ctx *daala_enc,
 int pvq_encode_helper2(tran_low_t *const coeff, tran_low_t *ref_coeff,
     tran_low_t *const dqcoeff,
     uint16_t *eob, int dc_quant, int ac_quant,
-    int plane, int tx_size, int *rate)
-{
+    int plane, int tx_size, int *rate, PVQ_INFO *pvq_info) {
   const int tx_blk_size = 1 << (tx_size + 2);
   int skip;
   int j;
@@ -1724,7 +1727,8 @@ int pvq_encode_helper2(tran_low_t *const coeff, tran_low_t *ref_coeff,
                            ac_quant,         // AC quantizer
                            plane,         // image plane
                            tx_size,       // transform size in log_2 - 2, ex: 0 is for 4x4
-                           0);            // key frame? 0 for always check noref mode == 0
+                           0,            // key frame? 0 for always check noref mode == 0
+                           pvq_info);
 
   if (!has_dc_skip || dqcoeff_pvq[0]) {
     generic_encode(&daala_enc.ec, &daala_enc.state.adapt.model_dc[plane],
@@ -1753,4 +1757,41 @@ int pvq_encode_helper2(tran_low_t *const coeff, tran_low_t *ref_coeff,
 
   return skip;
 }
+
+void store_pvq_enc_info(PVQ_INFO *pvq_info,
+                        int *qg,
+                        int *theta,
+                        int *max_theta,
+                        int *k,
+                        od_coeff *y,
+                        generic_encoder *model,
+                        int *exg,
+                        int *ext,
+                        int nb_bands,
+                        int *off,
+                        int skip_rest,
+                        int skip_dir,
+                        int bs) {       // log of the block size minus two
+  int i;
+
+  for (i=0; i < PVQ_MAX_PARTITIONS; i++) {
+    pvq_info->qg[i] = qg[i];
+    pvq_info->theta[i] = theta[i];
+    pvq_info->max_theta[i] = max_theta[i];
+    pvq_info->k[i] = k[i];
+  }
+  // TODO: just copying block size should be fine
+  for (i=0; i < OD_BSIZE_MAX*OD_BSIZE_MAX; i++) {
+    pvq_info->y[i] = y[i];
+  }
+  pvq_info->model = model;
+  pvq_info->exg = exg;
+  pvq_info->ext = ext;
+  pvq_info->nb_bands = nb_bands;
+  pvq_info->off = off;
+  pvq_info->skip_rest = skip_rest;
+  pvq_info->skip_dir = skip_dir;
+  pvq_info->bs = bs;
+}
+
 #endif

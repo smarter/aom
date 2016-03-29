@@ -37,6 +37,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 //#include "filter.h"
 #include "pvq_encoder.h"
 #include "vp10/common/partition.h"
+#include "vp10/common/blockd.h"
 
 #define OD_PVQ_RATE_APPROX (1)
 /*Shift to ensure that the upper bound (i.e. for the max blocksize) of the
@@ -712,7 +713,8 @@ int od_pvq_encode(daala_enc_ctx *enc,
                    int bx,
                    int by,
                    const int16_t *qm,
-                   const int16_t *qm_inv){
+                   const int16_t *qm_inv,
+                   PVQ_INFO *pvq_info){
   int theta[PVQ_MAX_PARTITIONS];
   int max_theta[PVQ_MAX_PARTITIONS];
   int qg[PVQ_MAX_PARTITIONS];
@@ -815,6 +817,14 @@ int od_pvq_encode(daala_enc_ctx *enc,
     }
   }
   if (theta[0] == skip_theta_value && qg[0] == 0 && skip_rest) nb_bands = 0;
+
+  // NOTE: There was no other better place to put this function.
+  // TODO: Better if we can call this function only when mode decision
+  //       (i.e. RDO) is over.
+  store_pvq_enc_info(pvq_info, qg, theta, max_theta, k,
+    y, model, exg, ext, nb_bands, off,
+    skip_rest, skip_dir, bs);
+
   for (i = 0; i < nb_bands; i++) {
     int encode_flip;
     /* Encode CFL flip bit just after the first time it's used. */
@@ -833,7 +843,6 @@ int od_pvq_encode(daala_enc_ctx *enc,
     }
     if (encode_flip) cfl_encoded = 1;
   }
-#if 1 // TODO: Enable this block later to enable 'skip' mode.
   tell = od_ec_enc_tell_frac(&enc->ec) - tell;
   /* Account for the rate of skipping the AC, based on the same DC decision
      we made when trying to not skip AC. */
@@ -875,6 +884,5 @@ int od_pvq_encode(daala_enc_ctx *enc,
     else for (i = 1; i < 1 << (2*bs + 4); i++) out[i] = ref[i];
     if (out[0] == 0) return 1;
   }
-#endif
   return 0;
 }

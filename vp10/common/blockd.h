@@ -27,6 +27,9 @@
 #include "vp10/common/scale.h"
 #include "vp10/common/seg_common.h"
 #include "vp10/common/tile_common.h"
+#if CONFIG_PVQ
+#include "vp10/common/pvq.h"
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -52,6 +55,25 @@ typedef struct {
   PREDICTION_MODE as_mode;
   int_mv as_mv[2];  // first, second inter predictor motion vectors
 } b_mode_info;
+
+#if CONFIG_PVQ
+typedef struct PVQ_INFO {
+  int theta[PVQ_MAX_PARTITIONS];
+  int max_theta[PVQ_MAX_PARTITIONS];
+  int qg[PVQ_MAX_PARTITIONS];
+  int k[PVQ_MAX_PARTITIONS];
+  od_coeff y[OD_BSIZE_MAX*OD_BSIZE_MAX];
+  int *exg;
+  int *ext;
+  int nb_bands;
+  int *off;
+  int size[PVQ_MAX_PARTITIONS];
+  generic_encoder *model;
+  int skip_rest;
+  int skip_dir;
+  int bs;       // log of the block size minus two
+} PVQ_INFO;
+#endif
 
 // Note that the rate-distortion optimization loop, bit-stream writer, and
 // decoder implementation modules critically rely on the defined entry values
@@ -90,6 +112,9 @@ typedef struct {
   int_mv mv[2];
   /* deringing gain *per-superblock* */
   int8_t dering_gain;
+#if CONFIG_PVQ
+  PVQ_INFO pvq;
+#endif
 } MB_MODE_INFO;
 
 typedef struct MODE_INFO {

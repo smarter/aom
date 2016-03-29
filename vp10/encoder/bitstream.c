@@ -508,10 +508,14 @@ static void write_modes_b(VP10_COMP *cpi, const TileInfo *const tile,
   const VP10_COMMON *const cm = &cpi->common;
   MACROBLOCKD *const xd = &cpi->td.mb.e_mbd;
   MODE_INFO *m;
+  MB_MODE_INFO mbmi;
   int plane;
+  int i;
+  PVQ_INFO pvq_info;
 
   xd->mi = cm->mi_grid_visible + (mi_row * cm->mi_stride + mi_col);
   m = xd->mi[0];
+  pvq_info = m->mbmi.pvq;
 
   cpi->td.mb.mbmi_ext = cpi->mbmi_ext_base + (mi_row * cm->mi_cols + mi_col);
 
@@ -538,6 +542,15 @@ static void write_modes_b(VP10_COMP *cpi, const TileInfo *const tile,
   }
 #else
   // PVQ writes its tokens (i.e. symbols) here.
+  {
+    const int is_keyframe = 0;
+    const int encode_flip = 0;
+    const int flip = 0;
+    int size[PVQ_MAX_PARTITIONS];
+
+    for (i = 0; i < pvq_info.nb_bands; i++)
+      size[i] = pvq_info.off[i+1] - pvq_info.off[i];
+
   /* i.e.
      for (i = 0; i < nb_bands; i++) {
        pvq_encode_partition(...);
@@ -548,7 +561,7 @@ static void write_modes_b(VP10_COMP *cpi, const TileInfo *const tile,
 
 
 
-
+  }
 #endif
 }
 

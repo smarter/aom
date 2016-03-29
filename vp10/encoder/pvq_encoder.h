@@ -29,6 +29,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 # include "vp10/common/pvq.h"
 # include "vpx_dsp/entenc.h"
 # include "vp10/encoder/encint.h"
+# include "vp10/common/blockd.h"
 
 void laplace_encode_special(od_ec_enc *enc, int x, unsigned decay, int max);
 void laplace_encode(od_ec_enc *enc, int x, int ex_q8, int k);
@@ -43,6 +44,6 @@ void od_encode_quantizer_scaling(daala_enc_ctx *enc, int q_scaling, int bx,
 int od_pvq_encode(daala_enc_ctx *enc, od_coeff *ref, const od_coeff *in,
  od_coeff *out, int q0, int pli, int bs, const double *beta, int robust,
  int is_keyframe, int q_scaling, int bx, int by, const int16_t *qm,
- const int16_t *qm_inv);
+ const int16_t *qm_inv, PVQ_INFO *pvq_info);
 
 #endif
