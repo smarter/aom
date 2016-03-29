@@ -846,6 +846,7 @@ int pvq_encode_helper2(tran_low_t *const coeff, tran_low_t *ref_coeff,
 {
   const int tx_blk_size = 1 << (tx_size + 2);
   int skip;
+  int j;
   DECLARE_ALIGNED(16, int16_t, coeff_pvq[64 * 64]);
   DECLARE_ALIGNED(16, int16_t, dqcoeff_pvq[64 * 64]);
   DECLARE_ALIGNED(16, int16_t, ref_coeff_pvq[64 * 64]);
@@ -878,6 +879,11 @@ int pvq_encode_helper2(tran_low_t *const coeff, tran_low_t *ref_coeff,
 
   // Back to original coefficient order
   od_coding_order_to_raster(dqcoeff, tx_blk_size, dqcoeff_pvq, tx_blk_size);
+
+  // Mark last nonzero coeff position via *eob.
+  for (j = 0; j < tx_blk_size*tx_blk_size; j++) {
+    if (dqcoeff[j]) *eob = j;
+  }
   }
 
   return skip;
@@ -1108,6 +1114,11 @@ void vp10_xform_quant(MACROBLOCK *x, int plane, int block, int blk_row,
 
   // Back to original coefficient order
   od_coding_order_to_raster(dqcoeff, tx_blk_size, dqcoeff_pvq, tx_blk_size);
+
+  // Mark last nonzero coeff position via *eob.
+  for (j = 0; j < tx_blk_size*tx_blk_size; j++) {
+    if (dqcoeff[j]) *eob = j;
+  }
   }
 #else
   // Difference of predicted and original in TRANSFORM domain
@@ -1209,13 +1220,13 @@ static void encode_block(int plane, int block, int blk_row, int blk_col,
   if (p->eobs[block] > 1) {
     // transform block size in pixels
     tx_blk_size = 1 << (tx_size + 2);
-
+#if 0
     // Reconstruct residue + predicted signal in transform domain
     // Note that ref_coeff[] is already computed in vp10_xform_quant(),
     // as like dqcoeff[].
     for (i=0; i < tx_blk_size * tx_blk_size; i++)
       dqcoeff[i] += ref_coeff[i];
-
+#endif
     // Since vp10 does not have inverse transform only function
     // but contain adding the inverse transform to predicted image,
     // pass blank dummy image to vp10_inv_txfm_add_*x*(), i.e. set dst as zeros
@@ -1648,6 +1659,13 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
 
     // Back to original coefficient order
     od_coding_order_to_raster(dqcoeff, tx_blk_size, dqcoeff_pvq, tx_blk_size);
+
+    dqcoeff[0] = coeff[0];
+
+    // Mark last nonzero coeff position via *eob.
+    for (j = 0; j < tx_blk_size*tx_blk_size; j++) {
+      if (dqcoeff[j]) *eob = j;
+    }
     }
 #else
     // Difference of predicted and original in TRANSFORM domain
