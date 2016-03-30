@@ -29,6 +29,7 @@
 #include "vp10/common/tile_common.h"
 #if CONFIG_PVQ
 #include "vp10/common/pvq.h"
+#include "vp10/common/state.h"
 #endif
 
 #ifdef __cplusplus
@@ -229,6 +230,8 @@ typedef struct macroblockd {
 
   PARTITION_CONTEXT *above_seg_context;
   PARTITION_CONTEXT left_seg_context[8];
+
+  od_adapt_ctx adapt;
 
 #if CONFIG_VPX_HIGHBITDEPTH
   /* Bit depth: 8, 10, 12 */

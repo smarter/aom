@@ -40,6 +40,9 @@
 #include "vp10/encoder/segmentation.h"
 #include "vp10/encoder/subexp.h"
 #include "vp10/encoder/tokenize.h"
+#if CONFIG_PVQ
+#include "vp10/encoder/pvq_encoder.c"
+#endif
 
 static const struct vp10_token intra_mode_encodings[INTRA_MODES] = {
   { 0, 1 },  { 6, 3 },   { 28, 5 },  { 30, 5 }, { 58, 6 },
@@ -542,25 +545,33 @@ static void write_modes_b(VP10_COMP *cpi, const TileInfo *const tile,
   }
 #else
   // PVQ writes its tokens (i.e. symbols) here.
-  {
+  if (!m->mbmi.skip) {
     const int is_keyframe = 0;
     const int encode_flip = 0;
     const int flip = 0;
+    const int robust = 1;
+    const int pli = 0; // FIXME
+    int i;
     int size[PVQ_MAX_PARTITIONS];
-
-    for (i = 0; i < pvq_info.nb_bands; i++)
-      size[i] = pvq_info.off[i+1] - pvq_info.off[i];
-
-  /* i.e.
-     for (i = 0; i < nb_bands; i++) {
-       pvq_encode_partition(...);
-       od_encode_cdf_adapt(...);
-     }
-  */
-
-
-
-
+    PVQ_INFO* pvq = &m->mbmi.pvq;
+    for (i = 0; i < pvq->nb_bands; i++) {
+      if (i == 0 || (!pvq->skip_rest &&
+       !(pvq->skip_dir & (1 << ((i - 1)%3))))) {
+        pvq_encode_partition(&w->ec, pvq->qg[i], pvq->theta[i],
+         pvq->max_theta[i], pvq->y + pvq->off[i],
+         pvq->size[i], pvq->k[i], pvq->model, &xd->adapt,
+         pvq->exg + i, pvq->ext + i,
+         robust || is_keyframe, (pli != 0)*OD_NBSIZES*PVQ_MAX_PARTITIONS
+         + pvq->bs*PVQ_MAX_PARTITIONS + i, is_keyframe,
+         i == 0 && (i < pvq->nb_bands - 1),
+         pvq->skip_rest, pvq->bs, encode_flip, flip);
+      }
+      if (i == 0 && !pvq->skip_rest && pvq->bs > 0) {
+        od_encode_cdf_adapt(&w->ec, pvq->skip_dir,
+         &xd->adapt.pvq.pvq_skip_dir_cdf[(pli != 0) + 2*(pvq->bs - 1)][0], 7,
+         xd->adapt.pvq.pvq_skip_dir_increment);
+      }
+    }
   }
 #endif
 }
@@ -1144,6 +1155,7 @@ static size_t encode_tiles(VP10_COMP *cpi, uint8_t *data_ptr,
   const int tile_cols = 1 << cm->log2_tile_cols;
   const int tile_rows = 1 << cm->log2_tile_rows;
   unsigned int max_tile = 0;
+  MACROBLOCKD *const xd = &cpi->td.mb.e_mbd;
 
   memset(cm->above_seg_context, 0,
          sizeof(*cm->above_seg_context) * mi_cols_aligned_to_sb(cm->mi_cols));
@@ -1160,7 +1172,9 @@ static size_t encode_tiles(VP10_COMP *cpi, uint8_t *data_ptr,
         vpx_start_encode(&residual_bc, data_ptr + total_size + 4);
       else
         vpx_start_encode(&residual_bc, data_ptr + total_size);
-
+#if CONFIG_PVQ
+      od_adapt_pvq_ctx_reset(&xd->adapt.pvq, 0);
+#endif
       write_modes(cpi, &cpi->tile_data[tile_idx].tile_info, &residual_bc, &tok,
                   tok_end);
       assert(tok == tok_end);
