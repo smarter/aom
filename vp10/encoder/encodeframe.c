@@ -1955,6 +1955,8 @@ static void rd_pick_partition(VP10_COMP *cpi, ThreadData *td,
 #if !CONFIG_PVQ
   int do_split = bsize >= BLOCK_8X8;
 #else
+  x->min_partition_size = cpi->sf.default_min_partition_size;
+  x->max_partition_size = cpi->sf.default_max_partition_size;
   int do_split = bsize > x->min_partition_size;
 #endif
   int do_rect = 1;
@@ -2104,7 +2106,6 @@ static void rd_pick_partition(VP10_COMP *cpi, ThreadData *td,
 
         best_rdc = this_rdc;
         if (bsize >= BLOCK_8X8) pc_tree->partitioning = PARTITION_NONE;
-
         // Adjust dist breakout threshold according to the partition size.
         dist_breakout_thr >>=
             8 - (b_width_log2_lookup[bsize] + b_height_log2_lookup[bsize]);

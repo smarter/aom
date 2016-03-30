@@ -2790,6 +2790,15 @@ static void set_size_independent_vars(VP10_COMP *cpi) {
   vp10_set_rd_speed_thresholds(cpi);
   vp10_set_rd_speed_thresholds_sub8x8(cpi);
   cpi->common.interp_filter = cpi->sf.default_interp_filter;
+#if CONFIG_PVQ
+  {
+  MACROBLOCK *x = &cpi->td.mb;
+  cpi->sf.default_min_partition_size = BLOCK_8X8;
+  // NOTE: These two lines does not propagate to x-> in rd_pick_partition()
+  x->min_partition_size = cpi->sf.default_min_partition_size;
+  x->max_partition_size = cpi->sf.default_max_partition_size;
+  }
+#endif
 }
 
 static void set_size_dependent_vars(VP10_COMP *cpi, int *q, int *bottom_index,
