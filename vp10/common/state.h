@@ -46,52 +46,17 @@ struct od_adapt_ctx {
 
   generic_encoder model_dc[OD_NPLANES_MAX];
 
-  int ex_sb_dc[OD_NPLANES_MAX];
   int ex_dc[OD_NPLANES_MAX][OD_NBSIZES][3];
   int ex_g[OD_NPLANES_MAX][OD_NBSIZES];
 
   /* Joint skip flag for DC and AC */
   uint16_t skip_cdf[OD_NBSIZES*2][5];
   int skip_increment;
-  /* 4 possible values for the sblock above (or skip), 4 for the sblock to the
-     left (or skip). */
-  uint16_t q_cdf[4*4][4];
-  int q_increment;
 };
 
 struct od_state{
   od_adapt_ctx        adapt;
-
-  /** Each 8x8 block of pixels in the image (+ one superblock of
-      padding on each side) has a corresponding byte in this array, and
-      every 64x64 superblock is represented by 64 (8 by 8) entries
-      ((8 * 8) * (8 * 8) == 64 * 64) that encode the block size decisions
-      for the superblock. The entry format is:
-      - 0 means the 8x8 block has been split into 4x4 blocks
-      - 1 means the 8x8 block is an 8x8 block
-      - 2 means the 8x8 block is part of a 16x16 block
-      - 3 means the 8x8 block is part of a 32x32 block.
-      - 4 means the 8x8 block is part of a 64x64 block.
-      The padding is filled as though it consisted of 64x64 blocks.
-
-      E.g., `state->bsize[j * state->bstride + i]` accesses the i'th 8x8
-      block in the j'th row of 8x8 blocks.
-
-      The `bstride` member has the distance between vertically adjacent
-      entries (horizontally adjacent entries are adjacent in memory). */
-  unsigned char *bsize;
-  int                 bstride;
-  unsigned char *bskip[3];
-  int                 skip_stride;
-  od_coeff           *(sb_dc_mem[OD_NPLANES_MAX]);
-  int quantizer[OD_NPLANES_MAX];
-  int coded_quantizer[OD_NPLANES_MAX];
   unsigned char pvq_qm_q4[OD_NPLANES_MAX][OD_QM_SIZE];
-  /*This provides context for the quantizer CDF.*/
-  unsigned char *sb_q_scaling;
-  /*Magnitude compensated quantization matrices and their inverses.
-   1 per block-size and decimation factor (i.e. OD_NBSIZES*2*(OD_BSIZE_MAX^2)),
-   assuming 2 possible decimation values (see OD_BASIS_MAG).*/
   int16_t *qm;
   int16_t *qm_inv;
 };
