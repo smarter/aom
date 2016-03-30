@@ -462,9 +462,16 @@ static void predict_and_reconstruct_intra_block(MACROBLOCKD *const xd,
 
   if (!mbmi->skip) {
     TX_TYPE tx_type = get_tx_type(plane_type, xd, block_idx);
+#if !CONFIG_PVQ
     const scan_order *sc = get_scan(tx_size, tx_type);
     const int eob = vp10_decode_block_tokens(xd, plane, sc, col, row, tx_size,
                                              r, mbmi->segment_id);
+#else
+    // pvq_decode() for intra block runs here.
+    const int eob = 0;
+
+
+#endif
     inverse_transform_block_intra(xd, plane, tx_type, tx_size, dst,
                                   pd->dst.stride, eob);
   }
@@ -478,8 +485,16 @@ static int reconstruct_inter_block(MACROBLOCKD *const xd, vpx_reader *r,
   int block_idx = (row << 1) + col;
   TX_TYPE tx_type = get_tx_type(plane_type, xd, block_idx);
   const scan_order *sc = get_scan(tx_size, tx_type);
+#if !CONFIG_PVQ
   const int eob = vp10_decode_block_tokens(xd, plane, sc, col, row, tx_size, r,
                                            mbmi->segment_id);
+#else
+  // pvq_decode() for inter block runs here.
+  const int eob = 0;
+
+
+
+#endif
 
   inverse_transform_block_inter(
       xd, plane, tx_size, &pd->dst.buf[4 * row * pd->dst.stride + 4 * col],
