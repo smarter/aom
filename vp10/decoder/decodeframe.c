@@ -448,7 +448,8 @@ static int pvq_decode_helper(
     od_dec_ctx *dec,
     int16_t *ref_coeff,
     int16_t *dqcoeff,
-    int quant,
+    int dc_quant,
+    int ac_quant,
     int pli,
     int bs,
     int xdec,
@@ -458,8 +459,8 @@ static int pvq_decode_helper(
   int off;
   const int is_keyframe = 0;
   const int has_dc_skip = 1;
-  int dc_quant;
-  int lossless = (quant == 0);
+  int pvq_dc_quant;
+  int lossless = (dc_quant == 0);
   const int blk_size = 1 << (bs + 2);
   int eob;
   int i, j;
@@ -473,12 +474,12 @@ static int pvq_decode_helper(
   od_coeff out_int32[64*64];
 
   /*Safely initialize d since some coeffs are skipped by PVQ.*/
-  od_init_skipped_coeffs(dqcoeff_pvq, ref_coeff_pvq, 0, 0, blk_size, blk_size);
+  od_init_skipped_coeffs(dqcoeff_pvq, ref_coeff, 0, 0, blk_size, blk_size);
   od_raster_to_coding_order(ref_coeff_pvq, blk_size, ref_coeff, blk_size);
 
-  if (lossless) dc_quant = 1;
+  if (lossless) pvq_dc_quant = 1;
   else {
-    dc_quant = OD_MAXI(1, quant*
+    pvq_dc_quant = OD_MAXI(1, dc_quant*
      dec->state.pvq_qm_q4[pli][od_qm_get_index(bs, 0)] >> 4);
   }
 
@@ -488,7 +489,7 @@ static int pvq_decode_helper(
   for (i=0; i < blk_size*blk_size; i++)
     ref_int32[i] = ref_coeff_pvq[i];
 
-  od_pvq_decode(dec, ref_int32, out_int32, quant, pli, bs,
+  od_pvq_decode(dec, ref_int32, out_int32, ac_quant, pli, bs,
    OD_PVQ_BETA[use_activity_masking][pli][bs],
    1, //OD_ROBUST_STREAM
    is_keyframe,
@@ -507,7 +508,7 @@ static int pvq_decode_helper(
      &dec->state.adapt.ex_dc[pli][bs][0], 2, "dc:mag");
     if (dqcoeff_pvq[0]) dqcoeff_pvq[0] *= od_ec_dec_bits(&dec->ec, 1, "dc:sign") ? -1 : 1;
   }
-  dqcoeff_pvq[0] = dqcoeff_pvq[0]*dc_quant + ref_coeff_pvq[0];
+  dqcoeff_pvq[0] = dqcoeff_pvq[0]*pvq_dc_quant + ref_coeff_pvq[0];
 
   od_coding_order_to_raster(dqcoeff, blk_size, dqcoeff_pvq, blk_size);
 
@@ -557,6 +558,9 @@ static void predict_and_reconstruct_intra_block(MACROBLOCKD *const xd,
     const int eob = 0;
     int skip_ac_dc;
     int xdec = pd->subsampling_x;
+    int seg_id = mbmi->segment_id;
+    int dc_quant;
+    int ac_quant;
 
     // transform block size in pixels
     tx_blk_size = 1 << (tx_size + 2);
@@ -594,10 +598,14 @@ static void predict_and_reconstruct_intra_block(MACROBLOCKD *const xd,
      daala_dec.state.adapt.skip_cdf[2*tx_size + (plane != 0)], 4,
      daala_dec.state.adapt.skip_increment, "skip");
 
+    dc_quant = pd->seg_dequant[seg_id][0];
+    ac_quant = pd->seg_dequant[seg_id][1];
+
      pvq_decode_helper(&daala_dec,
         pvq_ref_coeff,
         dqcoeff,
-        pd->dequant[1],
+        dc_quant,
+        ac_quant,
         plane,
         tx_size,
         xdec,
@@ -637,6 +645,9 @@ static int reconstruct_inter_block(MACROBLOCKD *const xd, vpx_reader *r,
   tran_low_t *const dqcoeff = pd->dqcoeff;
   int skip_ac_dc;
   int xdec = pd->subsampling_x;
+  int seg_id = mbmi->segment_id;
+  int dc_quant;
+  int ac_quant;
 
   dst = &pd->dst.buf[4 * row * pd->dst.stride + 4 * col];
 
@@ -676,10 +687,14 @@ static int reconstruct_inter_block(MACROBLOCKD *const xd, vpx_reader *r,
    daala_dec.state.adapt.skip_cdf[2*tx_size + (plane != 0)], 4,
    daala_dec.state.adapt.skip_increment, "skip");
 
+  dc_quant = pd->seg_dequant[seg_id][0];
+  ac_quant = pd->seg_dequant[seg_id][1];
+
    pvq_decode_helper(&daala_dec,
       pvq_ref_coeff,
       dqcoeff,
-      pd->dequant[1],
+      dc_quant,
+      ac_quant,
       plane,
       tx_size,
       xdec,
