@@ -1056,7 +1056,7 @@ void vp10_xform_quant(MACROBLOCK *x, int plane, int block, int blk_row,
                             0,  // keyframe (daala's definition)? Must be always 0 for use in aom since it has intra prediction
                             tx_size,        // block size in log_2 - 2, 0 for 4x4.
                             &x->rate,       // rate measured
-                            &xd->mi[0]->mbmi.pvq); // PVQ info for a block
+                            &xd->mi[0]->mbmi.pvq[plane]); // PVQ info for a block
 #else
   // Difference of predicted and original in TRANSFORM domain
   for (i=0; i < tx_blk_size * tx_blk_size; i++)
@@ -1570,7 +1570,7 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
                               0,  // keyframe (daala's definition)? Must be always 0 for use in aom since it has intra prediction
                               tx_size,        // block size in log_2 - 2, 0 for 4x4.
                               &x->rate,       // rate measured
-                              &xd->mi[0]->mbmi.pvq); // PVQ info for a block
+                              &xd->mi[0]->mbmi.pvq[plane]); // PVQ info for a block
 #else
     // Difference of predicted and original in TRANSFORM domain
     for (i=0; i < tx_blk_size * tx_blk_size; i++)
@@ -1667,11 +1667,12 @@ int pvq_encode_helper(daala_enc_ctx *daala_enc,
   int blk_size = 1 << (bs + 2);
 
   //copy int16 inputs to int32
-  for (i=0; i < blk_size*blk_size; i++)
+  for (i=0; i < blk_size*blk_size; i++) {
     ref_int32[i] = ref[i];
-
-  for (i=0; i < blk_size*blk_size; i++)
     in_int32[i] = in[i];
+    //out_int32[i] = out[i];
+  }
+  out_int32[0] = out[0];
 
   skip = od_pvq_encode(daala_enc, ref_int32, in_int32, out_int32,
           quant,//scale/quantizer
@@ -1696,6 +1697,7 @@ int pvq_encode_helper2(tran_low_t *const coeff, tran_low_t *ref_coeff,
   const int tx_blk_size = 1 << (tx_size + 2);
   int skip;
   int j;
+  // TODO: Enable this later, if pvq_qm_q4 is available in AOM.
   //int pvq_dc_quant = OD_MAXI(1,
   //  dc_quant * daala_enc.state.pvq_qm_q4[plane][od_qm_get_index(tx_size, 0)] >> 4);
   int pvq_dc_quant = OD_MAXI(1, dc_quant);
