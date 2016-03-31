@@ -73,6 +73,7 @@ void store_pvq_enc_info(PVQ_INFO *pvq_info,
                         int *ext,
                         int nb_bands,
                         int *off,
+                        int *size,
                         int skip_rest,
                         int skip_dir,
                         int bs);

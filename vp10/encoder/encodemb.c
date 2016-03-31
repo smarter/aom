@@ -1769,6 +1769,7 @@ void store_pvq_enc_info(PVQ_INFO *pvq_info,
                         int *ext,
                         int nb_bands,
                         int *off,
+                        int *size,
                         int skip_rest,
                         int skip_dir,
                         int bs) {       // log of the block size minus two
@@ -1779,6 +1780,7 @@ void store_pvq_enc_info(PVQ_INFO *pvq_info,
     pvq_info->theta[i] = theta[i];
     pvq_info->max_theta[i] = max_theta[i];
     pvq_info->k[i] = k[i];
+    pvq_info->size[i] = size[i];
   }
   // TODO: just copying block size should be fine
   for (i=0; i < OD_BSIZE_MAX*OD_BSIZE_MAX; i++) {

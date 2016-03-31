@@ -822,7 +822,7 @@ int od_pvq_encode(daala_enc_ctx *enc,
   // TODO: Better if we can call this function only when mode decision
   //       (i.e. RDO) is over.
   store_pvq_enc_info(pvq_info, qg, theta, max_theta, k,
-    y, model, exg, ext, nb_bands, off,
+    y, model, exg, ext, nb_bands, off, size,
     skip_rest, skip_dir, bs);
 
   for (i = 0; i < nb_bands; i++) {
