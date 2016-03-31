@@ -1154,22 +1154,20 @@ static void encode_block(int plane, int block, int blk_row, int blk_col,
   if (p->eobs[block] == 0) return;
 
 #if CONFIG_PVQ
-  if (p->eobs[block] > 1) {
-    // transform block size in pixels
-    tx_blk_size = 1 << (tx_size + 2);
+  // transform block size in pixels
+  tx_blk_size = 1 << (tx_size + 2);
 #if 0
-    // Reconstruct residue + predicted signal in transform domain
-    // Note that ref_coeff[] is already computed in vp10_xform_quant(),
-    // as like dqcoeff[].
-    for (i=0; i < tx_blk_size * tx_blk_size; i++)
-      dqcoeff[i] += ref_coeff[i];
+  // Reconstruct residue + predicted signal in transform domain
+  // Note that ref_coeff[] is already computed in vp10_xform_quant(),
+  // as like dqcoeff[].
+  for (i=0; i < tx_blk_size * tx_blk_size; i++)
+    dqcoeff[i] += ref_coeff[i];
 #endif
-    // Since vp10 does not have inverse transform only function
-    // but contain adding the inverse transform to predicted image,
-    // pass blank dummy image to vp10_inv_txfm_add_*x*(), i.e. set dst as zeros
-    for (j=0; j < tx_blk_size; j++)
-      memset(dst + j * pd->dst.stride, 0, tx_blk_size);
-  }
+  // Since vp10 does not have inverse transform only function
+  // but contain adding the inverse transform to predicted image,
+  // pass blank dummy image to vp10_inv_txfm_add_*x*(), i.e. set dst as zeros
+  for (j=0; j < tx_blk_size; j++)
+    memset(dst + j * pd->dst.stride, 0, tx_blk_size);
 #endif
 #if CONFIG_VPX_HIGHBITDEPTH
   if (xd->cur_buf->flags & YV12_FLAG_HIGHBITDEPTH) {
