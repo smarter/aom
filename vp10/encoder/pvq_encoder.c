@@ -744,7 +744,8 @@ int od_pvq_encode(daala_enc_ctx *enc,
   OD_UNUSED(bx);
   OD_UNUSED(by);
 #endif
-  pvq_qm = &enc->state.pvq_qm_q4[pli][0];
+  // TODO: Enable this later, if pvq_qm_q4 is available in AOM.
+  //pvq_qm = &enc->state.pvq_qm_q4[pli][0];
   exg = &enc->state.adapt.pvq.pvq_exg[pli][bs][0];
   ext = enc->state.adapt.pvq.pvq_ext + bs*PVQ_MAX_PARTITIONS;
   skip_cdf = enc->state.adapt.skip_cdf[2*bs + (pli != 0)];
@@ -752,7 +753,8 @@ int od_pvq_encode(daala_enc_ctx *enc,
   nb_bands = OD_BAND_OFFSETS[bs][0];
   off = &OD_BAND_OFFSETS[bs][1];
   // FIXME : somehow pvq_qm[] seems fetching wrong value.
-  dc_quant = OD_MAXI(1, q0*pvq_qm[od_qm_get_index(bs, 0)] >> 4);
+  //dc_quant = OD_MAXI(1, q0*pvq_qm[od_qm_get_index(bs, 0)] >> 4);
+  dc_quant = OD_MAXI(1, q0);
   tell = 0;
   for (i = 0; i < nb_bands; i++) size[i] = off[i+1] - off[i];
   skip_diff = 0;
@@ -775,7 +777,9 @@ int od_pvq_encode(daala_enc_ctx *enc,
 #endif
   for (i = 0; i < nb_bands; i++) {
     int q;
-    q = OD_MAXI(1, q0*pvq_qm[od_qm_get_index(bs, i + 1)] >> 4);
+    // TODO: Enable this later, if pvq_qm_q4 is available in AOM.
+    //q = OD_MAXI(1, q0*pvq_qm[od_qm_get_index(bs, i + 1)] >> 4);
+    q = OD_MAXI(1, q0);
     qg[i] = pvq_theta(out + off[i], in + off[i], ref + off[i], size[i],
      q, y + off[i], &theta[i], &max_theta[i],
      &k[i], beta[i], &skip_diff, robust, is_keyframe, pli, &enc->state.adapt,

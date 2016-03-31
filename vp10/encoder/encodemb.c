@@ -1696,8 +1696,9 @@ int pvq_encode_helper2(tran_low_t *const coeff, tran_low_t *ref_coeff,
   const int tx_blk_size = 1 << (tx_size + 2);
   int skip;
   int j;
-  int pvq_dc_quant = OD_MAXI(1,
-    dc_quant * daala_enc.state.pvq_qm_q4[plane][od_qm_get_index(tx_size, 0)] >> 4);
+  //int pvq_dc_quant = OD_MAXI(1,
+  //  dc_quant * daala_enc.state.pvq_qm_q4[plane][od_qm_get_index(tx_size, 0)] >> 4);
+  int pvq_dc_quant = OD_MAXI(1, dc_quant);
   int tell;
   int has_dc_skip = 1;
 

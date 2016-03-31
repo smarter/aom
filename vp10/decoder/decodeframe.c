@@ -479,8 +479,10 @@ static int pvq_decode_helper(
 
   if (lossless) pvq_dc_quant = 1;
   else {
-    pvq_dc_quant = OD_MAXI(1, dc_quant*
-     dec->state.pvq_qm_q4[pli][od_qm_get_index(bs, 0)] >> 4);
+    // TODO: Enable this later, if pvq_qm_q4 is available in AOM.
+    //pvq_dc_quant = OD_MAXI(1, dc_quant*
+    // dec->state.pvq_qm_q4[pli][od_qm_get_index(bs, 0)] >> 4);
+    pvq_dc_quant = OD_MAXI(1, dc_quant);
   }
 
   off = od_qm_offset(bs, xdec);

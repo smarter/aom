@@ -52,7 +52,7 @@ struct od_adapt_ctx {
 
 struct od_state{
   od_adapt_ctx        adapt;
-  unsigned char pvq_qm_q4[OD_NPLANES_MAX][OD_QM_SIZE];
+  //unsigned char pvq_qm_q4[OD_NPLANES_MAX][OD_QM_SIZE];
   int16_t *qm;
   int16_t *qm_inv;
 };
