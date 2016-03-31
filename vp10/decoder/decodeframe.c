@@ -443,18 +443,18 @@ static void inverse_transform_block_intra(MACROBLOCKD *xd, int plane,
   }
 }
 
-#if 0//CONFIG_PVQ
+#if CONFIG_PVQ
 static int pvq_decode_helper(
     od_dec_ctx *dec,
-    od_ec_dec *ec,
     int16_t *ref_coeff,
     int16_t *dqcoeff,
     int quant,
     int pli,
     int bs,
-    int xdec
+    int xdec,
+    int skip_ac_dc
     ) {
-  unsigned int flags;
+  unsigned int flags; // used for daala's stream analyzer.
   int off;
   const int is_keyframe = 0;
   const int has_dc_skip = 1;
@@ -493,7 +493,7 @@ static int pvq_decode_helper(
    1, //OD_ROBUST_STREAM
    is_keyframe,
    &flags,
-   skip,
+   skip_ac_dc,
    dec->state.qm + off,
    dec->state.qm_inv + off);
 
@@ -536,6 +536,7 @@ static void predict_and_reconstruct_intra_block(MACROBLOCKD *const xd,
   tran_low_t *pvq_ref_coeff = pd->pvq_ref_coeff;
   const int diff_stride = tx_blk_size;
   int16_t *pred = pd->pred;
+  tran_low_t *const dqcoeff = pd->dqcoeff;
 #endif
   dst = &pd->dst.buf[4 * row * pd->dst.stride + 4 * col];
 
@@ -554,6 +555,8 @@ static void predict_and_reconstruct_intra_block(MACROBLOCKD *const xd,
                                              r, mbmi->segment_id);
 #else
     const int eob = 0;
+    int skip_ac_dc;
+    int xdec = pd->subsampling_x;
 
     // transform block size in pixels
     tx_blk_size = 1 << (tx_size + 2);
@@ -582,7 +585,23 @@ static void predict_and_reconstruct_intra_block(MACROBLOCKD *const xd,
     }
 
     // pvq_decode() for intra block runs here.
-    // pvq_decode_helper(&r->ec, );
+
+    // decode ac/dc skip flag. bit0: 0 : DC skipped, bit1 : 0: AC skipped
+    // NOTE : we don't use 5 symbols for luma here in aom codebase,
+    // since block partition is taken care of by aom.
+    // So, only AC/DC skip info is coded
+    skip_ac_dc = od_decode_cdf_adapt(daala_dec.ec,
+     daala_dec.state.adapt.skip_cdf[2*tx_size + (plane != 0)], 4,
+     daala_dec.state.adapt.skip_increment, "skip");
+
+     pvq_decode_helper(&daala_dec,
+        pvq_ref_coeff,
+        dqcoeff,
+        pd->dequant[1],
+        plane,
+        tx_size,
+        xdec,
+        skip_ac_dc);
 
     // Since vp10 does not have separate inverse transform
     // but also contains adding to predicted image,
@@ -615,6 +634,9 @@ static int reconstruct_inter_block(MACROBLOCKD *const xd, vpx_reader *r,
   int16_t *pred = pd->pred;
   uint8_t *dst;
   const int eob = 0;
+  tran_low_t *const dqcoeff = pd->dqcoeff;
+  int skip_ac_dc;
+  int xdec = pd->subsampling_x;
 
   dst = &pd->dst.buf[4 * row * pd->dst.stride + 4 * col];
 
@@ -646,7 +668,22 @@ static int reconstruct_inter_block(MACROBLOCKD *const xd, vpx_reader *r,
 
   // pvq_decode() for inter block runs here.
 
+  // decode ac/dc skip flag. bit0: 0 : DC skipped, bit1 : 0: AC skipped
+  // NOTE : we don't use 5 symbols for luma here in aom codebase,
+  // since block partition is taken care of by aom.
+  // So, only AC/DC skip info is coded
+  skip_ac_dc = od_decode_cdf_adapt(daala_dec.ec,
+   daala_dec.state.adapt.skip_cdf[2*tx_size + (plane != 0)], 4,
+   daala_dec.state.adapt.skip_increment, "skip");
 
+   pvq_decode_helper(&daala_dec,
+      pvq_ref_coeff,
+      dqcoeff,
+      pd->dequant[1],
+      plane,
+      tx_size,
+      xdec,
+      skip_ac_dc);
 
   // Since vp10 does not have separate inverse transform
   // but also contains adding to predicted image,
