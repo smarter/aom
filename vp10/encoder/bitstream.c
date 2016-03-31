@@ -41,7 +41,7 @@
 #include "vp10/encoder/subexp.h"
 #include "vp10/encoder/tokenize.h"
 #if CONFIG_PVQ
-#include "vp10/encoder/pvq_encoder.h"
+#include "vp10/encoder/pvq_encoder.c"
 #endif
 
 static const struct vp10_token intra_mode_encodings[INTRA_MODES] = {
