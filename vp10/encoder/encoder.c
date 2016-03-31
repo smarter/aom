@@ -255,6 +255,7 @@ static void setup_frame(VP10_COMP *cpi) {
   }
 #if CONFIG_PVQ
   {
+
   od_adapt_ctx *adapt = &daala_enc.state.adapt;
   od_ec_enc_reset(&daala_enc.ec);
   od_adapt_ctx_reset(adapt, 0);

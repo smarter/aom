@@ -513,7 +513,6 @@ static void write_modes_b(VP10_COMP *cpi, const TileInfo *const tile,
   MODE_INFO *m;
   MB_MODE_INFO mbmi;
   int plane;
-  int i;
 
   xd->mi = cm->mi_grid_visible + (mi_row * cm->mi_stride + mi_col);
   m = xd->mi[0];
@@ -1172,6 +1171,14 @@ static size_t encode_tiles(VP10_COMP *cpi, uint8_t *data_ptr,
       else
         vpx_start_encode(&residual_bc, data_ptr + total_size);
 #if CONFIG_PVQ
+      {
+      extern daala_enc_ctx daala_enc;
+      od_adapt_ctx *adapt = &daala_enc.state.adapt;
+      //od_ec_enc_reset(&daala_enc.ec);
+      od_adapt_ctx_reset(adapt, 0);
+      adapt->skip_increment = 128;
+      OD_CDFS_INIT(adapt->skip_cdf, adapt->skip_increment >> 2);
+      }
       od_adapt_pvq_ctx_reset(&xd->adapt.pvq, 0);
 #endif
       write_modes(cpi, &cpi->tile_data[tile_idx].tile_info, &residual_bc, &tok,
