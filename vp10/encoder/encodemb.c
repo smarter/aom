@@ -1676,7 +1676,7 @@ int pvq_encode_helper(daala_enc_ctx *daala_enc,
   skip = od_pvq_encode(daala_enc, ref_int32, in_int32, out_int32,
           quant,//scale/quantizer
           pli, bs,
-          OD_PVQ_BETA[0/*use_masking*/][pli][bs],
+          OD_PVQ_BETA[0/*use_activity_masking*/][pli][bs],
           1,//OD_ROBUST_STREAM
           is_keyframe,
           0, 0, 0, //q_scaling, bx, by,

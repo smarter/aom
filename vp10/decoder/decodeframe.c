@@ -55,6 +55,8 @@
 #if CONFIG_PVQ
 #include "vp10/encoder/encodemb.h"
 #include "vp10/decoder/decint.h"
+#include "vpx_dsp/entdec.h"
+daala_dec_ctx daala_dec;
 #endif
 
 static int is_compound_reference_allowed(const VP10_COMMON *cm) {
@@ -223,7 +225,7 @@ static void inverse_transform_block_inter(MACROBLOCKD *xd, int plane,
   struct macroblockd_plane *const pd = &xd->plane[plane];
   TX_TYPE tx_type = get_tx_type(pd->plane_type, xd, block);
   const int seg_id = xd->mi[0]->mbmi.segment_id;
-#if CONFIG_PVQ
+#if 0//CONFIG_PVQ
   // transform block size in pixels
   int tx_blk_size = 1 << (tx_size + 2);
   int i, j;
@@ -234,7 +236,7 @@ static void inverse_transform_block_inter(MACROBLOCKD *xd, int plane,
 
   if (eob > 0) {
     tran_low_t *const dqcoeff = pd->dqcoeff;
-#if CONFIG_PVQ
+#if 0//CONFIG_PVQ
       if (eob > 1) {
         // transform block size in pixels
         tx_blk_size = 1 << (tx_size + 2);
@@ -335,7 +337,7 @@ static void inverse_transform_block_intra(MACROBLOCKD *xd, int plane,
                                           int stride, int eob) {
   struct macroblockd_plane *const pd = &xd->plane[plane];
   const int seg_id = xd->mi[0]->mbmi.segment_id;
-#if CONFIG_PVQ
+#if 0//CONFIG_PVQ
   // transform block size in pixels
   int tx_blk_size = 1 << (tx_size + 2);
   int i, j;
@@ -346,7 +348,7 @@ static void inverse_transform_block_intra(MACROBLOCKD *xd, int plane,
 
   if (eob > 0) {
     tran_low_t *const dqcoeff = pd->dqcoeff;
-#if CONFIG_PVQ
+#if 0//CONFIG_PVQ
       if (eob > 1) {
         // transform block size in pixels
         tx_blk_size = 1 << (tx_size + 2);
@@ -441,6 +443,82 @@ static void inverse_transform_block_intra(MACROBLOCKD *xd, int plane,
   }
 }
 
+#if 0//CONFIG_PVQ
+static int pvq_decode_helper(
+    od_dec_ctx *dec,
+    od_ec_dec *ec,
+    int16_t *ref_coeff,
+    int16_t *dqcoeff,
+    int quant,
+    int pli,
+    int bs,
+    int xdec
+    ) {
+  unsigned int flags;
+  int off;
+  const int is_keyframe = 0;
+  const int has_dc_skip = 1;
+  int dc_quant;
+  int lossless = (quant == 0);
+  const int blk_size = 1 << (bs + 2);
+  int eob;
+  int i, j;
+  //int use_activity_masking = dec->use_activity_masking;
+  int use_activity_masking = 0;
+
+  DECLARE_ALIGNED(16, int16_t, dqcoeff_pvq[64 * 64]);
+  DECLARE_ALIGNED(16, int16_t, ref_coeff_pvq[64 * 64]);
+
+  od_coeff ref_int32[64*64];
+  od_coeff out_int32[64*64];
+
+  /*Safely initialize d since some coeffs are skipped by PVQ.*/
+  od_init_skipped_coeffs(dqcoeff_pvq, ref_coeff_pvq, 0, 0, blk_size, blk_size);
+  od_raster_to_coding_order(ref_coeff_pvq, blk_size, ref_coeff, blk_size);
+
+  if (lossless) dc_quant = 1;
+  else {
+    dc_quant = OD_MAXI(1, quant*
+     dec->state.pvq_qm_q4[pli][od_qm_get_index(bs, 0)] >> 4);
+  }
+
+  off = od_qm_offset(bs, xdec);
+
+  //copy int16 inputs to int32
+  for (i=0; i < blk_size*blk_size; i++)
+    ref_int32[i] = ref_coeff_pvq[i];
+
+  od_pvq_decode(dec, ref_int32, out_int32, quant, pli, bs,
+   OD_PVQ_BETA[use_activity_masking][pli][bs],
+   1, //OD_ROBUST_STREAM
+   is_keyframe,
+   &flags,
+   skip,
+   dec->state.qm + off,
+   dec->state.qm_inv + off);
+
+  //copy int32 result back to int16
+  for (i=0; i < blk_size*blk_size; i++)
+    dqcoeff_pvq[i] = out_int32[i];
+
+  if (!has_dc_skip || dqcoeff_pvq[0]) {
+    dqcoeff_pvq[0] = has_dc_skip + generic_decode(&dec->ec,
+     &dec->state.adapt.model_dc[pli], -1,
+     &dec->state.adapt.ex_dc[pli][bs][0], 2, "dc:mag");
+    if (dqcoeff_pvq[0]) dqcoeff_pvq[0] *= od_ec_dec_bits(&dec->ec, 1, "dc:sign") ? -1 : 1;
+  }
+  dqcoeff_pvq[0] = dqcoeff_pvq[0]*dc_quant + ref_coeff_pvq[0];
+
+  od_coding_order_to_raster(dqcoeff, blk_size, dqcoeff_pvq, blk_size);
+
+  // Mark last nonzero coeff position.
+  for (j = 0; j < blk_size*blk_size; j++)
+    if (dqcoeff[j]) eob = j;
+
+  return eob;
+}
+#endif
+
 static void predict_and_reconstruct_intra_block(MACROBLOCKD *const xd,
                                                 vpx_reader *r,
                                                 MB_MODE_INFO *const mbmi,
@@ -451,6 +529,14 @@ static void predict_and_reconstruct_intra_block(MACROBLOCKD *const xd,
   PLANE_TYPE plane_type = (plane == 0) ? PLANE_TYPE_Y : PLANE_TYPE_UV;
   uint8_t *dst;
   int block_idx = (row << 1) + col;
+#if CONFIG_PVQ
+  // transform block size in pixels
+  int tx_blk_size = 1 << (tx_size + 2);
+  int i, j;
+  tran_low_t *pvq_ref_coeff = pd->pvq_ref_coeff;
+  const int diff_stride = tx_blk_size;
+  int16_t *pred = pd->pred;
+#endif
   dst = &pd->dst.buf[4 * row * pd->dst.stride + 4 * col];
 
   if (mbmi->sb_type < BLOCK_8X8)
@@ -467,10 +553,42 @@ static void predict_and_reconstruct_intra_block(MACROBLOCKD *const xd,
     const int eob = vp10_decode_block_tokens(xd, plane, sc, col, row, tx_size,
                                              r, mbmi->segment_id);
 #else
-    // pvq_decode() for intra block runs here.
     const int eob = 0;
 
+    // transform block size in pixels
+    tx_blk_size = 1 << (tx_size + 2);
 
+    for (j=0; j < tx_blk_size; j++)
+      for (i=0; i < tx_blk_size; i++) {
+        pred[diff_stride * j + i] = dst[pd->dst.stride * j + i];
+      }
+
+    switch (tx_size) {
+      case TX_32X32:
+        //forward transform of predicted image.
+        fwd_txfm_32x32(0, pred, pvq_ref_coeff, diff_stride, tx_type);
+        break;
+      case TX_16X16:
+        fwd_txfm_16x16(pred, pvq_ref_coeff, diff_stride, tx_type);
+        break;
+      case TX_8X8:
+        fwd_txfm_8x8(pred, pvq_ref_coeff, diff_stride, tx_type);
+        break;
+      case TX_4X4:
+        vp10_fwd_txfm_4x4(pred, pvq_ref_coeff, diff_stride, tx_type,
+                          xd->lossless[xd->mi[0]->mbmi.segment_id]);
+        break;
+      default: assert(0); break;
+    }
+
+    // pvq_decode() for intra block runs here.
+    // pvq_decode_helper(&r->ec, );
+
+    // Since vp10 does not have separate inverse transform
+    // but also contains adding to predicted image,
+    // pass blank dummy image to vp10_inv_txfm_add_*x*(), i.e. set dst as zeros
+    for (j=0; j < tx_blk_size; j++)
+      memset(dst + j * pd->dst.stride, 0, tx_blk_size);
 #endif
     inverse_transform_block_intra(xd, plane, tx_type, tx_size, dst,
                                   pd->dst.stride, eob);
@@ -489,10 +607,52 @@ static int reconstruct_inter_block(MACROBLOCKD *const xd, vpx_reader *r,
   const int eob = vp10_decode_block_tokens(xd, plane, sc, col, row, tx_size, r,
                                            mbmi->segment_id);
 #else
-  // pvq_decode() for inter block runs here.
+  // transform block size in pixels
+  int tx_blk_size = 1 << (tx_size + 2);
+  int i, j;
+  tran_low_t *pvq_ref_coeff = pd->pvq_ref_coeff;
+  const int diff_stride = tx_blk_size;
+  int16_t *pred = pd->pred;
+  uint8_t *dst;
   const int eob = 0;
 
+  dst = &pd->dst.buf[4 * row * pd->dst.stride + 4 * col];
 
+  // transform block size in pixels
+  tx_blk_size = 1 << (tx_size + 2);
+
+  for (j=0; j < tx_blk_size; j++)
+    for (i=0; i < tx_blk_size; i++) {
+      pred[diff_stride * j + i] = dst[pd->dst.stride * j + i];
+    }
+
+  switch (tx_size) {
+    case TX_32X32:
+      //forward transform of predicted image.
+      fwd_txfm_32x32(0, pred, pvq_ref_coeff, diff_stride, tx_type);
+      break;
+    case TX_16X16:
+      fwd_txfm_16x16(pred, pvq_ref_coeff, diff_stride, tx_type);
+      break;
+    case TX_8X8:
+      fwd_txfm_8x8(pred, pvq_ref_coeff, diff_stride, tx_type);
+      break;
+    case TX_4X4:
+      vp10_fwd_txfm_4x4(pred, pvq_ref_coeff, diff_stride, tx_type,
+                        xd->lossless[xd->mi[0]->mbmi.segment_id]);
+      break;
+    default: assert(0); break;
+  }
+
+  // pvq_decode() for inter block runs here.
+
+
+
+  // Since vp10 does not have separate inverse transform
+  // but also contains adding to predicted image,
+  // pass blank dummy image to vp10_inv_txfm_add_*x*(), i.e. set dst as zeros
+  for (j=0; j < tx_blk_size; j++)
+    memset(dst + j * pd->dst.stride, 0, tx_blk_size);
 
 #endif
 
@@ -1678,6 +1838,10 @@ static const uint8_t *decode_tiles(VP10Decoder *pbi, const uint8_t *data,
 #if !CONFIG_PVQ
       vp10_init_macroblockd(cm, &tile_data->xd, tile_data->dqcoeff);
 #else
+      // TODO: For muti tile (also threading), do this for each tile,
+      // which needs define daala_dec for each tile.
+      daala_dec.ec = &tile_data->bit_reader.ec;
+
       vp10_init_macroblockd(cm, &tile_data->xd, tile_data->dqcoeff,
                             tile_data->pvq_ref_coeff);
 #endif
@@ -2242,10 +2406,9 @@ static size_t read_uncompressed_header(VP10Decoder *pbi,
 
 #if CONFIG_PVQ
   {
-  extern daala_dec_ctx daala_dec;
   od_adapt_ctx *adapt = &daala_dec.state.adapt;
   od_adapt_ctx_reset(adapt, 0);
-  od_adapt_pvq_ctx_reset(&adapt->pvq, frame_is_intra_only(cm));
+  od_adapt_pvq_ctx_reset(&adapt->pvq, 0);
   adapt->skip_increment = 128;
   OD_CDFS_INIT(adapt->skip_cdf, adapt->skip_increment >> 2);
   }

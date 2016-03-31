@@ -214,6 +214,10 @@ static int decode_coefs(const MACROBLOCKD *xd, PLANE_TYPE type,
     dqv = dq[1];
   }
 
+  // NOTE: as in encoder, if c (i.e. eob) is always >= 0,
+  // the type of return of this function should be unsigned.
+  assert(c >= 0);
+
   return c;
 }
 

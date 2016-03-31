@@ -22,6 +22,12 @@
 #include "vp10/common/onyxc_int.h"
 #include "vp10/decoder/dthread.h"
 
+#if CONFIG_PVQ
+#include "vp10/encoder/encodemb.h"
+#include "vp10/decoder/decint.h"
+#include "vpx_dsp/entdec.h"
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
