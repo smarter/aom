@@ -884,6 +884,7 @@ void vp10_xform_quant(MACROBLOCK *x, int plane, int block, int blk_row,
   const int16_t *src_diff;
   src_diff = &p->src_diff[4 * (blk_row * diff_stride + blk_col)];
 #else
+  MB_MODE_INFO *mbmi = &xd->mi[0]->mbmi;
   tran_low_t *ref_coeff = BLOCK_OFFSET(pd->pvq_ref_coeff, block);
   int16_t *pred = &pd->pred[4 * (blk_row * diff_stride + blk_col)];
   uint8_t *src, *dst;
@@ -1058,6 +1059,7 @@ void vp10_xform_quant(MACROBLOCK *x, int plane, int block, int blk_row,
                             tx_size,        // block size in log_2 - 2, 0 for 4x4.
                             &x->rate,       // rate measured
                             &xd->mi[0]->mbmi.pvq[plane]); // PVQ info for a block
+  mbmi->skip = skip;
 #else
   // Difference of predicted and original in TRANSFORM domain
   for (i=0; i < tx_blk_size * tx_blk_size; i++)
@@ -1571,6 +1573,7 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
                               tx_size,        // block size in log_2 - 2, 0 for 4x4.
                               &x->rate,       // rate measured
                               &xd->mi[0]->mbmi.pvq[plane]); // PVQ info for a block
+    mbmi->skip = skip;
 #else
     // Difference of predicted and original in TRANSFORM domain
     for (i=0; i < tx_blk_size * tx_blk_size; i++)
