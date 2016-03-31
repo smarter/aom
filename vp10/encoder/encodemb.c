@@ -1048,6 +1048,7 @@ void vp10_xform_quant(MACROBLOCK *x, int plane, int block, int blk_row,
 
 #if 1 //work in progress(yushin)
   // pvq of daala will be called here for inter mode block
+  if (!x->skip_block)
   skip = pvq_encode_helper2(coeff,          // target original vector
                             ref_coeff,      // reference vector
                             dqcoeff,        // de-quantized vector
@@ -1560,6 +1561,7 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
     }
 #if 1 //work in progress(yushin)
     // pvq of daala will be called here for intra mode block
+    if (!x->skip_block)
     skip = pvq_encode_helper2(coeff,          // target original vector
                               ref_coeff,      // reference vector
                               dqcoeff,        // de-quantized vector
