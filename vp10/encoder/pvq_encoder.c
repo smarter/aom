@@ -792,7 +792,7 @@ int od_pvq_encode(daala_enc_ctx *enc,
      (double)(skip_cdf[2] - skip_cdf[1]));
     // TODO: Enable this later, since its change in out[0] causes DC change
     // and thus quality degrade in aom codebase.
-    //out[0] = od_rdo_quant(in[0] - ref[0], dc_quant, dc_rate);
+    out[0] = od_rdo_quant(in[0] - ref[0], dc_quant, dc_rate);
   }
   tell = od_ec_enc_tell_frac(&enc->ec);
   /* Code as if we're not skipping. */

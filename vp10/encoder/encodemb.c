@@ -707,7 +707,7 @@ void vp10_xform_quant_fp(MACROBLOCK *x, int plane, int block, int blk_row,
                             ref_coeff,      // reference vector
                             dqcoeff,        // de-quantized vector
                             &p->eobs[block],// End of Block marker
-                            pd->dequant[0], pd->dequant[1], // vpx's DC and AC quantization step size
+                            pd->dequant[1], // vpx's AC quantization step size
                             0,  // keyframe (daala's definition)? Must be always 0 for use in aom since it has intra prediction
                             tx_size,        // block size in log_2 - 2, 0 for 4x4.
                             &x->rate,       // rate measured
@@ -1052,7 +1052,7 @@ void vp10_xform_quant(MACROBLOCK *x, int plane, int block, int blk_row,
                             ref_coeff,      // reference vector
                             dqcoeff,        // de-quantized vector
                             &p->eobs[block],// End of Block marker
-                            pd->dequant[0], pd->dequant[1], // vpx's DC and AC quantization step size
+                            pd->dequant[1], // vpx's AC quantization step size
                             0,  // keyframe (daala's definition)? Must be always 0 for use in aom since it has intra prediction
                             tx_size,        // block size in log_2 - 2, 0 for 4x4.
                             &x->rate,       // rate measured
@@ -1566,7 +1566,7 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
                               ref_coeff,      // reference vector
                               dqcoeff,        // de-quantized vector
                               &p->eobs[block],// End of Block marker
-                              pd->dequant[0], pd->dequant[1], // vpx's DC and AC quantization step size
+                              pd->dequant[1], // vpx's DC and AC quantization step size
                               0,  // keyframe (daala's definition)? Must be always 0 for use in aom since it has intra prediction
                               tx_size,        // block size in log_2 - 2, 0 for 4x4.
                               &x->rate,       // rate measured
@@ -1692,15 +1692,15 @@ int pvq_encode_helper(daala_enc_ctx *daala_enc,
 
 int pvq_encode_helper2(tran_low_t *const coeff, tran_low_t *ref_coeff,
     tran_low_t *const dqcoeff,
-    uint16_t *eob, int dc_quant, int ac_quant,
+    uint16_t *eob, int quant,
     int plane, int tx_size, int *rate, PVQ_INFO *pvq_info) {
   const int tx_blk_size = 1 << (tx_size + 2);
   int skip;
   int j;
   // TODO: Enable this later, if pvq_qm_q4 is available in AOM.
   //int pvq_dc_quant = OD_MAXI(1,
-  //  dc_quant * daala_enc.state.pvq_qm_q4[plane][od_qm_get_index(tx_size, 0)] >> 4);
-  int pvq_dc_quant = OD_MAXI(1, dc_quant);
+  //  ac_quant * daala_enc.state.pvq_qm_q4[plane][od_qm_get_index(tx_size, 0)] >> 4);
+  int pvq_dc_quant = OD_MAXI(1, quant);
   int tell;
   int has_dc_skip = 1;
 
@@ -1727,7 +1727,7 @@ int pvq_encode_helper2(tran_low_t *const coeff, tran_low_t *ref_coeff,
                            ref_coeff_pvq, // reference vector
                            coeff_pvq,     // target original vector
                            dqcoeff_pvq,   // de-quantized vector
-                           ac_quant,         // AC quantizer
+                           quant,         // quantizer
                            plane,         // image plane
                            tx_size,       // transform size in log_2 - 2, ex: 0 is for 4x4
                            0,            // key frame? 0 for always check noref mode == 0
