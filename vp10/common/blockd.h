@@ -114,7 +114,7 @@ typedef struct {
   /* deringing gain *per-superblock* */
   int8_t dering_gain;
 #if CONFIG_PVQ
-  PVQ_INFO pvq;
+  PVQ_INFO pvq[3];
 #endif
 } MB_MODE_INFO;
 

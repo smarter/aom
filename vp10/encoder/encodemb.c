@@ -711,7 +711,7 @@ void vp10_xform_quant_fp(MACROBLOCK *x, int plane, int block, int blk_row,
                             0,  // keyframe (daala's definition)? Must be always 0 for use in aom since it has intra prediction
                             tx_size,        // block size in log_2 - 2, 0 for 4x4.
                             &x->rate,       // rate measured
-                            &xd->mi[0]->mbmi.pvq); // PVQ info for a block
+                            &xd->mi[0]->mbmi.pvq[plane]); // PVQ info for a block
 #else
   // Difference of predicted and original in TRANSFORM domain
   for (i=0; i < tx_blk_size * tx_blk_size; i++)

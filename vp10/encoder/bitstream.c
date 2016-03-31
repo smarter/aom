@@ -514,12 +514,9 @@ static void write_modes_b(VP10_COMP *cpi, const TileInfo *const tile,
   MB_MODE_INFO mbmi;
   int plane;
   int i;
-  PVQ_INFO pvq_info;
 
   xd->mi = cm->mi_grid_visible + (mi_row * cm->mi_stride + mi_col);
   m = xd->mi[0];
-  pvq_info = m->mbmi.pvq;
-
   cpi->td.mb.mbmi_ext = cpi->mbmi_ext_base + (mi_row * cm->mi_cols + mi_col);
 
   set_mi_row_col(xd, tile, mi_row, num_8x8_blocks_high_lookup[m->mbmi.sb_type],
@@ -550,26 +547,28 @@ static void write_modes_b(VP10_COMP *cpi, const TileInfo *const tile,
     const int encode_flip = 0;
     const int flip = 0;
     const int robust = 1;
-    const int pli = 0; // FIXME
     int i;
-    int size[PVQ_MAX_PARTITIONS];
-    PVQ_INFO* pvq = &m->mbmi.pvq;
-    for (i = 0; i < pvq->nb_bands; i++) {
-      if (i == 0 || (!pvq->skip_rest &&
-       !(pvq->skip_dir & (1 << ((i - 1)%3))))) {
-        pvq_encode_partition(&w->ec, pvq->qg[i], pvq->theta[i],
-         pvq->max_theta[i], pvq->y + pvq->off[i],
-         pvq->size[i], pvq->k[i], pvq->model, &xd->adapt,
-         pvq->exg + i, pvq->ext + i,
-         robust || is_keyframe, (pli != 0)*OD_NBSIZES*PVQ_MAX_PARTITIONS
-         + pvq->bs*PVQ_MAX_PARTITIONS + i, is_keyframe,
-         i == 0 && (i < pvq->nb_bands - 1),
-         pvq->skip_rest, pvq->bs, encode_flip, flip);
-      }
-      if (i == 0 && !pvq->skip_rest && pvq->bs > 0) {
-        od_encode_cdf_adapt(&w->ec, pvq->skip_dir,
-         &xd->adapt.pvq.pvq_skip_dir_cdf[(pli != 0) + 2*(pvq->bs - 1)][0], 7,
-         xd->adapt.pvq.pvq_skip_dir_increment);
+
+    for (plane = 0; plane < MAX_MB_PLANE; ++plane) {
+      PVQ_INFO* pvq = &m->mbmi.pvq[plane];
+
+      for (i = 0; i < pvq->nb_bands; i++) {
+        if (i == 0 || (!pvq->skip_rest &&
+         !(pvq->skip_dir & (1 << ((i - 1)%3))))) {
+          pvq_encode_partition(&w->ec, pvq->qg[i], pvq->theta[i],
+           pvq->max_theta[i], pvq->y + pvq->off[i],
+           pvq->size[i], pvq->k[i], pvq->model, &xd->adapt,
+           pvq->exg + i, pvq->ext + i,
+           robust || is_keyframe, (plane != 0)*OD_NBSIZES*PVQ_MAX_PARTITIONS
+           + pvq->bs*PVQ_MAX_PARTITIONS + i, is_keyframe,
+           i == 0 && (i < pvq->nb_bands - 1),
+           pvq->skip_rest, pvq->bs, encode_flip, flip);
+        }
+        if (i == 0 && !pvq->skip_rest && pvq->bs > 0) {
+          od_encode_cdf_adapt(&w->ec, pvq->skip_dir,
+           &xd->adapt.pvq.pvq_skip_dir_cdf[(plane != 0) + 2*(pvq->bs - 1)][0], 7,
+           xd->adapt.pvq.pvq_skip_dir_increment);
+        }
       }
     }
   }
