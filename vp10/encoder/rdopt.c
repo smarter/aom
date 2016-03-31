@@ -995,9 +995,6 @@ static int64_t rd_pick_intra4x4block(VP10_COMP *cpi, MACROBLOCK *x, int row,
           skip = pvq_encode_helper2(coeff, ref_coeff, dqcoeff,
               &p->eobs[block], pd->dequant[1],
               0, TX_4X4, &rate_pvq, &xd->mi[0]->mbmi.pvq[0]);
-          //TODO: Check this. Do we ever use skip flag for lossless mode.
-          // TODO: This seems not a right place to set x->skip_block
-          //x->skip_block = skip;
           ratey += rate_pvq;
 #else
           // Difference of predicted and original in TRANSFORM domain
@@ -1033,8 +1030,6 @@ static int64_t rd_pick_intra4x4block(VP10_COMP *cpi, MACROBLOCK *x, int row,
           skip = pvq_encode_helper2(coeff, ref_coeff, dqcoeff,
               &p->eobs[block], pd->dequant[1],
               0, TX_4X4, &rate_pvq, &xd->mi[0]->mbmi.pvq[0]);
-          // TODO: This seems not a right place to set x->skip_block
-          //x->skip_block = skip;
           ratey += rate_pvq;
 #else
           // Difference of predicted and original in TRANSFORM domain
