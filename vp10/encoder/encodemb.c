@@ -1736,6 +1736,7 @@ int pvq_encode_helper2(tran_low_t *const coeff, tran_low_t *ref_coeff,
                            0,            // key frame? 0 for always check noref mode == 0
                            pvq_info);
 
+  // Encode residue of DC coeff, if required.
   if (!has_dc_skip || dqcoeff_pvq[0]) {
     generic_encode(&daala_enc.ec, &daala_enc.state.adapt.model_dc[plane],
      abs(dqcoeff_pvq[0]) - has_dc_skip, -1,
@@ -1745,6 +1746,10 @@ int pvq_encode_helper2(tran_low_t *const coeff, tran_low_t *ref_coeff,
     od_ec_enc_bits(&daala_enc.ec, dqcoeff_pvq[0] < 0, 1);
     skip = 0;
   }
+  // need to save quantized residue of DC coeff
+  // so that final pvq bitstream writing can know whether DC is coded.
+  pvq_info->dq_dc_residue = dqcoeff_pvq[0];
+
   dqcoeff_pvq[0] = dqcoeff_pvq[0] * pvq_dc_quant;
   dqcoeff_pvq[0] += ref_coeff_pvq[0];
 

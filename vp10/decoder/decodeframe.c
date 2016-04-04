@@ -583,7 +583,7 @@ static void predict_and_reconstruct_intra_block(MACROBLOCKD *const xd,
         break;
       case TX_4X4:
         vp10_fwd_txfm_4x4(pred, pvq_ref_coeff, diff_stride, tx_type,
-                          xd->lossless[xd->mi[0]->mbmi.segment_id]);
+                          xd->lossless[seg_id]);
         break;
       default: assert(0); break;
     }
@@ -669,7 +669,7 @@ static int reconstruct_inter_block(MACROBLOCKD *const xd, vpx_reader *r,
       break;
     case TX_4X4:
       vp10_fwd_txfm_4x4(pred, pvq_ref_coeff, diff_stride, tx_type,
-                        xd->lossless[xd->mi[0]->mbmi.segment_id]);
+                        xd->lossless[seg_id]);
       break;
     default: assert(0); break;
   }

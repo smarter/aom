@@ -547,10 +547,19 @@ static void write_modes_b(VP10_COMP *cpi, const TileInfo *const tile,
     const int flip = 0;
     const int robust = 1;
     int i;
+    int has_dc_skip = 1;
 
     for (plane = 0; plane < MAX_MB_PLANE; ++plane) {
       PVQ_INFO* pvq = &m->mbmi.pvq[plane];
+      TX_SIZE tx_size =
+          plane ? get_uv_tx_size(&m->mbmi, &xd->plane[plane]) : m->mbmi.tx_size;
 
+      // encode block skip info
+      od_encode_cdf_adapt(&w->ec, pvq->block_skip,
+       xd->adapt.skip_cdf[2*tx_size + (plane != 0)], 4,
+       xd->adapt.skip_increment);
+
+      if (pvq->block_skip && 0x02)  // AC coeffs coded?
       for (i = 0; i < pvq->nb_bands; i++) {
         if (i == 0 || (!pvq->skip_rest &&
          !(pvq->skip_dir & (1 << ((i - 1)%3))))) {
@@ -569,7 +578,16 @@ static void write_modes_b(VP10_COMP *cpi, const TileInfo *const tile,
            xd->adapt.pvq.pvq_skip_dir_increment);
         }
       }
-    }
+      // Encode residue of DC coeff, if exist.
+      if (!has_dc_skip || (pvq->block_skip & 1)) {
+        generic_encode(&w->ec, &xd->adapt.model_dc[plane],
+         abs(pvq->dq_dc_residue) - has_dc_skip, -1,
+         xd->adapt.ex_dc[plane][tx_size][0], 2);
+      }
+      if (pvq->dq_dc_residue) {
+        od_ec_enc_bits(&w->ec, pvq->dq_dc_residue < 0, 1);
+      }
+    }//for (plane =
   }
 #endif
 }
