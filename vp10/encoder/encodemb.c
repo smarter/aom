@@ -1786,6 +1786,7 @@ void store_pvq_enc_info(PVQ_INFO *pvq_info,
     pvq_info->theta[i] = theta[i];
     pvq_info->max_theta[i] = max_theta[i];
     pvq_info->k[i] = k[i];
+    pvq_info->off[i] = off[i];
     pvq_info->size[i] = size[i];
   }
   // TODO: just copying block size should be fine
@@ -1796,7 +1797,6 @@ void store_pvq_enc_info(PVQ_INFO *pvq_info,
   pvq_info->exg = exg;
   pvq_info->ext = ext;
   pvq_info->nb_bands = nb_bands;
-  pvq_info->off = off;
   pvq_info->skip_rest = skip_rest;
   pvq_info->skip_dir = skip_dir;
   pvq_info->bs = bs;

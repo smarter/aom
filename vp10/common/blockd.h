@@ -67,7 +67,7 @@ typedef struct PVQ_INFO {
   int *exg;
   int *ext;
   int nb_bands;
-  int *off;
+  int off[PVQ_MAX_PARTITIONS];
   int size[PVQ_MAX_PARTITIONS];
   generic_encoder *model;
   int skip_rest;
