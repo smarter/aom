@@ -452,7 +452,7 @@ static int pvq_decode_helper(
     int pli,
     int bs,
     int xdec,
-    int skip_ac_dc
+    int ac_dc_coded
     ) {
   unsigned int flags; // used for daala's stream analyzer.
   int off;
@@ -495,7 +495,7 @@ static int pvq_decode_helper(
    1, //OD_ROBUST_STREAM
    is_keyframe,
    &flags,
-   skip_ac_dc,
+   ac_dc_coded,
    dec->state.qm + off,
    dec->state.qm_inv + off);
 
@@ -557,7 +557,7 @@ static void predict_and_reconstruct_intra_block(MACROBLOCKD *const xd,
                                              r, mbmi->segment_id);
 #else
     const int eob = 0;
-    int skip_ac_dc;
+    int ac_dc_coded; // bit0: DC coded, bit1 : AC coded
     int xdec = pd->subsampling_x;
     int seg_id = mbmi->segment_id;
     int quant;
@@ -590,11 +590,11 @@ static void predict_and_reconstruct_intra_block(MACROBLOCKD *const xd,
 
     // pvq_decode() for intra block runs here.
 
-    // decode ac/dc skip flag. bit0: 0 : DC skipped, bit1 : 0: AC skipped
+    // decode ac/dc coded flag. bit0: DC coded, bit1 : AC coded
     // NOTE : we don't use 5 symbols for luma here in aom codebase,
     // since block partition is taken care of by aom.
     // So, only AC/DC skip info is coded
-    skip_ac_dc = od_decode_cdf_adapt(daala_dec.ec,
+    ac_dc_coded = od_decode_cdf_adapt(daala_dec.ec,
      daala_dec.state.adapt.skip_cdf[2*tx_size + (plane != 0)], 4,
      daala_dec.state.adapt.skip_increment, "skip");
 
@@ -607,7 +607,7 @@ static void predict_and_reconstruct_intra_block(MACROBLOCKD *const xd,
         plane,
         tx_size,
         xdec,
-        skip_ac_dc);
+        ac_dc_coded);
 
     // Since vp10 does not have separate inverse transform
     // but also contains adding to predicted image,
@@ -2455,9 +2455,6 @@ static size_t read_uncompressed_header(VP10Decoder *pbi,
   {
   od_adapt_ctx *adapt = &daala_dec.state.adapt;
   od_adapt_ctx_reset(adapt, 0);
-  od_adapt_pvq_ctx_reset(&adapt->pvq, 0);
-  adapt->skip_increment = 128;
-  OD_CDFS_INIT(adapt->skip_cdf, adapt->skip_increment >> 2);
   }
 #endif
   setup_loopfilter(&cm->lf, rb);

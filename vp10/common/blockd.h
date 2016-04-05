@@ -69,12 +69,11 @@ typedef struct PVQ_INFO {
   int nb_bands;
   int off[PVQ_MAX_PARTITIONS];
   int size[PVQ_MAX_PARTITIONS];
-  generic_encoder *model;
   int skip_rest;
   int skip_dir;
   int bs;         // log of the block size minus two
-  int block_skip; // block skip info, indicating whether DC/AC is coded.
-                  // bit1: AC coded, bit0: DC coded (1 means coded)
+  int ac_dc_coded;// block skip info, indicating whether DC/AC is coded.
+                  // bit0: DC coded, bit1 : AC coded (1 means coded)
   tran_low_t dq_dc_residue;
 } PVQ_INFO;
 #endif

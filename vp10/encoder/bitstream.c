@@ -554,18 +554,20 @@ static void write_modes_b(VP10_COMP *cpi, const TileInfo *const tile,
       TX_SIZE tx_size =
           plane ? get_uv_tx_size(&m->mbmi, &xd->plane[plane]) : m->mbmi.tx_size;
 
+      assert(tx_size == pvq->bs);
+
       // encode block skip info
-      od_encode_cdf_adapt(&w->ec, pvq->block_skip,
+      od_encode_cdf_adapt(&w->ec, pvq->ac_dc_coded,
        xd->adapt.skip_cdf[2*tx_size + (plane != 0)], 4,
        xd->adapt.skip_increment);
 
-      if (pvq->block_skip && 0x02)  // AC coeffs coded?
+      if (pvq->ac_dc_coded && 0x02)  // AC coeffs coded?
       for (i = 0; i < pvq->nb_bands; i++) {
         if (i == 0 || (!pvq->skip_rest &&
          !(pvq->skip_dir & (1 << ((i - 1)%3))))) {
           pvq_encode_partition(&w->ec, pvq->qg[i], pvq->theta[i],
            pvq->max_theta[i], pvq->y + pvq->off[i],
-           pvq->size[i], pvq->k[i], pvq->model, &xd->adapt,
+           pvq->size[i], pvq->k[i], &xd->adapt.pvq.pvq_param_model, &xd->adapt,
            pvq->exg + i, pvq->ext + i,
            robust || is_keyframe, (plane != 0)*OD_NBSIZES*PVQ_MAX_PARTITIONS
            + pvq->bs*PVQ_MAX_PARTITIONS + i, is_keyframe,
@@ -579,12 +581,12 @@ static void write_modes_b(VP10_COMP *cpi, const TileInfo *const tile,
         }
       }
       // Encode residue of DC coeff, if exist.
-      if (!has_dc_skip || (pvq->block_skip & 1)) {
+      if (!has_dc_skip || (pvq->ac_dc_coded & 1)) {  // DC coded?
         generic_encode(&w->ec, &xd->adapt.model_dc[plane],
          abs(pvq->dq_dc_residue) - has_dc_skip, -1,
-         xd->adapt.ex_dc[plane][tx_size][0], 2);
+         &xd->adapt.ex_dc[plane][pvq->bs][0], 2);
       }
-      if (pvq->dq_dc_residue) {
+      if ((pvq->ac_dc_coded & 1)) {  // DC coded?
         od_ec_enc_bits(&w->ec, pvq->dq_dc_residue < 0, 1);
       }
     }//for (plane =
@@ -1189,15 +1191,7 @@ static size_t encode_tiles(VP10_COMP *cpi, uint8_t *data_ptr,
       else
         vpx_start_encode(&residual_bc, data_ptr + total_size);
 #if CONFIG_PVQ
-      {
-      extern daala_enc_ctx daala_enc;
-      od_adapt_ctx *adapt = &daala_enc.state.adapt;
-      //od_ec_enc_reset(&daala_enc.ec);
-      od_adapt_ctx_reset(adapt, 0);
-      adapt->skip_increment = 128;
-      OD_CDFS_INIT(adapt->skip_cdf, adapt->skip_increment >> 2);
-      }
-      od_adapt_pvq_ctx_reset(&xd->adapt.pvq, 0);
+      od_adapt_ctx_reset(&xd->adapt, 0);
 #endif
       write_modes(cpi, &cpi->tile_data[tile_idx].tile_info, &residual_bc, &tok,
                   tok_end);

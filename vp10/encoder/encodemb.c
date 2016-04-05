@@ -1675,7 +1675,7 @@ int pvq_encode_helper(daala_enc_ctx *daala_enc,
     in_int32[i] = in[i];
     //out_int32[i] = out[i];
   }
-  out_int32[0] = out[0];
+  //out_int32[0] = out[0];
 
   skip = od_pvq_encode(daala_enc, ref_int32, in_int32, out_int32,
           quant,//scale/quantizer
@@ -1775,7 +1775,6 @@ void store_pvq_enc_info(PVQ_INFO *pvq_info,
                         int *max_theta,
                         int *k,
                         od_coeff *y,
-                        generic_encoder *model,
                         int *exg,
                         int *ext,
                         int nb_bands,
@@ -1798,7 +1797,6 @@ void store_pvq_enc_info(PVQ_INFO *pvq_info,
   for (i=0; i < OD_BSIZE_MAX*OD_BSIZE_MAX; i++) {
     pvq_info->y[i] = y[i];
   }
-  pvq_info->model = model;
   pvq_info->exg = exg;
   pvq_info->ext = ext;
   pvq_info->nb_bands = nb_bands;
