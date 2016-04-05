@@ -1888,7 +1888,10 @@ static const uint8_t *decode_tiles(VP10Decoder *pbi, const uint8_t *data,
       // TODO: For muti tile (also threading), do this for each tile,
       // which needs define daala_dec for each tile.
       daala_dec.ec = &tile_data->bit_reader.ec;
-
+      {
+      od_adapt_ctx *adapt = &daala_dec.state.adapt;
+      od_adapt_ctx_reset(adapt, 0);
+      }
       vp10_init_macroblockd(cm, &tile_data->xd, tile_data->dqcoeff,
                             tile_data->pvq_ref_coeff);
 #endif
@@ -2451,12 +2454,6 @@ static size_t read_uncompressed_header(VP10Decoder *pbi,
   if (frame_is_intra_only(cm) || cm->error_resilient_mode)
     vp10_setup_past_independence(cm);
 
-#if CONFIG_PVQ
-  {
-  od_adapt_ctx *adapt = &daala_dec.state.adapt;
-  od_adapt_ctx_reset(adapt, 0);
-  }
-#endif
   setup_loopfilter(&cm->lf, rb);
 #if CONFIG_CLPF
   setup_clpf(cm, rb);
