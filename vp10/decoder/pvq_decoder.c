@@ -369,7 +369,7 @@ void od_pvq_decode(daala_dec_ctx *dec,
       // TODO: Enable this later, if pvq_qm_q4 is available in AOM.
       //q = OD_MAXI(1, q0*pvq_qm[od_qm_get_index(bs, i + 1)] >> 4);
       q = OD_MAXI(1, q0);
-      pvq_decode_partition(&dec->ec, q, size[i],
+      pvq_decode_partition(dec->ec, q, size[i],
        model, &dec->state.adapt, exg + i, ext + i, ref + off[i], out + off[i],
        &noref[i], beta[i], robust, is_keyframe, pli,
        (pli != 0)*OD_NBSIZES*PVQ_MAX_PARTITIONS + bs*PVQ_MAX_PARTITIONS + i,
@@ -378,7 +378,7 @@ void od_pvq_decode(daala_dec_ctx *dec,
       if (i == 0 && !skip_rest[0] && bs > 0) {
         int skip_dir;
         int j;
-        skip_dir = od_decode_cdf_adapt(&dec->ec,
+        skip_dir = od_decode_cdf_adapt(dec->ec,
          &dec->state.adapt.pvq.pvq_skip_dir_cdf[(pli != 0) + 2*(bs - 1)][0], 7,
          dec->state.adapt.pvq.pvq_skip_dir_increment, "pvq:skiprest");
         for (j = 0; j < 3; j++) skip_rest[j] = !!(skip_dir & (1 << j));

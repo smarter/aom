@@ -56,7 +56,7 @@
 #include "vp10/encoder/encodemb.h"
 #include "vp10/decoder/decint.h"
 #include "vpx_dsp/entdec.h"
-daala_dec_ctx daala_dec;
+od_dec_ctx daala_dec;
 #endif
 
 static int is_compound_reference_allowed(const VP10_COMMON *cm) {
