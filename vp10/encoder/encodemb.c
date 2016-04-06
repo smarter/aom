@@ -1797,8 +1797,6 @@ void store_pvq_enc_info(PVQ_INFO *pvq_info,
   for (i=0; i < OD_BSIZE_MAX*OD_BSIZE_MAX; i++) {
     pvq_info->y[i] = y[i];
   }
-  pvq_info->exg = exg;
-  pvq_info->ext = ext;
   pvq_info->nb_bands = nb_bands;
   pvq_info->skip_rest = skip_rest;
   pvq_info->skip_dir = skip_dir;

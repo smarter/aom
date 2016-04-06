@@ -553,6 +553,9 @@ static void write_modes_b(VP10_COMP *cpi, const TileInfo *const tile,
       PVQ_INFO* pvq = &m->mbmi.pvq[plane];
       TX_SIZE tx_size =
           plane ? get_uv_tx_size(&m->mbmi, &xd->plane[plane]) : m->mbmi.tx_size;
+      int *exg = &xd->adapt.pvq.pvq_exg[plane][tx_size][0];
+      int *ext = xd->adapt.pvq.pvq_ext + tx_size*PVQ_MAX_PARTITIONS;
+      generic_encoder *model = xd->adapt.pvq.pvq_param_model;
 
       assert(tx_size == pvq->bs);
 
@@ -567,8 +570,8 @@ static void write_modes_b(VP10_COMP *cpi, const TileInfo *const tile,
          !(pvq->skip_dir & (1 << ((i - 1)%3))))) {
           pvq_encode_partition(&w->ec, pvq->qg[i], pvq->theta[i],
            pvq->max_theta[i], pvq->y + pvq->off[i],
-           pvq->size[i], pvq->k[i], &xd->adapt.pvq.pvq_param_model, &xd->adapt,
-           pvq->exg + i, pvq->ext + i,
+           pvq->size[i], pvq->k[i], model, &xd->adapt,
+           exg + i, ext + i,
            robust || is_keyframe, (plane != 0)*OD_NBSIZES*PVQ_MAX_PARTITIONS
            + pvq->bs*PVQ_MAX_PARTITIONS + i, is_keyframe,
            i == 0 && (i < pvq->nb_bands - 1),
