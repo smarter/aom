@@ -503,10 +503,10 @@ static int pvq_decode_helper(
     dqcoeff_pvq[i] = out_int32[i];
 
   if (!has_dc_skip || dqcoeff_pvq[0]) {
-    dqcoeff_pvq[0] = has_dc_skip + generic_decode(&dec->ec,
+    dqcoeff_pvq[0] = has_dc_skip + generic_decode(dec->ec,
      &dec->state.adapt.model_dc[pli], -1,
      &dec->state.adapt.ex_dc[pli][bs][0], 2, "dc:mag");
-    if (dqcoeff_pvq[0]) dqcoeff_pvq[0] *= od_ec_dec_bits(&dec->ec, 1, "dc:sign") ? -1 : 1;
+    if (dqcoeff_pvq[0]) dqcoeff_pvq[0] *= od_ec_dec_bits(dec->ec, 1, "dc:sign") ? -1 : 1;
   }
   dqcoeff_pvq[0] = dqcoeff_pvq[0]*pvq_dc_quant + ref_coeff_pvq[0];
 
