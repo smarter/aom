@@ -73,6 +73,8 @@ typedef struct PVQ_INFO {
   int ac_dc_coded;// block skip info, indicating whether DC/AC is coded.
                   // bit0: DC coded, bit1 : AC coded (1 means coded)
   tran_low_t dq_dc_residue;
+  tran_low_t ref_coeff[OD_BSIZE_MAX*OD_BSIZE_MAX];  // for DEBUG, reference vector for PVQ!
+  int eob;
 } PVQ_INFO;
 #endif
 

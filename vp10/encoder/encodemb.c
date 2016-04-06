@@ -1724,6 +1724,12 @@ int pvq_encode_helper2(tran_low_t *const coeff, tran_low_t *ref_coeff,
     dqcoeff_pvq[0] = OD_DIV_R0(coeff_pvq[0] - ref_coeff_pvq[0], pvq_dc_quant);
   }
 
+  {// for debugging, to match with decoder side ref vector.
+  int i;
+  for (i=0; i<tx_blk_size*tx_blk_size; i++)
+    pvq_info->ref_coeff[i] = ref_coeff[i];
+  }
+
   tell = od_ec_enc_tell(&daala_enc.ec);
 
   skip = pvq_encode_helper(&daala_enc,    // daala encoder
@@ -1765,6 +1771,8 @@ int pvq_encode_helper2(tran_low_t *const coeff, tran_low_t *ref_coeff,
   // Mark last nonzero coeff position.
   for (j = 0; j < tx_blk_size*tx_blk_size; j++)
     if (dqcoeff[j]) *eob = j;
+
+  pvq_info->eob = *eob;
 
   return skip;
 }

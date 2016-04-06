@@ -452,8 +452,7 @@ static int pvq_decode_helper(
     int pli,
     int bs,
     int xdec,
-    int ac_dc_coded
-    ) {
+    int ac_dc_coded) {
   unsigned int flags; // used for daala's stream analyzer.
   int off;
   const int is_keyframe = 0;
@@ -556,7 +555,7 @@ static void predict_and_reconstruct_intra_block(MACROBLOCKD *const xd,
     const int eob = vp10_decode_block_tokens(xd, plane, sc, col, row, tx_size,
                                              r, mbmi->segment_id);
 #else
-    const int eob = 0;
+    int eob = 0;
     int ac_dc_coded; // bit0: DC coded, bit1 : AC coded
     int xdec = pd->subsampling_x;
     int seg_id = mbmi->segment_id;
@@ -600,14 +599,14 @@ static void predict_and_reconstruct_intra_block(MACROBLOCKD *const xd,
 
     quant = pd->seg_dequant[seg_id][1]; //AC quantizer
 
-     pvq_decode_helper(&daala_dec,
-        pvq_ref_coeff,
-        dqcoeff,
-        quant,
-        plane,
-        tx_size,
-        xdec,
-        ac_dc_coded);
+    eob = pvq_decode_helper(&daala_dec,
+      pvq_ref_coeff,
+      dqcoeff,
+      quant,
+      plane,
+      tx_size,
+      xdec,
+      ac_dc_coded);
 
     // Since vp10 does not have separate inverse transform
     // but also contains adding to predicted image,
@@ -639,7 +638,7 @@ static int reconstruct_inter_block(MACROBLOCKD *const xd, vpx_reader *r,
   const int diff_stride = tx_blk_size;
   int16_t *pred = pd->pred;
   uint8_t *dst;
-  const int eob = 0;
+  int eob = 0;
   tran_low_t *const dqcoeff = pd->dqcoeff;
   int skip_ac_dc;
   int xdec = pd->subsampling_x;
@@ -686,14 +685,14 @@ static int reconstruct_inter_block(MACROBLOCKD *const xd, vpx_reader *r,
 
   quant = pd->seg_dequant[seg_id][1]; //AC quantizer
 
-   pvq_decode_helper(&daala_dec,
-      pvq_ref_coeff,
-      dqcoeff,
-      quant,
-      plane,
-      tx_size,
-      xdec,
-      skip_ac_dc);
+  eob = pvq_decode_helper(&daala_dec,
+    pvq_ref_coeff,
+    dqcoeff,
+    quant,
+    plane,
+    tx_size,
+    xdec,
+    skip_ac_dc);
 
   // Since vp10 does not have separate inverse transform
   // but also contains adding to predicted image,

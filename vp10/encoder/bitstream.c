@@ -564,7 +564,7 @@ static void write_modes_b(VP10_COMP *cpi, const TileInfo *const tile,
        xd->adapt.skip_cdf[2*tx_size + (plane != 0)], 4,
        xd->adapt.skip_increment);
 
-      if (pvq->ac_dc_coded && 0x02)  // AC coeffs coded?
+      if (pvq->ac_dc_coded & 0x02)  // AC coeffs coded?
       for (i = 0; i < pvq->nb_bands; i++) {
         if (i == 0 || (!pvq->skip_rest &&
          !(pvq->skip_dir & (1 << ((i - 1)%3))))) {
