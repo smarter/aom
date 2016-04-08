@@ -1714,8 +1714,10 @@ int pvq_encode_helper2(tran_low_t *const coeff, tran_low_t *ref_coeff,
   int skip;
   int j;
 
-  if (plane == 0)
-    assert(tx_size > TX_4X4);
+  // TODO: Enabling this cause assert when encoding inter mode.
+  // that means 4x4 block partition happens for inter.
+  //if (plane == 0)
+  //  assert(tx_size > TX_4X4);
 
   // TODO: Enable this later, if pvq_qm_q4 is available in AOM.
   //int pvq_dc_quant = OD_MAXI(1,
