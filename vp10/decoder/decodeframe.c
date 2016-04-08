@@ -640,7 +640,7 @@ static int reconstruct_inter_block(MACROBLOCKD *const xd, vpx_reader *r,
   uint8_t *dst;
   int eob = 0;
   tran_low_t *const dqcoeff = pd->dqcoeff;
-  int skip_ac_dc;
+  int ac_dc_coded;
   int xdec = pd->subsampling_x;
   int seg_id = mbmi->segment_id;
   int quant;
@@ -679,7 +679,7 @@ static int reconstruct_inter_block(MACROBLOCKD *const xd, vpx_reader *r,
   // NOTE : we don't use 5 symbols for luma here in aom codebase,
   // since block partition is taken care of by aom.
   // So, only AC/DC skip info is coded
-  skip_ac_dc = od_decode_cdf_adapt(daala_dec.ec,
+  ac_dc_coded = od_decode_cdf_adapt(daala_dec.ec,
    daala_dec.state.adapt.skip_cdf[2*tx_size + (plane != 0)], 4,
    daala_dec.state.adapt.skip_increment, "skip");
 
@@ -692,7 +692,7 @@ static int reconstruct_inter_block(MACROBLOCKD *const xd, vpx_reader *r,
     plane,
     tx_size,
     xdec,
-    skip_ac_dc);
+    ac_dc_coded);
 
   // Since vp10 does not have separate inverse transform
   // but also contains adding to predicted image,

@@ -512,6 +512,7 @@ void vp10_xform_quant_fp(MACROBLOCK *x, int plane, int block, int blk_row,
 #else
   struct macroblock_plane *const p = &x->plane[plane];
   struct macroblockd_plane *const pd = &xd->plane[plane];
+  MB_MODE_INFO *mbmi = &xd->mi[0]->mbmi;
 #endif
   PLANE_TYPE plane_type = (plane == 0) ? PLANE_TYPE_Y : PLANE_TYPE_UV;
   TX_TYPE tx_type = get_tx_type(plane_type, xd, block);
@@ -521,7 +522,7 @@ void vp10_xform_quant_fp(MACROBLOCK *x, int plane, int block, int blk_row,
   tran_low_t *const dqcoeff = BLOCK_OFFSET(pd->dqcoeff, block);
   uint16_t *const eob = &p->eobs[block];
   const int diff_stride = 4 * num_4x4_blocks_wide_lookup[plane_bsize];
-  int seg_id = xd->mi[0]->mbmi.segment_id;
+  int seg_id = mbmi->segment_id;
 #if CONFIG_AOM_QM
   int is_intra = !is_inter_block(&xd->mi[0]->mbmi);
   const qm_val_t *qmatrix = pd->seg_qmatrix[seg_id][is_intra][tx_size];
@@ -706,12 +707,12 @@ void vp10_xform_quant_fp(MACROBLOCK *x, int plane, int block, int blk_row,
   skip = pvq_encode_helper2(coeff,          // target original vector
                             ref_coeff,      // reference vector
                             dqcoeff,        // de-quantized vector
-                            &p->eobs[block],// End of Block marker
+                            eob,             // End of Block marker
                             pd->dequant[1], // vpx's AC quantization step size
-                            0,  // keyframe (daala's definition)? Must be always 0 for use in aom since it has intra prediction
+                            0,              // keyframe (daala's definition)? 0 for now
                             tx_size,        // block size in log_2 - 2, 0 for 4x4.
                             &x->rate,       // rate measured
-                            &xd->mi[0]->mbmi.pvq[plane]); // PVQ info for a block
+                            &mbmi->pvq[plane]); // PVQ info for a block
 #else
   // Difference of predicted and original in TRANSFORM domain
   for (i=0; i < tx_blk_size * tx_blk_size; i++)
@@ -1053,12 +1054,12 @@ void vp10_xform_quant(MACROBLOCK *x, int plane, int block, int blk_row,
   skip = pvq_encode_helper2(coeff,          // target original vector
                             ref_coeff,      // reference vector
                             dqcoeff,        // de-quantized vector
-                            eob,// End of Block marker
+                            eob,            // End of Block marker
                             pd->dequant[1], // vpx's AC quantization step size
-                            0,  // keyframe (daala's definition)? Must be always 0 for use in aom since it has intra prediction
+                            0,              // keyframe (daala's definition)? 0 for now
                             tx_size,        // block size in log_2 - 2, 0 for 4x4.
                             &x->rate,       // rate measured
-                            &xd->mi[0]->mbmi.pvq[plane]); // PVQ info for a block
+                            &mbmi->pvq[plane]); // PVQ info for a block
   mbmi->skip = skip;
 #else
   // Difference of predicted and original in TRANSFORM domain
@@ -1567,12 +1568,12 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
     skip = pvq_encode_helper2(coeff,          // target original vector
                               ref_coeff,      // reference vector
                               dqcoeff,        // de-quantized vector
-                              &p->eobs[block],// End of Block marker
+                              eob,// End of Block marker
                               pd->dequant[1], // vpx's DC and AC quantization step size
                               0,  // keyframe (daala's definition)? Must be always 0 for use in aom since it has intra prediction
                               tx_size,        // block size in log_2 - 2, 0 for 4x4.
                               &x->rate,       // rate measured
-                              &xd->mi[0]->mbmi.pvq[plane]); // PVQ info for a block
+                              &mbmi->pvq[plane]); // PVQ info for a block
     mbmi->skip = skip;
 #else
     // Difference of predicted and original in TRANSFORM domain
@@ -1650,7 +1651,8 @@ void vp10_encode_intra_block_plane(MACROBLOCK *x, BLOCK_SIZE bsize, int plane) {
  * @param [in]     pli     plane index
  * @param [in]     bs      log of the block size minus two
  * @param [in]     is_keyframe whether we're encoding a keyframe
- * @return         Returns 1 if the AC coefficients are skipped, zero otherwise
+ * @return         Returns 1 if both DC and AC coefficients are skipped,
+ *                 zero otherwise
  */
 int pvq_encode_helper(daala_enc_ctx *daala_enc,
                    int16_t *ref,

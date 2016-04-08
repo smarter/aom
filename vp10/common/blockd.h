@@ -116,7 +116,7 @@ typedef struct {
   /* deringing gain *per-superblock* */
   int8_t dering_gain;
 #if CONFIG_PVQ
-  PVQ_INFO pvq[3];
+  PVQ_INFO pvq[3];  // 3 for YUV 3 channels
 #endif
 } MB_MODE_INFO;
 
@@ -151,7 +151,6 @@ struct buf_2d {
 };
 
 struct macroblockd_plane {
-  DECLARE_ALIGNED(16, int16_t, pred[64 * 64]);
   tran_low_t *dqcoeff;
   PLANE_TYPE plane_type;
   int subsampling_x;
@@ -179,6 +178,7 @@ struct macroblockd_plane {
 #endif
 
 #if CONFIG_PVQ
+  DECLARE_ALIGNED(16, int16_t, pred[64 * 64]);
   // PVQ: forward transformed predicted image, a reference for PVQ.
   tran_low_t *pvq_ref_coeff;
 #endif
