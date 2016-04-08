@@ -1575,6 +1575,14 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
                               &x->rate,       // rate measured
                               &mbmi->pvq[plane]); // PVQ info for a block
     mbmi->skip = skip;
+
+    // NOTE: *eob == 0 and skip == 0 are not equivalent,
+    // since the later means PVQ has not coded both DC and AC,
+    // while the former can be false when skip == 0 but the ref vector is nonzero.
+    // *eob == 0 is superset to skip == 0.
+    // If *eob == 0, decoder does not call pvq_decode().
+    // If skip == 0, decoder just use spatial domain prediction.
+
 #else
     // Difference of predicted and original in TRANSFORM domain
     for (i=0; i < tx_blk_size * tx_blk_size; i++)
@@ -1601,6 +1609,8 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
   // pass blank dummy image to vp10_inv_txfm_add_*x*(), i.e. set dst as zeros
 
   if (*eob) {
+  //if (!skip) {  // using this fix the blockiness in enc side output
+                  // but cause assert (`less8x8 == 0') in decoder!
     for (j=0; j < tx_blk_size; j++)
       memset(dst + j * dst_stride, 0, tx_blk_size);
 
@@ -1625,10 +1635,11 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
     }
   }
 #endif//#if !CONFIG_PVQ
-  if (*eob) *(args->skip) = 0;
 
-#if CONFIG_PVQ
-  // TODO: Need to verify if this skip info is properly used upward during RDO search
+#if !CONFIG_PVQ
+  if (*eob) *(args->skip) = 0;
+#else
+  //if (*eob) *(args->skip) = 0;
   *(args->skip) = skip;
 #endif
 }
@@ -1702,6 +1713,10 @@ int pvq_encode_helper2(tran_low_t *const coeff, tran_low_t *ref_coeff,
   const int tx_blk_size = 1 << (tx_size + 2);
   int skip;
   int j;
+
+  if (plane == 0)
+    assert(tx_size > TX_4X4);
+
   // TODO: Enable this later, if pvq_qm_q4 is available in AOM.
   //int pvq_dc_quant = OD_MAXI(1,
   //  quant * daala_enc.state.pvq_qm_q4[plane][od_qm_get_index(tx_size, 0)] >> 4);
