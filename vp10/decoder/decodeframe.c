@@ -514,7 +514,7 @@ static int pvq_decode_helper(
 
   // Mark last nonzero coeff position.
   for (j = 0; j < blk_size*blk_size; j++)
-    if (dqcoeff[j]) eob = j;
+    if (dqcoeff[j]) eob = j + 1;
 
   return eob;
 }

@@ -1789,7 +1789,7 @@ int pvq_encode_helper2(tran_low_t *const coeff, tran_low_t *ref_coeff,
 
   // Mark last nonzero coeff position.
   for (j = 0; j < tx_blk_size*tx_blk_size; j++)
-    if (dqcoeff[j]) *eob = j;
+    if (dqcoeff[j]) *eob = j + 1;
 
   pvq_info->eob = *eob;
 
