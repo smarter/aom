@@ -414,6 +414,7 @@ static void set_rt_speed_feature(VP10_COMP *cpi, SPEED_FEATURES *sf, int speed,
     // For pvq experiment
     sf->partition_search_type = FIXED_PARTITION;
     sf->always_this_block_size = BLOCK_32X32;
+    sf->tx_size_search_method = USE_LARGESTALL;
     //sf->default_max_partition_size = sf->always_this_block_size;
     //sf->default_min_partition_size = sf->always_this_block_size;
     //cpi->partition_search_skippable_frame = 0;
