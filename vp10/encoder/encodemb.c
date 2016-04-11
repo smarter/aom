@@ -1570,7 +1570,7 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
                               dqcoeff,        // de-quantized vector
                               eob,// End of Block marker
                               pd->dequant[1], // vpx's DC and AC quantization step size
-                              0,  // keyframe (daala's definition)? Must be always 0 for use in aom since it has intra prediction
+                              plane,          // image plane
                               tx_size,        // block size in log_2 - 2, 0 for 4x4.
                               &x->rate,       // rate measured
                               &mbmi->pvq[plane]); // PVQ info for a block
@@ -1755,7 +1755,7 @@ int pvq_encode_helper2(tran_low_t *const coeff, tran_low_t *ref_coeff,
                            quant,         // quantizer
                            plane,         // image plane
                            tx_size,       // transform size in log_2 - 2, ex: 0 is for 4x4
-                           0,            // key frame? 0 for always check noref mode == 0
+                           0,            // key frame? 0 for now
                            pvq_info);
 
   // Encode residue of DC coeff, if required.

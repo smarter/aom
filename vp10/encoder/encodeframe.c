@@ -1478,6 +1478,11 @@ static void rd_use_partition(VP10_COMP *cpi, ThreadData *td,
   partition = partition_lookup[bsl][bs_type];
   subsize = get_subsize(bsize, partition);
 
+#if CONFIG_PVQ
+  if (bsize <= BLOCK_8X8) {
+    partition = PARTITION_NONE;
+  }
+#endif
   pc_tree->partitioning = partition;
   save_context(x, mi_row, mi_col, a, l, sa, sl, bsize);
 
@@ -2414,8 +2419,12 @@ static void encode_rd_sb_row(VP10_COMP *cpi, ThreadData *td,
       set_fixed_partitioning(cpi, tile_info, mi, mi_row, mi_col, bsize);
       rd_use_partition(cpi, td, tile_data, mi, tp, mi_row, mi_col, BLOCK_64X64,
                        &dummy_rate, &dummy_dist, 1, td->pc_root);
+#if !CONFIG_PVQ
     } else if (sf->partition_search_type == VAR_BASED_PARTITION &&
                cm->frame_type != KEY_FRAME) {
+#else
+    } else if (sf->partition_search_type == VAR_BASED_PARTITION) {
+#endif
       choose_partitioning(cpi, tile_info, x, mi_row, mi_col);
       rd_use_partition(cpi, td, tile_data, mi, tp, mi_row, mi_col, BLOCK_64X64,
                        &dummy_rate, &dummy_dist, 1, td->pc_root);
