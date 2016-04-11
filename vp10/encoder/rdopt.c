@@ -673,6 +673,10 @@ static void choose_tx_size_from_rd(VP10_COMP *cpi, MACROBLOCK *x, int *rate,
     end_tx = chosen_tx_size;
   }
 
+#if CONFIG_PVQ
+  end_tx = TX_8X8;
+#endif
+
   *distortion = INT64_MAX;
   *rate = INT_MAX;
   *skip = 0;

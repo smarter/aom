@@ -1056,7 +1056,7 @@ void vp10_xform_quant(MACROBLOCK *x, int plane, int block, int blk_row,
                             dqcoeff,        // de-quantized vector
                             eob,            // End of Block marker
                             pd->dequant[1], // vpx's AC quantization step size
-                            0,              // keyframe (daala's definition)? 0 for now
+                            plane,          // image plane
                             tx_size,        // block size in log_2 - 2, 0 for 4x4.
                             &x->rate,       // rate measured
                             &mbmi->pvq[plane]); // PVQ info for a block
@@ -1714,11 +1714,8 @@ int pvq_encode_helper2(tran_low_t *const coeff, tran_low_t *ref_coeff,
   int skip;
   int j;
 
-  // TODO: Enabling this cause assert when encoding inter mode.
-  // that means 4x4 block partition happens for inter.
-  //if (plane == 0)
-  //  assert(tx_size > TX_4X4);
-
+  if (plane == 0)
+    assert(tx_size > TX_4X4);
   // TODO: Enable this later, if pvq_qm_q4 is available in AOM.
   //int pvq_dc_quant = OD_MAXI(1,
   //  quant * daala_enc.state.pvq_qm_q4[plane][od_qm_get_index(tx_size, 0)] >> 4);
