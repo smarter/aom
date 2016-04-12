@@ -369,7 +369,7 @@ static int pvq_decode_helper(
   int pvq_dc_quant;
   int lossless = (quant == 0);
   const int blk_size = 1 << (bs + 2);
-  int eob;
+  int eob = 0;
   int i, j;
   //int use_activity_masking = dec->use_activity_masking;
   int use_activity_masking = 0;

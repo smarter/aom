@@ -512,8 +512,8 @@ void vp10_xform_quant_fp(MACROBLOCK *x, int plane, int block, int blk_row,
 #else
   struct macroblock_plane *const p = &x->plane[plane];
   struct macroblockd_plane *const pd = &xd->plane[plane];
-  MB_MODE_INFO *mbmi = &xd->mi[0]->mbmi;
 #endif
+  MB_MODE_INFO *mbmi = &xd->mi[0]->mbmi;
   PLANE_TYPE plane_type = (plane == 0) ? PLANE_TYPE_Y : PLANE_TYPE_UV;
   TX_TYPE tx_type = get_tx_type(plane_type, xd, block);
   const scan_order *const scan_order = get_scan(tx_size, tx_type);
@@ -1065,6 +1065,9 @@ static void encode_block(int plane, int block, int blk_row, int blk_col,
   int tx_blk_size;
   int i, j;
   tran_low_t *ref_coeff = BLOCK_OFFSET(pd->pvq_ref_coeff, block);
+  MB_MODE_INFO *mbmi = &xd->mi[0]->mbmi;
+  //block skip info from pvq, 0 means both DC and AC are skipped.
+  int skip;
 #endif
   dst = &pd->dst.buf[4 * blk_row * pd->dst.stride + 4 * blk_col];
   a = &ctx->ta[plane][blk_col];
@@ -1121,7 +1124,12 @@ static void encode_block(int plane, int block, int blk_row, int blk_col,
     *a = *l = p->eobs[block] > 0;
   }
 
+#if !CONFIG_PVQ
   if (p->eobs[block]) *(args->skip) = 0;
+#else
+  if (p->eobs[block]) *(args->skip) = 0;
+  skip = mbmi->skip;
+#endif
 
   if (p->eobs[block] == 0) return;
 
@@ -1132,6 +1140,7 @@ static void encode_block(int plane, int block, int blk_row, int blk_col,
   // Since vp10 does not have inverse transform only function
   // but contain adding the inverse transform to predicted image,
   // pass blank dummy image to vp10_inv_txfm_add_*x*(), i.e. set dst as zeros
+  if (!skip)
   for (j=0; j < tx_blk_size; j++)
     memset(dst + j * pd->dst.stride, 0, tx_blk_size);
 #endif
@@ -1167,6 +1176,10 @@ static void encode_block(int plane, int block, int blk_row, int blk_col,
     return;
   }
 #endif  // CONFIG_VPX_HIGHBITDEPTH
+
+#if CONFIG_PVQ
+  if (!skip)
+#endif
   switch (tx_size) {
     case TX_32X32:
       vp10_inv_txfm_add_32x32(dqcoeff, dst, pd->dst.stride, p->eobs[block],
