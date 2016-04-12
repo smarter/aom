@@ -773,6 +773,9 @@ static void super_block_yrd(VP10_COMP *cpi, MACROBLOCK *x, int *rate,
     choose_tx_size_from_rd(cpi, x, rate, distortion, skip, ret_sse, ref_best_rd,
                            bs);
   }
+#if CONFIG_PVQ
+  assert(xd->mi[0]->mbmi.tx_size >= TX_8X8);
+#endif
 }
 
 static int conditional_skipintra(PREDICTION_MODE mode,
