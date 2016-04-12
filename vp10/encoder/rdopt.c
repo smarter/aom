@@ -454,6 +454,10 @@ static void block_rd_txfm(int plane, int block, int blk_row, int blk_col,
 
   if (args->exit_early) return;
 
+#if CONFIG_PVQ
+  assert(tx_size >= TX_8X8);
+#endif
+
   if (!is_inter_block(mbmi)) {
     struct encode_b_args arg = { x, NULL, &mbmi->skip };
     vp10_encode_block_intra(plane, block, blk_row, blk_col, plane_bsize,

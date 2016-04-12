@@ -1563,9 +1563,8 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
   // but contain adding the inverse transform to predicted image,
   // pass blank dummy image to vp10_inv_txfm_add_*x*(), i.e. set dst as zeros
 
-  if (*eob) {
-  //if (!skip) {  // using this fix the blockiness in enc side output
-                  // but cause assert (`less8x8 == 0') in decoder!
+  //if (*eob) {
+  if (!skip) {
     for (j=0; j < tx_blk_size; j++)
       memset(dst + j * dst_stride, 0, tx_blk_size);
 

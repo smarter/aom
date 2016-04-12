@@ -49,6 +49,9 @@ void vp10_foreach_transformed_block_in_plane(
   const int step = 1 << (tx_size << 1);
   int i = 0, r, c;
 
+#if CONFIG_PVQ
+  assert(tx_size >= TX_8X8);
+#endif
   // If mb_to_right_edge is < 0 we are in a situation in which
   // the current block size extends into the UMV and we won't
   // visit the sub blocks that are wholly within the UMV.
