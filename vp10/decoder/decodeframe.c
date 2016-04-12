@@ -596,6 +596,8 @@ static int reconstruct_inter_block(MACROBLOCKD *const xd, vpx_reader *r,
    daala_dec.state.adapt.skip_cdf[2*tx_size + (plane != 0)], 4,
    daala_dec.state.adapt.skip_increment, "skip");
 
+  assert(ac_dc_coded > 0);
+
   quant = pd->seg_dequant[seg_id][0]; //vpx's DC quantizer
 
   eob = pvq_decode_helper(&daala_dec,
@@ -610,6 +612,7 @@ static int reconstruct_inter_block(MACROBLOCKD *const xd, vpx_reader *r,
   // Since vp10 does not have separate inverse transform
   // but also contains adding to predicted image,
   // pass blank dummy image to vp10_inv_txfm_add_*x*(), i.e. set dst as zeros
+  if (eob > 0)
   for (j=0; j < tx_blk_size; j++)
     memset(dst + j * pd->dst.stride, 0, tx_blk_size);
 

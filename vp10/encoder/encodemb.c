@@ -1129,6 +1129,12 @@ static void encode_block(int plane, int block, int blk_row, int blk_col,
 #else
   if (p->eobs[block]) *(args->skip) = 0;
   skip = mbmi->skip;
+
+  if (skip)
+    assert(mbmi->pvq[plane].ac_dc_coded == 0);
+
+  if (!skip)
+    assert(mbmi->pvq[plane].ac_dc_coded > 0);
 #endif
 
   if (p->eobs[block] == 0) return;
@@ -1551,6 +1557,9 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
                               &mbmi->pvq[plane]); // PVQ info for a block
     mbmi->skip = skip;
 
+    if (!skip)
+      assert(mbmi->pvq[plane].ac_dc_coded > 0);
+
     // NOTE: *eob == 0 and skip == 0 are not equivalent,
     // since the later means PVQ has not coded both DC and AC,
     // while the former can be false when skip == 0 but the ref vector is nonzero.
@@ -1652,6 +1661,12 @@ int pvq_encode_helper(daala_enc_ctx *daala_enc,
           0, 0, 0, //q_scaling, bx, by,
           daala_enc->state.qm + off, daala_enc->state.qm_inv + off, pvq_info);
 
+  if (skip)
+    assert(pvq_info->ac_dc_coded == 0);
+
+  if (!skip)
+    assert(pvq_info->ac_dc_coded > 0);
+
   //copy int32 result back to int16
   for (i=0; i < blk_size*blk_size; i++)
     out[i] = out_int32[i];
@@ -1742,6 +1757,9 @@ int pvq_encode_helper2(tran_low_t *const coeff, tran_low_t *ref_coeff,
     if (dqcoeff[j]) *eob = j + 1;
 
   pvq_info->eob = *eob;
+
+  if (!skip)
+    assert(pvq_info->ac_dc_coded > 0);
 
   return skip;
 }

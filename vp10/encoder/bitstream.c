@@ -558,6 +558,7 @@ static void write_modes_b(VP10_COMP *cpi, const TileInfo *const tile,
       generic_encoder *model = xd->adapt.pvq.pvq_param_model;
 
       assert(tx_size == pvq->bs);
+      assert(pvq->ac_dc_coded > 0);
 
       // encode block skip info
       od_encode_cdf_adapt(&w->ec, pvq->ac_dc_coded,
