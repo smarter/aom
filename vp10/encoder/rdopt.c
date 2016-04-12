@@ -989,7 +989,7 @@ static int64_t rd_pick_intra4x4block(VP10_COMP *cpi, MACROBLOCK *x, int row,
 #else
           // TODO: Properly use skip info (for 4x4 block here) from pvq
           skip = pvq_encode_helper2(coeff, ref_coeff, dqcoeff,
-              &p->eobs[block], pd->dequant[1],
+              &p->eobs[block], pd->dequant[0],
               0, TX_4X4, &rate_pvq, &xd->mi[0]->mbmi.pvq[0]);
           ratey += rate_pvq;
 #endif
@@ -1010,7 +1010,7 @@ static int64_t rd_pick_intra4x4block(VP10_COMP *cpi, MACROBLOCK *x, int row,
 #else
           // TODO: Properly use skip info (for 4x4 block here) from pvq
           skip = pvq_encode_helper2(coeff, ref_coeff, dqcoeff,
-              &p->eobs[block], pd->dequant[1],
+              &p->eobs[block], pd->dequant[0],
               0, TX_4X4, &rate_pvq, &xd->mi[0]->mbmi.pvq[0]);
           ratey += rate_pvq;
 #endif

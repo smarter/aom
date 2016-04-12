@@ -708,7 +708,7 @@ void vp10_xform_quant_fp(MACROBLOCK *x, int plane, int block, int blk_row,
                             ref_coeff,      // reference vector
                             dqcoeff,        // de-quantized vector
                             eob,             // End of Block marker
-                            pd->dequant[1], // vpx's AC quantization step size
+                            pd->dequant[0], // vpx's DC quantization step size
                             0,              // keyframe (daala's definition)? 0 for now
                             tx_size,        // block size in log_2 - 2, 0 for 4x4.
                             &x->rate,       // rate measured
@@ -1039,7 +1039,7 @@ void vp10_xform_quant(MACROBLOCK *x, int plane, int block, int blk_row,
                             ref_coeff,      // reference vector
                             dqcoeff,        // de-quantized vector
                             eob,            // End of Block marker
-                            pd->dequant[1], // vpx's AC quantization step size
+                            pd->dequant[0], // vpx's DC quantization step size
                             plane,          // image plane
                             tx_size,        // block size in log_2 - 2, 0 for 4x4.
                             &x->rate,       // rate measured
@@ -1543,8 +1543,8 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
     skip = pvq_encode_helper2(coeff,          // target original vector
                               ref_coeff,      // reference vector
                               dqcoeff,        // de-quantized vector
-                              eob,// End of Block marker
-                              pd->dequant[1], // vpx's DC and AC quantization step size
+                              eob,            // End of Block marker
+                              pd->dequant[0], // vpx's DC quantization step size
                               plane,          // image plane
                               tx_size,        // block size in log_2 - 2, 0 for 4x4.
                               &x->rate,       // rate measured

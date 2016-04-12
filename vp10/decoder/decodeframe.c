@@ -506,7 +506,7 @@ static void predict_and_reconstruct_intra_block(MACROBLOCKD *const xd,
      daala_dec.state.adapt.skip_cdf[2*tx_size + (plane != 0)], 4,
      daala_dec.state.adapt.skip_increment, "skip");
 
-    quant = pd->seg_dequant[seg_id][1]; //AC quantizer
+    quant = pd->seg_dequant[seg_id][0]; //vpx's DC quantizer
 
     eob = pvq_decode_helper(&daala_dec,
       pvq_ref_coeff,
@@ -592,7 +592,7 @@ static int reconstruct_inter_block(MACROBLOCKD *const xd, vpx_reader *r,
    daala_dec.state.adapt.skip_cdf[2*tx_size + (plane != 0)], 4,
    daala_dec.state.adapt.skip_increment, "skip");
 
-  quant = pd->seg_dequant[seg_id][1]; //AC quantizer
+  quant = pd->seg_dequant[seg_id][0]; //vpx's DC quantizer
 
   eob = pvq_decode_helper(&daala_dec,
     pvq_ref_coeff,
