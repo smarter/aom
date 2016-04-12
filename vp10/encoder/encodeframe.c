@@ -1479,7 +1479,7 @@ static void rd_use_partition(VP10_COMP *cpi, ThreadData *td,
   subsize = get_subsize(bsize, partition);
 
 #if CONFIG_PVQ
-  if (bsize <= BLOCK_8X8) {
+  if (bsize <= BLOCK_16X16) {
     partition = PARTITION_NONE;
   }
 #endif
@@ -1958,7 +1958,7 @@ static void rd_pick_partition(VP10_COMP *cpi, ThreadData *td,
   BLOCK_SIZE subsize;
   RD_COST this_rdc, sum_rdc, best_rdc;
 #if !CONFIG_PVQ
-  int do_split = bsize >= BLOCK_8X8;
+  int do_split = bsize >= BLOCK_16X16;
 #else
   x->min_partition_size = cpi->sf.default_min_partition_size;
   x->max_partition_size = cpi->sf.default_max_partition_size;
