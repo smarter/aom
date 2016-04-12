@@ -1073,6 +1073,9 @@ static int64_t rd_pick_intra_sub_8x8_y_mode(VP10_COMP *cpi, MACROBLOCK *mb,
   ENTROPY_CONTEXT t_above[4], t_left[4];
   const int *bmode_costs = cpi->mbmode_cost;
 
+#if CONFIG_PVQ
+  assert(0);
+#endif
   memcpy(t_above, xd->plane[0].above_context, sizeof(t_above));
   memcpy(t_left, xd->plane[0].left_context, sizeof(t_left));
 
@@ -3594,6 +3597,9 @@ void vp10_rd_pick_inter_mode_sub8x8(VP10_COMP *cpi, TileDataEnc *tile_data,
   int internal_active_edge =
       vp10_active_edge_sb(cpi, mi_row, mi_col) && vp10_internal_image_edge(cpi);
 
+#if CONFIG_PVQ
+  assert(0);
+#endif
   memset(x->zcoeff_blk[TX_4X4], 0, 4);
   vp10_zero(best_mbmode);
 
