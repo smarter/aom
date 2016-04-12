@@ -2444,7 +2444,9 @@ static int read_compressed_header(VP10Decoder *pbi, const uint8_t *data,
   cm->tx_mode = xd->lossless[0] ? ONLY_4X4 : read_tx_mode(&r);
 #endif
   if (cm->tx_mode == TX_MODE_SELECT) read_tx_mode_probs(&fc->tx_probs, &r);
+#if !CONFIG_PVQ
   read_coef_probs(fc, cm->tx_mode, &r);
+#endif
 
   for (k = 0; k < SKIP_CONTEXTS; ++k)
     vp10_diff_update_prob(&r, &fc->skip_probs[k]);

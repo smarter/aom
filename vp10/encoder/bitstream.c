@@ -1450,7 +1450,9 @@ static size_t write_compressed_header(VP10_COMP *cpi, uint8_t *data) {
 #else
   update_txfm_probs(cm, &header_bc, counts);
 #endif
+#if !CONFIG_PVQ
   update_coef_probs(cpi, &header_bc);
+#endif
   update_skip_probs(cm, &header_bc, counts);
 #if CONFIG_MISC_FIXES
   update_seg_probs(cpi, &header_bc);
