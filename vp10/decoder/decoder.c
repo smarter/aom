@@ -31,9 +31,10 @@
 
 #include "vp10/decoder/decodeframe.h"
 #include "vp10/decoder/decoder.h"
-#include "vp10/decoder/detokenize.h"
 
-#if CONFIG_PVQ
+#if !CONFIG_PVQ
+#include "vp10/decoder/detokenize.h"
+#else
 #include "vp10/decoder/decint.h"
 daala_dec_ctx daala_dec;
 #endif

@@ -702,7 +702,7 @@ void vp10_xform_quant_fp(MACROBLOCK *x, int plane, int block, int blk_row,
       break;
     default: assert(0); break;
   }
-#if 1 //work in progress(yushin)
+
   // pvq of daala will be called here for inter mode block
   skip = pvq_encode_helper2(coeff,          // target original vector
                             ref_coeff,      // reference vector
@@ -713,21 +713,6 @@ void vp10_xform_quant_fp(MACROBLOCK *x, int plane, int block, int blk_row,
                             tx_size,        // block size in log_2 - 2, 0 for 4x4.
                             &x->rate,       // rate measured
                             &mbmi->pvq[plane]); // PVQ info for a block
-#else
-  // Difference of predicted and original in TRANSFORM domain
-  for (i=0; i < tx_blk_size * tx_blk_size; i++)
-    coeff[i] -= ref_coeff[i];
-
-  if (tx_size == TX_32X32)
-    vp10_quantize_fp_32x32(coeff, 1024, x->skip_block, p->zbin, p->round_fp,
-                           p->quant_fp, p->quant_shift, qcoeff, dqcoeff,
-                           pd->dequant, eob, scan_order->scan,
-                           scan_order->iscan);
-  else
-    vp10_quantize_fp(coeff, tx_blk_size * tx_blk_size, x->skip_block, p->zbin, p->round_fp,
-                     p->quant_fp, p->quant_shift, qcoeff, dqcoeff,
-                     pd->dequant, eob, scan_order->scan, scan_order->iscan);
-#endif
 #endif//#if !CONFIG_PVQ
 }
 
@@ -1048,7 +1033,6 @@ void vp10_xform_quant(MACROBLOCK *x, int plane, int block, int blk_row,
     default: assert(0); break;
   }
 
-#if 1 //work in progress(yushin)
   // pvq of daala will be called here for inter mode block
   if (!x->skip_block)
   skip = pvq_encode_helper2(coeff,          // target original vector
@@ -1061,22 +1045,6 @@ void vp10_xform_quant(MACROBLOCK *x, int plane, int block, int blk_row,
                             &x->rate,       // rate measured
                             &mbmi->pvq[plane]); // PVQ info for a block
   mbmi->skip = skip;
-#else
-  // Difference of predicted and original in TRANSFORM domain
-  for (i=0; i < tx_blk_size * tx_blk_size; i++)
-    coeff[i] -= ref_coeff[i];
-
-  if (tx_size == TX_32X32)
-    vpx_quantize_b_32x32(coeff, 1024, x->skip_block, p->zbin, p->round,
-                         p->quant, p->quant_shift, qcoeff, dqcoeff,
-                         pd->dequant, eob, scan_order->scan,
-                         scan_order->iscan);
-  else
-    vpx_quantize_b(coeff, tx_blk_size * tx_blk_size, x->skip_block, p->zbin, p->round, p->quant,
-                   p->quant_shift, qcoeff, dqcoeff, pd->dequant, eob,
-                   scan_order->scan, scan_order->iscan);
-#endif
-
 #endif//#if !CONFIG_PVQ
 }
 
@@ -1160,19 +1128,14 @@ static void encode_block(int plane, int block, int blk_row, int blk_col,
 #if CONFIG_PVQ
   // transform block size in pixels
   tx_blk_size = 1 << (tx_size + 2);
-#if 0
-  // Reconstruct residue + predicted signal in transform domain
-  // Note that ref_coeff[] is already computed in vp10_xform_quant(),
-  // as like dqcoeff[].
-  for (i=0; i < tx_blk_size * tx_blk_size; i++)
-    dqcoeff[i] += ref_coeff[i];
-#endif
+
   // Since vp10 does not have inverse transform only function
   // but contain adding the inverse transform to predicted image,
   // pass blank dummy image to vp10_inv_txfm_add_*x*(), i.e. set dst as zeros
   for (j=0; j < tx_blk_size; j++)
     memset(dst + j * pd->dst.stride, 0, tx_blk_size);
 #endif
+
 #if CONFIG_VPX_HIGHBITDEPTH
   if (xd->cur_buf->flags & YV12_FLAG_HIGHBITDEPTH) {
     switch (tx_size) {
@@ -1639,7 +1602,6 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
 #if !CONFIG_PVQ
   if (*eob) *(args->skip) = 0;
 #else
-  //if (*eob) *(args->skip) = 0;
   *(args->skip) = skip;
 #endif
 }

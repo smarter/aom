@@ -987,25 +987,11 @@ static int64_t rd_pick_intra4x4block(VP10_COMP *cpi, MACROBLOCK *x, int row,
                                so->scan, so->neighbors,
                                cpi->sf.use_fast_coef_costing);
 #else
-#if 1
+          // TODO: Properly use skip info (for 4x4 block here) from pvq
           skip = pvq_encode_helper2(coeff, ref_coeff, dqcoeff,
               &p->eobs[block], pd->dequant[1],
               0, TX_4X4, &rate_pvq, &xd->mi[0]->mbmi.pvq[0]);
           ratey += rate_pvq;
-#else
-          // Difference of predicted and original in TRANSFORM domain
-          for (i=0; i < tx_blk_size * tx_blk_size; i++)
-            coeff[i] -= ref_coeff[i];
-
-          vp10_regular_quantize_b_4x4(x, 0, block, so->scan, so->iscan);
-
-          // Reconstruct residue + predicted signal in transform domain
-          for (i=0; i < tx_blk_size * tx_blk_size; i++)
-            dqcoeff[i] = ref_coeff[i] + dqcoeff[i];
-
-          for (j=0; j < tx_blk_size; j++)
-            memset(dst + j * dst_stride, 0, tx_blk_size);
-#endif
 #endif
           if (RDCOST(x->rdmult, x->rddiv, ratey, distortion) >= best_rd)
             goto next;
@@ -1022,25 +1008,11 @@ static int64_t rd_pick_intra4x4block(VP10_COMP *cpi, MACROBLOCK *x, int row,
                                so->scan, so->neighbors,
                                cpi->sf.use_fast_coef_costing);
 #else
-#if 1
+          // TODO: Properly use skip info (for 4x4 block here) from pvq
           skip = pvq_encode_helper2(coeff, ref_coeff, dqcoeff,
               &p->eobs[block], pd->dequant[1],
               0, TX_4X4, &rate_pvq, &xd->mi[0]->mbmi.pvq[0]);
           ratey += rate_pvq;
-#else
-          // Difference of predicted and original in TRANSFORM domain
-          for (i=0; i < tx_blk_size * tx_blk_size; i++)
-            coeff[i] -= ref_coeff[i];
-
-          vp10_regular_quantize_b_4x4(x, 0, block, so->scan, so->iscan);
-
-          // Reconstruct residue + predicted signal in transform domain
-          for (i=0; i < tx_blk_size * tx_blk_size; i++)
-            dqcoeff[i] = ref_coeff[i] + dqcoeff[i];
-
-          for (j=0; j < tx_blk_size; j++)
-            memset(dst + j * dst_stride, 0, tx_blk_size);
-#endif
 #endif
           distortion +=
               vp10_block_error(coeff, BLOCK_OFFSET(pd->dqcoeff, block), 16,

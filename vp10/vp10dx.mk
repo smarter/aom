@@ -22,7 +22,9 @@ VP10_DX_SRCS-yes += decoder/decodeframe.c
 VP10_DX_SRCS-yes += decoder/decodeframe.h
 VP10_DX_SRCS-yes += decoder/detokenize.c
 VP10_DX_SRCS-yes += decoder/decodemv.h
+ifeq ($(CONFIG_PVQ),no)
 VP10_DX_SRCS-yes += decoder/detokenize.h
+endif
 VP10_DX_SRCS-yes += decoder/dthread.c
 VP10_DX_SRCS-yes += decoder/dthread.h
 VP10_DX_SRCS-yes += decoder/decoder.c

@@ -8,6 +8,7 @@
  *  be found in the AUTHORS file in the root of the source tree.
  */
 
+#if !CONFIG_PVQ
 #include "vpx_mem/vpx_mem.h"
 #include "vpx_ports/mem.h"
 
@@ -279,5 +280,4 @@ int vp10_decode_block_tokens(MACROBLOCKD *xd, int plane, const scan_order *sc,
   dec_set_contexts(xd, pd, tx_size, eob > 0, x, y);
   return eob;
 }
-
-
+#endif//#if !CONFIG_PVQ
