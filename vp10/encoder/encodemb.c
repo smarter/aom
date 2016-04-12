@@ -1525,7 +1525,6 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
         break;
       default: assert(0); break;
     }
-#if 1 //work in progress(yushin)
     // pvq of daala will be called here for intra mode block
     if (!x->skip_block)
     skip = pvq_encode_helper2(coeff,          // target original vector
@@ -1545,26 +1544,6 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
     // *eob == 0 is superset to skip == 0.
     // If *eob == 0, decoder does not call pvq_decode().
     // If skip == 0, decoder just use spatial domain prediction.
-
-#else
-    // Difference of predicted and original in TRANSFORM domain
-    for (i=0; i < tx_blk_size * tx_blk_size; i++)
-      coeff[i] = coeff[i] - ref_coeff[i];
-
-    if (tx_size == TX_32X32)
-      vpx_quantize_b_32x32(coeff, 1024, x->skip_block, p->zbin, p->round,
-                           p->quant, p->quant_shift, qcoeff, dqcoeff,
-                           pd->dequant, eob, scan_order->scan,
-                           scan_order->iscan);
-    else
-      vpx_quantize_b(coeff, tx_blk_size * tx_blk_size, x->skip_block, p->zbin, p->round, p->quant,
-                     p->quant_shift, qcoeff, dqcoeff, pd->dequant, eob,
-                     scan_order->scan, scan_order->iscan);
-
-    // Reconstruct residue + predicted signal in transform domain
-    for (i=0; i < tx_blk_size * tx_blk_size; i++)
-      dqcoeff[i] = ref_coeff[i] + dqcoeff[i];
-#endif
   }//if (!x->skip_recode) {
 
   // Since vp10 does not have inverse transform only function
