@@ -549,6 +549,8 @@ static void write_modes_b(VP10_COMP *cpi, const TileInfo *const tile,
     int i;
     int has_dc_skip = 1;
 
+    assert(m->mbmi.tx_size >= TX_8X8);
+
     for (plane = 0; plane < MAX_MB_PLANE; ++plane) {
       PVQ_INFO* pvq = &m->mbmi.pvq[plane];
       TX_SIZE tx_size =

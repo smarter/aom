@@ -1131,15 +1131,14 @@ static void encode_block(int plane, int block, int blk_row, int blk_col,
 
 #if !CONFIG_PVQ
   if (p->eobs[block]) *(args->skip) = 0;
-#else
-  //if (p->eobs[block]) *(args->skip) = 0;
-  if (mbmi->pvq[plane].ac_dc_coded)
-    *(args->skip) = 0;
-#endif
 
   if (p->eobs[block] == 0) return;
+#else
+  if (mbmi->pvq[plane].ac_dc_coded)
+    *(args->skip) = 0;
 
-#if CONFIG_PVQ
+  if (!mbmi->pvq[plane].ac_dc_coded) return;
+
   // transform block size in pixels
   tx_blk_size = 1 << (tx_size + 2);
 
@@ -1183,9 +1182,6 @@ static void encode_block(int plane, int block, int blk_row, int blk_col,
   }
 #endif  // CONFIG_VPX_HIGHBITDEPTH
 
-#if CONFIG_PVQ
-  if (mbmi->pvq[plane].ac_dc_coded)
-#endif
   switch (tx_size) {
     case TX_32X32:
       vp10_inv_txfm_add_32x32(dqcoeff, dst, pd->dst.stride, p->eobs[block],
