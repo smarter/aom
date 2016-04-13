@@ -713,6 +713,9 @@ void vp10_xform_quant_fp(MACROBLOCK *x, int plane, int block, int blk_row,
                             tx_size,        // block size in log_2 - 2, 0 for 4x4.
                             &x->rate,       // rate measured
                             &mbmi->pvq[plane]); // PVQ info for a block
+
+  if (!skip)
+    mbmi->skip = 0;
 #endif//#if !CONFIG_PVQ
 }
 
@@ -1044,7 +1047,9 @@ void vp10_xform_quant(MACROBLOCK *x, int plane, int block, int blk_row,
                             tx_size,        // block size in log_2 - 2, 0 for 4x4.
                             &x->rate,       // rate measured
                             &mbmi->pvq[plane]); // PVQ info for a block
-  mbmi->skip = skip;
+
+  if (!skip)
+    mbmi->skip = 0;
 #endif//#if !CONFIG_PVQ
 }
 
@@ -1127,14 +1132,9 @@ static void encode_block(int plane, int block, int blk_row, int blk_col,
 #if !CONFIG_PVQ
   if (p->eobs[block]) *(args->skip) = 0;
 #else
-  if (p->eobs[block]) *(args->skip) = 0;
-  skip = mbmi->skip;
-
-  if (skip)
-    assert(mbmi->pvq[plane].ac_dc_coded == 0);
-
-  if (!skip)
-    assert(mbmi->pvq[plane].ac_dc_coded > 0);
+  //if (p->eobs[block]) *(args->skip) = 0;
+  if (mbmi->pvq[plane].ac_dc_coded)
+    *(args->skip) = 0;
 #endif
 
   if (p->eobs[block] == 0) return;
@@ -1146,7 +1146,7 @@ static void encode_block(int plane, int block, int blk_row, int blk_col,
   // Since vp10 does not have inverse transform only function
   // but contain adding the inverse transform to predicted image,
   // pass blank dummy image to vp10_inv_txfm_add_*x*(), i.e. set dst as zeros
-  if (!skip)
+  if (mbmi->pvq[plane].ac_dc_coded)
   for (j=0; j < tx_blk_size; j++)
     memset(dst + j * pd->dst.stride, 0, tx_blk_size);
 #endif
@@ -1184,7 +1184,7 @@ static void encode_block(int plane, int block, int blk_row, int blk_col,
 #endif  // CONFIG_VPX_HIGHBITDEPTH
 
 #if CONFIG_PVQ
-  if (!skip)
+  if (mbmi->pvq[plane].ac_dc_coded)
 #endif
   switch (tx_size) {
     case TX_32X32:
@@ -1555,10 +1555,9 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
                               tx_size,        // block size in log_2 - 2, 0 for 4x4.
                               &x->rate,       // rate measured
                               &mbmi->pvq[plane]); // PVQ info for a block
-    mbmi->skip = skip;
 
     if (!skip)
-      assert(mbmi->pvq[plane].ac_dc_coded > 0);
+      mbmi->skip = 0;
 
     // NOTE: *eob == 0 and skip == 0 are not equivalent,
     // since the later means PVQ has not coded both DC and AC,
@@ -1572,7 +1571,6 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
   // but contain adding the inverse transform to predicted image,
   // pass blank dummy image to vp10_inv_txfm_add_*x*(), i.e. set dst as zeros
 
-  //if (*eob) {
   if (!skip) {
     for (j=0; j < tx_blk_size; j++)
       memset(dst + j * dst_stride, 0, tx_blk_size);
@@ -1602,7 +1600,7 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
 #if !CONFIG_PVQ
   if (*eob) *(args->skip) = 0;
 #else
-  *(args->skip) = skip;
+  // Note : *(args->skip) == mbmi->skip
 #endif
 }
 
@@ -1757,6 +1755,9 @@ int pvq_encode_helper2(tran_low_t *const coeff, tran_low_t *ref_coeff,
     if (dqcoeff[j]) *eob = j + 1;
 
   pvq_info->eob = *eob;
+
+  if (skip)
+    assert(pvq_info->ac_dc_coded == 0);
 
   if (!skip)
     assert(pvq_info->ac_dc_coded > 0);

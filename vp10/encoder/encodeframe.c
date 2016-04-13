@@ -2625,8 +2625,11 @@ static void encode_frame_internal(VP10_COMP *cpi) {
 
   if (!cm->seg.enabled && xd->lossless[0]) x->optimize = 0;
 
+#if !CONFIG_PVQ
   cm->tx_mode = select_tx_mode(cpi, xd);
-
+#else
+  cm->tx_mode = TX_MODE_SELECT;
+#endif
   vp10_frame_init_quantizer(cpi);
 
   vp10_initialize_rd_consts(cpi);

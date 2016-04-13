@@ -507,6 +507,7 @@ static void predict_and_reconstruct_intra_block(MACROBLOCKD *const xd,
      daala_dec.state.adapt.skip_cdf[2*tx_size + (plane != 0)], 4,
      daala_dec.state.adapt.skip_increment, "skip");
 
+    if (ac_dc_coded) {
     quant = pd->seg_dequant[seg_id][0]; //vpx's DC quantizer
 
     eob = pvq_decode_helper(&daala_dec,
@@ -527,6 +528,9 @@ static void predict_and_reconstruct_intra_block(MACROBLOCKD *const xd,
 #endif
     inverse_transform_block_intra(xd, plane, tx_type, tx_size, dst,
                                   pd->dst.stride, eob);
+#if CONFIG_PVQ
+    }
+#endif
   }
 }
 
@@ -596,8 +600,7 @@ static int reconstruct_inter_block(MACROBLOCKD *const xd, vpx_reader *r,
    daala_dec.state.adapt.skip_cdf[2*tx_size + (plane != 0)], 4,
    daala_dec.state.adapt.skip_increment, "skip");
 
-  assert(ac_dc_coded > 0);
-
+  if (ac_dc_coded) {
   quant = pd->seg_dequant[seg_id][0]; //vpx's DC quantizer
 
   eob = pvq_decode_helper(&daala_dec,
@@ -615,12 +618,14 @@ static int reconstruct_inter_block(MACROBLOCKD *const xd, vpx_reader *r,
   if (eob > 0)
   for (j=0; j < tx_blk_size; j++)
     memset(dst + j * pd->dst.stride, 0, tx_blk_size);
-
 #endif
 
   inverse_transform_block_inter(
       xd, plane, tx_size, &pd->dst.buf[4 * row * pd->dst.stride + 4 * col],
       pd->dst.stride, eob, block_idx);
+#if CONFIG_PVQ
+  }
+#endif
   return eob;
 }
 
