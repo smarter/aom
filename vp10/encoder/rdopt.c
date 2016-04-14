@@ -454,10 +454,6 @@ static void block_rd_txfm(int plane, int block, int blk_row, int blk_col,
 
   if (args->exit_early) return;
 
-#if CONFIG_PVQ
-  assert(tx_size >= TX_8X8);
-#endif
-
   if (!is_inter_block(mbmi)) {
     struct encode_b_args arg = { x, NULL, &mbmi->skip };
     vp10_encode_block_intra(plane, block, blk_row, blk_col, plane_bsize,
@@ -677,10 +673,6 @@ static void choose_tx_size_from_rd(VP10_COMP *cpi, MACROBLOCK *x, int *rate,
     end_tx = chosen_tx_size;
   }
 
-#if CONFIG_PVQ
-  end_tx = TX_8X8;
-#endif
-
   *distortion = INT64_MAX;
   *rate = INT_MAX;
   *skip = 0;
@@ -777,9 +769,6 @@ static void super_block_yrd(VP10_COMP *cpi, MACROBLOCK *x, int *rate,
     choose_tx_size_from_rd(cpi, x, rate, distortion, skip, ret_sse, ref_best_rd,
                            bs);
   }
-#if CONFIG_PVQ
-  assert(xd->mi[0]->mbmi.tx_size >= TX_8X8);
-#endif
 }
 
 static int conditional_skipintra(PREDICTION_MODE mode,
@@ -961,6 +950,9 @@ static int64_t rd_pick_intra4x4block(VP10_COMP *cpi, MACROBLOCK *x, int row,
         TX_TYPE tx_type = get_tx_type(PLANE_TYPE_Y, xd, block);
         int rate_pvq;
         int skip;
+
+        PVQ_INFO *pvq_info = &xd->mi[0]->bmi[block].pvq[0];
+
         src_int16 = &p->src_int16[4 * (row * diff_stride + col)];
 #endif
         xd->mi[0]->bmi[block].as_mode = mode;
@@ -970,7 +962,7 @@ static int64_t rd_pick_intra4x4block(VP10_COMP *cpi, MACROBLOCK *x, int row,
         vpx_subtract_block(4, 4, src_diff, 8, src, src_stride, dst, dst_stride);
 #else
         // transform block size in pixels
-        tx_blk_size = 1 << (TX_4X4 + 2);
+        tx_blk_size = 4;
 
         // copy uint8 orig and predicted block to int16 buffer
         // in order to use existing VP10 transform functions
@@ -997,7 +989,7 @@ static int64_t rd_pick_intra4x4block(VP10_COMP *cpi, MACROBLOCK *x, int row,
           // TODO: Properly use skip info (for 4x4 block here) from pvq
           skip = pvq_encode_helper2(coeff, ref_coeff, dqcoeff,
               &p->eobs[block], pd->dequant[0],
-              0, TX_4X4, &rate_pvq, &xd->mi[0]->mbmi.pvq[0]);
+              0, TX_4X4, &rate_pvq, pvq_info);
           ratey += rate_pvq;
 #endif
           if (RDCOST(x->rdmult, x->rddiv, ratey, distortion) >= best_rd)
@@ -1018,7 +1010,7 @@ static int64_t rd_pick_intra4x4block(VP10_COMP *cpi, MACROBLOCK *x, int row,
           // TODO: Properly use skip info (for 4x4 block here) from pvq
           skip = pvq_encode_helper2(coeff, ref_coeff, dqcoeff,
               &p->eobs[block], pd->dequant[0],
-              0, TX_4X4, &rate_pvq, &xd->mi[0]->mbmi.pvq[0]);
+              0, TX_4X4, &rate_pvq, pvq_info);
           ratey += rate_pvq;
 #endif
           distortion +=
@@ -1080,9 +1072,6 @@ static int64_t rd_pick_intra_sub_8x8_y_mode(VP10_COMP *cpi, MACROBLOCK *mb,
   ENTROPY_CONTEXT t_above[4], t_left[4];
   const int *bmode_costs = cpi->mbmode_cost;
 
-#if CONFIG_PVQ
-  assert(0);
-#endif
   memcpy(t_above, xd->plane[0].above_context, sizeof(t_above));
   memcpy(t_left, xd->plane[0].left_context, sizeof(t_left));
 
@@ -3604,9 +3593,6 @@ void vp10_rd_pick_inter_mode_sub8x8(VP10_COMP *cpi, TileDataEnc *tile_data,
   int internal_active_edge =
       vp10_active_edge_sb(cpi, mi_row, mi_col) && vp10_internal_image_edge(cpi);
 
-#if CONFIG_PVQ
-  assert(0);
-#endif
   memset(x->zcoeff_blk[TX_4X4], 0, 4);
   vp10_zero(best_mbmode);
 

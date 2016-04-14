@@ -423,6 +423,10 @@ static void set_rt_speed_feature(VP10_COMP *cpi, SPEED_FEATURES *sf, int speed,
     sf->disable_filter_search_var_thresh = 5000;
 #endif
   }
+#if CONFIG_PVQ
+    sf->tx_size_search_method = USE_LARGESTALL;
+#endif
+
 }
 
 void vp10_set_speed_features_framesize_dependent(VP10_COMP *cpi) {

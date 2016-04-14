@@ -48,15 +48,6 @@ static INLINE int is_inter_mode(PREDICTION_MODE mode) {
   return mode >= NEARESTMV && mode <= NEWMV;
 }
 
-/* For keyframes, intra block modes are predicted by the (already decoded)
-   modes for the Y blocks to the left and above us; for interframes, there
-   is a single probability table. */
-
-typedef struct {
-  PREDICTION_MODE as_mode;
-  int_mv as_mv[2];  // first, second inter predictor motion vectors
-} b_mode_info;
-
 #if CONFIG_PVQ
 typedef struct PVQ_INFO {
   int theta[PVQ_MAX_PARTITIONS];
@@ -73,10 +64,22 @@ typedef struct PVQ_INFO {
   int ac_dc_coded;// block skip info, indicating whether DC/AC is coded.
                   // bit0: DC coded, bit1 : AC coded (1 means coded)
   tran_low_t dq_dc_residue;
-  tran_low_t ref_coeff[OD_BSIZE_MAX*OD_BSIZE_MAX];  // for DEBUG, reference vector for PVQ!
+  //tran_low_t ref_coeff[OD_BSIZE_MAX*OD_BSIZE_MAX];  // for DEBUG, reference vector for PVQ!
   int eob;
 } PVQ_INFO;
 #endif
+
+/* For keyframes, intra block modes are predicted by the (already decoded)
+   modes for the Y blocks to the left and above us; for interframes, there
+   is a single probability table. */
+
+typedef struct {
+  PREDICTION_MODE as_mode;
+  int_mv as_mv[2];  // first, second inter predictor motion vectors
+#if CONFIG_PVQ
+  PVQ_INFO pvq[3];  // 3 for YUV 3 channels
+#endif
+} b_mode_info;
 
 // Note that the rate-distortion optimization loop, bit-stream writer, and
 // decoder implementation modules critically rely on the defined entry values

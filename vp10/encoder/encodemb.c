@@ -541,6 +541,12 @@ void vp10_xform_quant_fp(MACROBLOCK *x, int plane, int block, int blk_row,
   int tx_blk_size;
   int i, j;
   int skip;
+  PVQ_INFO *pvq_info;
+
+  if (tx_size == TX_4X4)
+    pvq_info = &xd->mi[0]->bmi[block].pvq[plane];
+  else
+    pvq_info = &mbmi->pvq[plane];
 
   dst = &pd->dst.buf[4 * (blk_row * dst_stride + blk_col)];
   src = &p->src.buf[4 * (blk_row * src_stride + blk_col)];
@@ -712,7 +718,7 @@ void vp10_xform_quant_fp(MACROBLOCK *x, int plane, int block, int blk_row,
                             0,              // keyframe (daala's definition)? 0 for now
                             tx_size,        // block size in log_2 - 2, 0 for 4x4.
                             &x->rate,       // rate measured
-                            &mbmi->pvq[plane]); // PVQ info for a block
+                            pvq_info); // PVQ info for a block
 
   if (!skip)
     mbmi->skip = 0;
@@ -883,6 +889,13 @@ void vp10_xform_quant(MACROBLOCK *x, int plane, int block, int blk_row,
   int tx_blk_size;
   int i, j;
   int skip;
+  PVQ_INFO *pvq_info;
+
+  if (tx_size == TX_4X4)
+    pvq_info = &xd->mi[0]->bmi[block].pvq[plane];
+  else
+    pvq_info = &mbmi->pvq[plane];
+
   DECLARE_ALIGNED(16, int16_t, coeff_pvq[64 * 64]);
   DECLARE_ALIGNED(16, int16_t, dqcoeff_pvq[64 * 64]);
   DECLARE_ALIGNED(16, int16_t, ref_coeff_pvq[64 * 64]);
@@ -1046,7 +1059,7 @@ void vp10_xform_quant(MACROBLOCK *x, int plane, int block, int blk_row,
                             plane,          // image plane
                             tx_size,        // block size in log_2 - 2, 0 for 4x4.
                             &x->rate,       // rate measured
-                            &mbmi->pvq[plane]); // PVQ info for a block
+                            pvq_info); // PVQ info for a block
 
   if (!skip)
     mbmi->skip = 0;
@@ -1313,6 +1326,13 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
   int i, j;
   int16_t *pred = &pd->pred[4 * (blk_row * diff_stride + blk_col)];
   int skip;
+  PVQ_INFO *pvq_info;
+
+  if (tx_size == TX_4X4)
+    pvq_info = &xd->mi[0]->bmi[block].pvq[plane];
+  else
+    pvq_info = &mbmi->pvq[plane];
+
   DECLARE_ALIGNED(16, int16_t, coeff_pvq[64 * 64]);
   DECLARE_ALIGNED(16, int16_t, dqcoeff_pvq[64 * 64]);
   DECLARE_ALIGNED(16, int16_t, ref_coeff_pvq[64 * 64]);
@@ -1550,7 +1570,7 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
                               plane,          // image plane
                               tx_size,        // block size in log_2 - 2, 0 for 4x4.
                               &x->rate,       // rate measured
-                              &mbmi->pvq[plane]); // PVQ info for a block
+                              pvq_info);      // PVQ info for a block
 
     if (!skip)
       mbmi->skip = 0;
@@ -1676,8 +1696,6 @@ int pvq_encode_helper2(tran_low_t *const coeff, tran_low_t *ref_coeff,
   int skip;
   int j;
 
-  if (plane == 0)
-    assert(tx_size > TX_4X4);
   // TODO: Enable this later, if pvq_qm_q4 is available in AOM.
   //int pvq_dc_quant = OD_MAXI(1,
   //  quant * daala_enc.state.pvq_qm_q4[plane][od_qm_get_index(tx_size, 0)] >> 4);
@@ -1702,11 +1720,11 @@ int pvq_encode_helper2(tran_low_t *const coeff, tran_low_t *ref_coeff,
     dqcoeff_pvq[0] = OD_DIV_R0(coeff_pvq[0] - ref_coeff_pvq[0], pvq_dc_quant);
   }
 
-  {// for debugging, to match with decoder side ref vector.
+  /*{// for debugging, to match with decoder side ref vector.
   int i;
   for (i=0; i<tx_blk_size*tx_blk_size; i++)
     pvq_info->ref_coeff[i] = ref_coeff[i];
-  }
+  }*/
 
   tell = od_ec_enc_tell(&daala_enc.ec);
 

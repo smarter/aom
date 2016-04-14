@@ -1478,11 +1478,6 @@ static void rd_use_partition(VP10_COMP *cpi, ThreadData *td,
   partition = partition_lookup[bsl][bs_type];
   subsize = get_subsize(bsize, partition);
 
-#if CONFIG_PVQ
-  if (bsize <= BLOCK_16X16) {
-    partition = PARTITION_NONE;
-  }
-#endif
   pc_tree->partitioning = partition;
   save_context(x, mi_row, mi_col, a, l, sa, sl, bsize);
 
@@ -1957,13 +1952,7 @@ static void rd_pick_partition(VP10_COMP *cpi, ThreadData *td,
   int i, pl;
   BLOCK_SIZE subsize;
   RD_COST this_rdc, sum_rdc, best_rdc;
-#if !CONFIG_PVQ
-  int do_split = bsize >= BLOCK_16X16;
-#else
-  x->min_partition_size = cpi->sf.default_min_partition_size;
-  x->max_partition_size = cpi->sf.default_max_partition_size;
-  int do_split = bsize > x->min_partition_size;
-#endif
+  int do_split = bsize >= BLOCK_8X8;
   int do_rect = 1;
 
   // Override skipping rectangular partition operations for edge blocks
@@ -1981,17 +1970,10 @@ static void rd_pick_partition(VP10_COMP *cpi, ThreadData *td,
 #endif
 
   int partition_none_allowed = !force_horz_split && !force_vert_split;
-#if !CONFIG_PVQ
   int partition_horz_allowed =
       !force_vert_split && yss <= xss && bsize >= BLOCK_8X8;
   int partition_vert_allowed =
       !force_horz_split && xss <= yss && bsize >= BLOCK_8X8;
-#else
-  int partition_horz_allowed =
-      !force_vert_split && yss <= xss && bsize > x->min_partition_size;
-  int partition_vert_allowed =
-      !force_horz_split && xss <= yss && bsize > x->min_partition_size;
-#endif
   (void)*tp_orig;
 
   assert(num_8x8_blocks_wide_lookup[bsize] ==
@@ -2111,6 +2093,7 @@ static void rd_pick_partition(VP10_COMP *cpi, ThreadData *td,
 
         best_rdc = this_rdc;
         if (bsize >= BLOCK_8X8) pc_tree->partitioning = PARTITION_NONE;
+
         // Adjust dist breakout threshold according to the partition size.
         dist_breakout_thr >>=
             8 - (b_width_log2_lookup[bsize] + b_height_log2_lookup[bsize]);
@@ -2625,11 +2608,8 @@ static void encode_frame_internal(VP10_COMP *cpi) {
 
   if (!cm->seg.enabled && xd->lossless[0]) x->optimize = 0;
 
-#if !CONFIG_PVQ
   cm->tx_mode = select_tx_mode(cpi, xd);
-#else
-  cm->tx_mode = TX_MODE_SELECT;
-#endif
+
   vp10_frame_init_quantizer(cpi);
 
   vp10_initialize_rd_consts(cpi);

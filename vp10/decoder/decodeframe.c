@@ -447,7 +447,6 @@ static void predict_and_reconstruct_intra_block(MACROBLOCKD *const xd,
   const int diff_stride = tx_blk_size;
   int16_t *pred = pd->pred;
   tran_low_t *const dqcoeff = pd->dqcoeff;
-  assert(tx_size >= TX_8X8);
 #endif
   dst = &pd->dst.buf[4 * row * pd->dst.stride + 4 * col];
 
@@ -519,10 +518,11 @@ static void predict_and_reconstruct_intra_block(MACROBLOCKD *const xd,
       xdec,
       ac_dc_coded);
 
-    assert(eob > 0);
+    //assert(eob > 0);
     // Since vp10 does not have separate inverse transform
     // but also contains adding to predicted image,
     // pass blank dummy image to vp10_inv_txfm_add_*x*(), i.e. set dst as zeros
+    if (eob > 0)
     for (j=0; j < tx_blk_size; j++)
       memset(dst + j * pd->dst.stride, 0, tx_blk_size);
 #endif
@@ -559,8 +559,6 @@ static int reconstruct_inter_block(MACROBLOCKD *const xd, vpx_reader *r,
   int xdec = pd->subsampling_x;
   int seg_id = mbmi->segment_id;
   int quant;
-
-  assert(tx_size >= TX_8X8);
 
   dst = &pd->dst.buf[4 * row * pd->dst.stride + 4 * col];
 
