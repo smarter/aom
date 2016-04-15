@@ -416,7 +416,7 @@ static void set_rt_speed_feature(VP10_COMP *cpi, SPEED_FEATURES *sf, int speed,
     sf->lpf_pick = LPF_PICK_MINIMAL_LPF;
 #if CONFIG_PVQ
     sf->partition_search_type = FIXED_PARTITION;
-    sf->always_this_block_size = BLOCK_8X8;
+    sf->always_this_block_size = BLOCK_16X16;
     //sf->default_max_partition_size = sf->always_this_block_size;
     //sf->default_min_partition_size = sf->always_this_block_size;
     //cpi->partition_search_skippable_frame = 0;
