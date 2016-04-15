@@ -1645,7 +1645,7 @@ VP10_COMP *vp10_create_compressor(VP10EncoderConfig *oxcf,
 #if CONFIG_PVQ
   daala_enc.state.qm = (int16_t *)vpx_calloc(OD_QM_BUFFER_SIZE, sizeof(daala_enc.state.qm[0]));
   daala_enc.state.qm_inv = (int16_t *)vpx_calloc(OD_QM_BUFFER_SIZE, sizeof(daala_enc.state.qm_inv[0]));
-  daala_enc.qm = OD_HVS_QM;
+  daala_enc.qm = OD_QM8_Q4_FLAT;  // Hard coded. Enc/dec required to sync.
 
   od_init_qm(daala_enc.state.qm, daala_enc.state.qm_inv,
       daala_enc.qm == OD_HVS_QM ? OD_QM8_Q4_HVS : OD_QM8_Q4_FLAT);
