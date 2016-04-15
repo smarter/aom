@@ -1040,7 +1040,7 @@ static void decode_block(VP10Decoder *const pbi, MACROBLOCKD *const xd,
 #if CONFIG_PVQ
   if (mbmi->tx_size == TX_4X4) {
     if (bsize != BLOCK_4X4)
-      printf("frame # %d, mi_row,mi_col = (%d, %d), [%d, %d], TX_4X4, bsize = %d, skip = %d\n",
+      printf("dec: frame # %d, mi_row,mi_col = (%d, %d), [%d, %d], TX_4X4, bsize = %d, skip = %d\n",
           pbi->common.current_video_frame, mi_row, mi_col, mi_row*8, mi_col*8,
           bsize, mbmi->skip);
     assert(bsize == BLOCK_4X4);
