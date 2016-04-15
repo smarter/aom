@@ -470,9 +470,6 @@ static void predict_and_reconstruct_intra_block(MACROBLOCKD *const xd,
     int seg_id = mbmi->segment_id;
     int quant;
 
-    // transform block size in pixels
-    tx_blk_size = 1 << (tx_size + 2);
-
     for (j=0; j < tx_blk_size; j++)
       for (i=0; i < tx_blk_size; i++) {
         pred[diff_stride * j + i] = dst[pd->dst.stride * j + i];
@@ -518,7 +515,8 @@ static void predict_and_reconstruct_intra_block(MACROBLOCKD *const xd,
       xdec,
       ac_dc_coded);
 
-    //assert(eob > 0);
+    assert(eob > 0);
+
     // Since vp10 does not have separate inverse transform
     // but also contains adding to predicted image,
     // pass blank dummy image to vp10_inv_txfm_add_*x*(), i.e. set dst as zeros
@@ -561,9 +559,6 @@ static int reconstruct_inter_block(MACROBLOCKD *const xd, vpx_reader *r,
   int quant;
 
   dst = &pd->dst.buf[4 * row * pd->dst.stride + 4 * col];
-
-  // transform block size in pixels
-  tx_blk_size = 1 << (tx_size + 2);
 
   for (j=0; j < tx_blk_size; j++)
     for (i=0; i < tx_blk_size; i++) {
@@ -609,6 +604,8 @@ static int reconstruct_inter_block(MACROBLOCKD *const xd, vpx_reader *r,
     tx_size,
     xdec,
     ac_dc_coded);
+
+  assert(eob > 0);
 
   // Since vp10 does not have separate inverse transform
   // but also contains adding to predicted image,
@@ -1040,7 +1037,15 @@ static void decode_block(VP10Decoder *const pbi, MACROBLOCKD *const xd,
   if (mbmi->skip) {
     dec_reset_skip_context(xd);
   }
-
+#if CONFIG_PVQ
+  if (mbmi->tx_size == TX_4X4) {
+    if (bsize != BLOCK_4X4)
+      printf("frame # %d, mi_row,mi_col = (%d, %d), [%d, %d], TX_4X4, bsize = %d, skip = %d\n",
+          pbi->common.current_video_frame, mi_row, mi_col, mi_row*8, mi_col*8,
+          bsize, mbmi->skip);
+    assert(bsize == BLOCK_4X4);
+  }
+#endif
   if (!is_inter_block(mbmi)) {
     int plane;
     for (plane = 0; plane < MAX_MB_PLANE; ++plane) {
@@ -1175,6 +1180,11 @@ static void decode_partition(VP10Decoder *const pbi, MACROBLOCKD *const xd,
   partition =
       read_partition(cm, xd, mi_row, mi_col, r, has_rows, has_cols, n8x8_l2);
   subsize = subsize_lookup[partition][bsize];  // get_subsize(bsize, partition);
+
+#if CONFIG_PVQ
+  assert(partition < PARTITION_TYPES);
+  assert(subsize < BLOCK_SIZES);
+#endif
   if (!hbs) {
     // calculate bmode block dimensions (log 2)
     xd->bmode_blocks_wl = 1 >> !!(partition & PARTITION_VERT);

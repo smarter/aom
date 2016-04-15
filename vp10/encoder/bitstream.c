@@ -379,6 +379,11 @@ static void pack_inter_mode_mvs(VP10_COMP *cpi, const MODE_INFO *mi,
       int idx, idy;
       const int num_4x4_w = num_4x4_blocks_wide_lookup[bsize];
       const int num_4x4_h = num_4x4_blocks_high_lookup[bsize];
+
+#if CONFIG_PVQ
+    assert(num_4x4_h == 1);
+    assert(num_4x4_h == 1);
+#endif
       for (idy = 0; idy < 2; idy += num_4x4_h) {
         for (idx = 0; idx < 2; idx += num_4x4_w) {
           const PREDICTION_MODE b_mode = mi->bmi[idy * 2 + idx].as_mode;
@@ -483,6 +488,11 @@ static void write_mb_modes_kf(const VP10_COMMON *cm, const MACROBLOCKD *xd,
     const int num_4x4_h = num_4x4_blocks_high_lookup[bsize];
     int idx, idy;
 
+#if CONFIG_PVQ
+    assert(num_4x4_h == 1);
+    assert(num_4x4_h == 1);
+#endif
+
     for (idy = 0; idy < 2; idy += num_4x4_h) {
       for (idx = 0; idx < 2; idx += num_4x4_w) {
         const int block = idy * 2 + idx;
@@ -520,6 +530,11 @@ static void write_modes_b(VP10_COMP *cpi, const TileInfo *const tile,
   set_mi_row_col(xd, tile, mi_row, num_8x8_blocks_high_lookup[m->mbmi.sb_type],
                  mi_col, num_8x8_blocks_wide_lookup[m->mbmi.sb_type],
                  cm->mi_rows, cm->mi_cols);
+
+#if CONFIG_PVQ
+  assert(m->mbmi.sb_type != BLOCK_4X8 && m->mbmi.sb_type != BLOCK_8X4);
+#endif
+
   if (frame_is_intra_only(cm)) {
     write_mb_modes_kf(cm, xd, xd->mi, w);
   } else {
@@ -541,6 +556,10 @@ static void write_modes_b(VP10_COMP *cpi, const TileInfo *const tile,
 #else
   // PVQ writes its tokens (i.e. symbols) here.
   if (!m->mbmi.skip) {
+
+    if (m->mbmi.tx_size == TX_4X4)
+      assert(m->mbmi.sb_type == BLOCK_4X4);
+
     for (plane = 0; plane < MAX_MB_PLANE; ++plane) {
       PVQ_INFO* pvq;
       TX_SIZE tx_size =
@@ -548,7 +567,7 @@ static void write_modes_b(VP10_COMP *cpi, const TileInfo *const tile,
       int idx, idy;
       int ystep = tx_size > TX_4X4 ? 2 : 1;
       int xstep = tx_size > TX_4X4 ? 2 : 1;
-      const BLOCK_SIZE bsize = m->mbmi.sb_type;
+      //const BLOCK_SIZE bsize = m->mbmi.sb_type;
 
       xstep += xd->plane[plane].subsampling_x;
       ystep += xd->plane[plane].subsampling_y;
@@ -573,9 +592,6 @@ static void write_modes_b(VP10_COMP *cpi, const TileInfo *const tile,
 
           if (plane == 0)
             assert(tx_size == pvq->bs);
-
-          //if (tx_size == TX_4X4)
-          //  printf("tx_size == TX_4X4, plane = %d\n", plane);
 
           // encode block skip info
           od_encode_cdf_adapt(&w->ec, pvq->ac_dc_coded,
