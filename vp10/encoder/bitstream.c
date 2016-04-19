@@ -535,12 +535,6 @@ static void write_modes_b(VP10_COMP *cpi, const TileInfo *const tile,
   printf("enc: frame# %d (%2d, %2d): bsize %d, tx_size %d, skip %d\n",
       cpi->common.current_video_frame, mi_row, mi_col, bsize, mbmi->tx_size,
       mbmi->skip);
-
-  if (!frame_is_intra_only(cm)) {
-    if (!(bsize == BLOCK_8X8 || bsize == BLOCK_16X16 ||
-        bsize == BLOCK_32X32 || bsize == BLOCK_64X64))
-      assert(0);
-  }
 #endif
 
   if (frame_is_intra_only(cm)) {
@@ -564,9 +558,6 @@ static void write_modes_b(VP10_COMP *cpi, const TileInfo *const tile,
 #else
   // PVQ writes its tokens (i.e. symbols) here.
   if (!m->mbmi.skip) {
-if (bsize == 8) {
-  int a = 0;
-}
     if (m->mbmi.tx_size == TX_4X4)
       assert(m->mbmi.sb_type == BLOCK_4X4);
 
