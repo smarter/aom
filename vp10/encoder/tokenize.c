@@ -497,6 +497,31 @@ int vp10_has_high_freq_in_plane(MACROBLOCK *x, BLOCK_SIZE bsize, int plane) {
   return result;
 }
 
+#if CONFIG_PVQ
+// NOTE : not really generate tokens but store pvq info for each block is
+//        saved in buffer in encoding order, which later in packing stage
+//        is then written to bitstream via write_modes_b().
+static void tokenize_pvq(int plane, int block, int blk_row, int blk_col,
+                       BLOCK_SIZE plane_bsize, TX_SIZE tx_size, void *arg) {
+  struct tokenize_b_args *const args = arg;
+  VP10_COMP *cpi = args->cpi;
+  ThreadData *const td = args->td;
+  MACROBLOCK *const x = &td->mb;
+  MACROBLOCKD *const xd = &x->e_mbd;
+  TOKENEXTRA **tp = args->tp;
+  uint8_t token_cache[32 * 32];
+  struct macroblock_plane *p = &x->plane[plane];
+  struct macroblockd_plane *pd = &xd->plane[plane];
+  MB_MODE_INFO *mbmi = &xd->mi[0]->mbmi;
+
+  const tran_low_t *qcoeff = BLOCK_OFFSET(p->qcoeff, block);
+  const int segment_id = mbmi->segment_id;
+
+
+
+}
+#endif
+
 void vp10_tokenize_sb(VP10_COMP *cpi, ThreadData *td, TOKENEXTRA **t,
                       int dry_run, BLOCK_SIZE bsize) {
   VP10_COMMON *const cm = &cpi->common;
@@ -513,6 +538,7 @@ void vp10_tokenize_sb(VP10_COMP *cpi, ThreadData *td, TOKENEXTRA **t,
     return;
   }
 
+#if !CONFIG_PVQ
   if (!dry_run) {
     int plane;
 
@@ -527,4 +553,15 @@ void vp10_tokenize_sb(VP10_COMP *cpi, ThreadData *td, TOKENEXTRA **t,
   } else {
     vp10_foreach_transformed_block(xd, bsize, set_entropy_context_b, &arg);
   }
+#else
+  if (!dry_run) {
+    int plane;
+
+    td->counts->skip[ctx][0] += skip_inc;
+
+    for (plane = 0; plane < MAX_MB_PLANE; ++plane)
+      vp10_foreach_transformed_block_in_plane(xd, bsize, plane, tokenize_pvq,
+                                              &arg);
+  }
+#endif
 }

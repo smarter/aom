@@ -67,6 +67,12 @@ typedef struct PVQ_INFO {
   //tran_low_t ref_coeff[OD_BSIZE_MAX*OD_BSIZE_MAX];  // for DEBUG, reference vector for PVQ!
   int eob;
 } PVQ_INFO;
+
+typedef struct PVQ_QUEUE {
+  PVQ_INFO *pvq_buff; // buffer for pvq info, stored in encoding order
+  int curr_pos; // curr position to write PVQ_INFO
+  int buf_len;  // allocated buffer length
+} PVQ_QUEUE;
 #endif
 
 /* For keyframes, intra block modes are predicted by the (already decoded)

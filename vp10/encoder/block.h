@@ -145,6 +145,7 @@ struct macroblock {
 #if CONFIG_PVQ
   int rate;
   int64_t dist;
+  PVQ_QUEUE *pvq_q;
 #endif
 };
 

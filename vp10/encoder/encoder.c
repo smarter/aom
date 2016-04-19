@@ -351,6 +351,20 @@ static void dealloc_compressor_data(VP10_COMP *cpi) {
   vpx_free(cpi->mbmi_ext_base);
   cpi->mbmi_ext_base = NULL;
 
+#if CONFIG_PVQ
+  {
+  const int tile_cols = 1 << cm->log2_tile_cols;
+  const int tile_rows = 1 << cm->log2_tile_rows;
+  int tile_col, tile_row;
+
+  for (tile_row = 0; tile_row < tile_rows; ++tile_row)
+    for (tile_col = 0; tile_col < tile_cols; ++tile_col) {
+      TileDataEnc *tile_data =
+          &cpi->tile_data[tile_row * tile_cols + tile_col];
+      vpx_free(tile_data->pvq_q.pvq_buff);
+    }
+  }
+#endif
   vpx_free(cpi->tile_data);
   cpi->tile_data = NULL;
 
