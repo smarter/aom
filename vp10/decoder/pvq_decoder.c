@@ -282,8 +282,8 @@ static void pvq_decode_partition(od_ec_dec *ec,
 
   k = od_pvq_compute_k(qcg, itheta, theta, *noref, n, beta, nodesync);
 
-  if (n == 15)
-    printf("plane %d, qg = %d, k = %d", pli, qg-1, k);
+  //if (n == 15)
+  //  printf("plane %d, qg = %d, k = %d", pli, qg-1, k);
 
   if (k != 0) {
     /* when noref==0, y is actually size n-1 */

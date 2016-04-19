@@ -532,9 +532,9 @@ static void write_modes_b(VP10_COMP *cpi, const TileInfo *const tile,
   mbmi = &m->mbmi;
   bsize = mbmi->sb_type;
 
-  printf("enc: frame# %d (%2d, %2d): bsize %d, tx_size %d, skip %d\n",
-      cpi->common.current_video_frame, mi_row, mi_col, bsize, mbmi->tx_size,
-      mbmi->skip);
+  //printf("enc: frame# %d (%2d, %2d): bsize %d, tx_size %d, skip %d\n",
+  //    cpi->common.current_video_frame, mi_row, mi_col, bsize, mbmi->tx_size,
+  //    mbmi->skip);
 #endif
 
   if (frame_is_intra_only(cm)) {
@@ -668,8 +668,8 @@ static void write_modes_b(VP10_COMP *cpi, const TileInfo *const tile,
           if ((pvq->ac_dc_coded & 1)) {  // DC coded?
             od_ec_enc_bits(&w->ec, pvq->dq_dc_residue < 0, 1);
           }
-          printf("ac_dc_coded %d, plane %d, qg[0] = %d, k[0] = %d\n",
-                pvq->ac_dc_coded, plane, pvq->qg[0], pvq->k[0]);
+          //printf("ac_dc_coded %d, plane %d, qg[0] = %d, k[0] = %d\n",
+          //      pvq->ac_dc_coded, plane, pvq->qg[0], pvq->k[0]);
         }
       }//for (idy = 0;
     }//for (plane =
@@ -776,7 +776,7 @@ static void write_modes(VP10_COMP *cpi, const TileInfo *const tile,
     for (mi_col = tile->mi_col_start; mi_col < tile->mi_col_end;
          mi_col += MI_BLOCK_SIZE) {
       //DEBUG
-      printf("------------------------------------------------------\n");
+      //printf("------------------------------------------------------\n");
       write_modes_sb(cpi, tile, w, tok, tok_end, mi_row, mi_col, BLOCK_64X64);
     }
   }

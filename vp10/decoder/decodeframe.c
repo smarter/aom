@@ -503,7 +503,7 @@ static void predict_and_reconstruct_intra_block(MACROBLOCKD *const xd,
      daala_dec.state.adapt.skip_cdf[2*tx_size + (plane != 0)], 4,
      daala_dec.state.adapt.skip_increment, "skip");
 
-   printf("ac_dc_coded %d, ",  ac_dc_coded);
+   //printf("ac_dc_coded %d, ",  ac_dc_coded);
 
     if (ac_dc_coded) {
     quant = pd->seg_dequant[seg_id][0]; //vpx's DC quantizer
@@ -530,7 +530,7 @@ static void predict_and_reconstruct_intra_block(MACROBLOCKD *const xd,
                                   pd->dst.stride, eob);
 #if CONFIG_PVQ
     }
-    printf("\n");
+    //printf("\n");
 #endif
   }
 }
@@ -596,7 +596,7 @@ static int reconstruct_inter_block(MACROBLOCKD *const xd, vpx_reader *r,
    daala_dec.state.adapt.skip_cdf[2*tx_size + (plane != 0)], 4,
    daala_dec.state.adapt.skip_increment, "skip");
 
-  printf("ac_dc_coded %d, ",  ac_dc_coded);
+  //printf("ac_dc_coded %d, ",  ac_dc_coded);
 
   if (ac_dc_coded) {
   quant = pd->seg_dequant[seg_id][0]; //vpx's DC quantizer
@@ -625,7 +625,7 @@ static int reconstruct_inter_block(MACROBLOCKD *const xd, vpx_reader *r,
       pd->dst.stride, eob, block_idx);
 #if CONFIG_PVQ
   }
-printf("\n");
+//printf("\n");
 #endif
   return eob;
 }
@@ -1043,7 +1043,7 @@ static void decode_block(VP10Decoder *const pbi, MACROBLOCKD *const xd,
   if (mbmi->skip) {
     dec_reset_skip_context(xd);
   }
-#if CONFIG_PVQ
+#if 0//CONFIG_PVQ
   printf("dec: frame# %d (%2d, %2d): bsize %d, tx_size %d, skip %d\n",
       pbi->common.current_video_frame, mi_row, mi_col, bsize, mbmi->tx_size,
       mbmi->skip);
@@ -1851,7 +1851,7 @@ static const uint8_t *decode_tiles(VP10Decoder *pbi, const uint8_t *data,
         vp10_zero(tile_data->xd.left_seg_context);
         for (mi_col = tile.mi_col_start; mi_col < tile.mi_col_end;
              mi_col += MI_BLOCK_SIZE) {
-          printf("------------------------------------------------------\n");
+          //printf("------------------------------------------------------\n");
           decode_partition(pbi, &tile_data->xd, mi_row, mi_col,
                            &tile_data->bit_reader, BLOCK_64X64, 4);
         }
