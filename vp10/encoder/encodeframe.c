@@ -1956,8 +1956,15 @@ static void rd_pick_partition(VP10_COMP *cpi, ThreadData *td,
   int do_rect = 1;
 
   // Override skipping rectangular partition operations for edge blocks
+#if !CONFIG_PVQ
   const int force_horz_split = (mi_row + mi_step >= cm->mi_rows);
   const int force_vert_split = (mi_col + mi_step >= cm->mi_cols);
+#else
+  int force_horz_split = (mi_row + mi_step >= cm->mi_rows);
+  int force_vert_split = (mi_col + mi_step >= cm->mi_cols);
+  force_horz_split |= force_vert_split;
+  force_vert_split |= force_horz_split;
+#endif
   const int xss = x->e_mbd.plane[1].subsampling_x;
   const int yss = x->e_mbd.plane[1].subsampling_y;
 
@@ -2402,7 +2409,7 @@ static void encode_rd_sb_row(VP10_COMP *cpi, ThreadData *td,
       set_fixed_partitioning(cpi, tile_info, mi, mi_row, mi_col, bsize);
       rd_use_partition(cpi, td, tile_data, mi, tp, mi_row, mi_col, BLOCK_64X64,
                        &dummy_rate, &dummy_dist, 1, td->pc_root);
-#if !CONFIG_PVQ
+#if 1//!CONFIG_PVQ
     } else if (sf->partition_search_type == VAR_BASED_PARTITION &&
                cm->frame_type != KEY_FRAME) {
 #else

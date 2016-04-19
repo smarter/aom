@@ -380,10 +380,6 @@ static void pack_inter_mode_mvs(VP10_COMP *cpi, const MODE_INFO *mi,
       const int num_4x4_w = num_4x4_blocks_wide_lookup[bsize];
       const int num_4x4_h = num_4x4_blocks_high_lookup[bsize];
 
-#if CONFIG_PVQ
-    assert(num_4x4_h == 1);
-    assert(num_4x4_h == 1);
-#endif
       for (idy = 0; idy < 2; idy += num_4x4_h) {
         for (idx = 0; idx < 2; idx += num_4x4_w) {
           const PREDICTION_MODE b_mode = mi->bmi[idy * 2 + idx].as_mode;
@@ -488,11 +484,6 @@ static void write_mb_modes_kf(const VP10_COMMON *cm, const MACROBLOCKD *xd,
     const int num_4x4_h = num_4x4_blocks_high_lookup[bsize];
     int idx, idy;
 
-#if CONFIG_PVQ
-    assert(num_4x4_h == 1);
-    assert(num_4x4_h == 1);
-#endif
-
     for (idy = 0; idy < 2; idy += num_4x4_h) {
       for (idx = 0; idx < 2; idx += num_4x4_w) {
         const int block = idy * 2 + idx;
@@ -522,6 +513,10 @@ static void write_modes_b(VP10_COMP *cpi, const TileInfo *const tile,
   MACROBLOCKD *const xd = &cpi->td.mb.e_mbd;
   MODE_INFO *m;
   int plane;
+#if CONFIG_PVQ
+  MB_MODE_INFO *mbmi;
+  BLOCK_SIZE bsize;
+#endif
 
   xd->mi = cm->mi_grid_visible + (mi_row * cm->mi_stride + mi_col);
   m = xd->mi[0];
@@ -533,6 +528,19 @@ static void write_modes_b(VP10_COMP *cpi, const TileInfo *const tile,
 
 #if CONFIG_PVQ
   assert(m->mbmi.sb_type != BLOCK_4X8 && m->mbmi.sb_type != BLOCK_8X4);
+
+  mbmi = &m->mbmi;
+  bsize = mbmi->sb_type;
+
+  printf("enc: frame# %d (%2d, %2d): bsize %d, tx_size %d, skip %d\n",
+      cpi->common.current_video_frame, mi_row, mi_col, bsize, mbmi->tx_size,
+      mbmi->skip);
+
+  if (!frame_is_intra_only(cm)) {
+    if (!(bsize == BLOCK_8X8 || bsize == BLOCK_16X16 ||
+        bsize == BLOCK_32X32 || bsize == BLOCK_64X64))
+      assert(0);
+  }
 #endif
 
   if (frame_is_intra_only(cm)) {
@@ -556,7 +564,9 @@ static void write_modes_b(VP10_COMP *cpi, const TileInfo *const tile,
 #else
   // PVQ writes its tokens (i.e. symbols) here.
   if (!m->mbmi.skip) {
-
+if (bsize == 8) {
+  int a = 0;
+}
     if (m->mbmi.tx_size == TX_4X4)
       assert(m->mbmi.sb_type == BLOCK_4X4);
 
@@ -565,6 +575,39 @@ static void write_modes_b(VP10_COMP *cpi, const TileInfo *const tile,
       TX_SIZE tx_size =
           plane ? get_uv_tx_size(&m->mbmi, &xd->plane[plane]) : m->mbmi.tx_size;
       int idx, idy;
+#if 1
+      const struct macroblockd_plane *const pd = &xd->plane[plane];
+      int num_4x4_w;
+      int num_4x4_h;
+      int max_blocks_wide;
+      int max_blocks_high;
+      int step = (1 << tx_size);
+
+      if (tx_size != TX_4X4) {
+        num_4x4_w = num_4x4_blocks_wide_lookup[bsize] >>
+            xd->plane[plane].subsampling_x;
+        num_4x4_h = num_4x4_blocks_high_lookup[bsize] >>
+            xd->plane[plane].subsampling_y;
+      } else {
+        num_4x4_w = 2 >> xd->plane[plane].subsampling_x;
+        num_4x4_h = 2 >> xd->plane[plane].subsampling_y;
+        //TODO: if vpx is not padded for 8x8, we need below.
+        /*if (bsize == BLOCK_4X8)
+          num_4x4_w = 1;
+        if (bsize == BLOCK_8X4)
+          num_4x4_h = 1;*/
+      }
+      //TODO: Do we need below for 4x4,4x8,8x4 cases as well?
+      max_blocks_wide =
+          num_4x4_w + (xd->mb_to_right_edge >= 0 ? 0
+                           : xd->mb_to_right_edge >> (5 + pd->subsampling_x));
+      max_blocks_high =
+          num_4x4_h + (xd->mb_to_bottom_edge >= 0 ? 0
+                           : xd->mb_to_bottom_edge >> (5 + pd->subsampling_y));
+
+      for (idy = 0; idy < max_blocks_high; idy += step) {
+        for (idx = 0; idx < max_blocks_wide; idx += step) {
+#else
       int ystep = tx_size > TX_4X4 ? 2 : 1;
       int xstep = tx_size > TX_4X4 ? 2 : 1;
       //const BLOCK_SIZE bsize = m->mbmi.sb_type;
@@ -574,6 +617,7 @@ static void write_modes_b(VP10_COMP *cpi, const TileInfo *const tile,
 
       for (idy = 0; idy < 2; idy += ystep) {
         for (idx = 0; idx < 2; idx += xstep) {
+#endif
           const int block = idy * 2 + idx;
           const int is_keyframe = 0;
           const int encode_flip = 0;
@@ -587,11 +631,18 @@ static void write_modes_b(VP10_COMP *cpi, const TileInfo *const tile,
 
           if (tx_size == TX_4X4)
             pvq = &m->bmi[block].pvq[plane];
-          else
+          else {
+#if 1
+            MODE_INFO **mi = cm->mi_grid_visible +
+                ((mi_row + idy / (step >> 1)) * cm->mi_stride +
+                    mi_col + idx / (step >> 1));
+            pvq = &mi[0]->mbmi.pvq[plane];
+#else
             pvq = &m->mbmi.pvq[plane];
+#endif
+          }
 
-          if (plane == 0)
-            assert(tx_size == pvq->bs);
+          assert(pvq->bs <= tx_size);
 
           // encode block skip info
           od_encode_cdf_adapt(&w->ec, pvq->ac_dc_coded,
@@ -626,10 +677,12 @@ static void write_modes_b(VP10_COMP *cpi, const TileInfo *const tile,
           if ((pvq->ac_dc_coded & 1)) {  // DC coded?
             od_ec_enc_bits(&w->ec, pvq->dq_dc_residue < 0, 1);
           }
+          printf("ac_dc_coded %d, plane %d, qg[0] = %d, k[0] = %d\n",
+                pvq->ac_dc_coded, plane, pvq->qg[0], pvq->k[0]);
         }
       }//for (idy = 0;
     }//for (plane =
-  }
+  }//if (!m->mbmi.skip)
 #endif
 }
 
@@ -730,8 +783,11 @@ static void write_modes(VP10_COMP *cpi, const TileInfo *const tile,
        mi_row += MI_BLOCK_SIZE) {
     vp10_zero(xd->left_seg_context);
     for (mi_col = tile->mi_col_start; mi_col < tile->mi_col_end;
-         mi_col += MI_BLOCK_SIZE)
+         mi_col += MI_BLOCK_SIZE) {
+      //DEBUG
+      printf("------------------------------------------------------\n");
       write_modes_sb(cpi, tile, w, tok, tok_end, mi_row, mi_col, BLOCK_64X64);
+    }
   }
 }
 
