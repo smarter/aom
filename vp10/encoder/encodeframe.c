@@ -2862,12 +2862,25 @@ static void encode_superblock(VP10_COMP *cpi, ThreadData *td, TOKENEXTRA **t,
   ctx->is_coded = 1;
   x->use_lp32x32fdct = cpi->sf.use_lp32x32fdct;
 
-#if 0//CONFIG_PVQ
-    if (!(bsize == BLOCK_4X4 || bsize == BLOCK_8X8 || bsize == BLOCK_16X16 ||
-        bsize == BLOCK_32X32 || bsize == BLOCK_64X64)) {
-      printf("non-square partition not supported yet with PVQ!");
-      assert(0);
-    }
+#if CONFIG_PVQ
+    //if (!(bsize == BLOCK_4X4 || bsize == BLOCK_8X8 || bsize == BLOCK_16X16 ||
+      //  bsize == BLOCK_32X32 || bsize == BLOCK_64X64)) {
+      //printf("non-square partition not supported yet with PVQ!");
+      //assert(0);
+    //}
+
+  if (output_enabled &&
+      ( (bsize == BLOCK_16X16 && mbmi->tx_size == TX_8X8) ||
+          (bsize == BLOCK_16X16 && mbmi->tx_size == TX_4X4) ||
+          (bsize == BLOCK_32X32 && mbmi->tx_size == TX_16X16) ||
+          (bsize == BLOCK_32X32 && mbmi->tx_size == TX_8X8) ||
+          (bsize == BLOCK_32X32 && mbmi->tx_size == TX_4X4) ||
+          (bsize == BLOCK_64X64 && mbmi->tx_size == TX_16X16) ||
+          (bsize == BLOCK_64X64 && mbmi->tx_size == TX_8X8) ||
+          (bsize == BLOCK_64X64 && mbmi->tx_size == TX_4X4)   )
+          ) {
+          printf("bsize = %d, tx_size = %d\n", bsize, mbmi->tx_size);
+          }
 #endif
 
   if (!is_inter_block(mbmi)) {

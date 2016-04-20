@@ -517,7 +517,7 @@ static void predict_and_reconstruct_intra_block(MACROBLOCKD *const xd,
       xdec,
       ac_dc_coded);
 
-    assert(eob > 0);
+    //assert(eob > 0);
 
     // Since vp10 does not have separate inverse transform
     // but also contains adding to predicted image,

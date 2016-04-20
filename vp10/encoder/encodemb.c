@@ -891,24 +891,26 @@ void vp10_xform_quant(MACROBLOCK *x, int plane, int block, int blk_row,
   int skip;
   PVQ_INFO *pvq_info;
 
-#if 0
-  if (tx_size == TX_4X4)
-    pvq_info = &xd->mi[0]->bmi[block].pvq[plane];
-  else
-    pvq_info = &mbmi->pvq[plane];
+  //int step = 1 << tx_size;
+  int mi_offset = (blk_row >> 1) * xd->mi_stride + (blk_col >> 1);
+
+  MODE_INFO *mi = xd->mi[0] + mi_offset;
+
+  if (tx_size == TX_4X4) {
+#if 1
+    const int num_4x4_w = num_4x4_blocks_wide_lookup[plane_bsize];
+    int row, col;
+    int b = block % (2 * num_4x4_w);
+    row = b / num_4x4_w;
+    col = b & 1;
+    b = row * 2 + col;
+    pvq_info = &mi->bmi[b].pvq[plane];
 #else
-    int step = 1 << tx_size;
-    int mi_offset = (blk_row >> 1) * xd->mi_stride +
-                      blk_col >> 1;
-
-    //MODE_INFO *mi = xd->mi[mi_offset];
-    MODE_INFO *mi = xd->mi[0] + mi_offset;
-
-    if (tx_size == TX_4X4)
-      pvq_info = &mi->bmi[block].pvq[plane];
-    else
-      pvq_info = &mi->mbmi.pvq[plane];
+    pvq_info = &mi->bmi[block].pvq[plane];
 #endif
+  }
+  else
+    pvq_info = &mi->mbmi.pvq[plane];
 
   DECLARE_ALIGNED(16, int16_t, coeff_pvq[64 * 64]);
   DECLARE_ALIGNED(16, int16_t, dqcoeff_pvq[64 * 64]);
@@ -1342,24 +1344,25 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
   int skip;
   PVQ_INFO *pvq_info;
 
-#if 0
-  if (tx_size == TX_4X4)
-    pvq_info = &xd->mi[0]->bmi[block].pvq[plane];
-  else
-    pvq_info = &mbmi->pvq[plane];
+  //int step = 1 << tx_size;
+  int mi_offset = (blk_row >> 1) * xd->mi_stride + (blk_col >> 1);
+  MODE_INFO *mi = xd->mi[0] + mi_offset;
+
+  if (tx_size == TX_4X4) {
+#if 1
+    const int num_4x4_w = num_4x4_blocks_wide_lookup[plane_bsize];
+    int row, col;
+    int b = block % (2 * num_4x4_w);
+    row = b / num_4x4_w;
+    col = b & 1;
+    b = row * 2 + col;
+    pvq_info = &mi->bmi[b].pvq[plane];
 #else
-    int step = 1 << tx_size;
-    int mi_offset = (blk_row >> 1) * xd->mi_stride +
-                      blk_col >> 1;
-
-    //MODE_INFO *mi = xd->mi[mi_offset];
-    MODE_INFO *mi = xd->mi[0] + mi_offset;
-
-    if (tx_size == TX_4X4)
-      pvq_info = &mi->bmi[block].pvq[plane];
-    else
-      pvq_info = &mi->mbmi.pvq[plane];
+    pvq_info = &mi->bmi[block].pvq[plane];
 #endif
+  }
+  else
+    pvq_info = &mi->mbmi.pvq[plane];
 
   DECLARE_ALIGNED(16, int16_t, coeff_pvq[64 * 64]);
   DECLARE_ALIGNED(16, int16_t, dqcoeff_pvq[64 * 64]);

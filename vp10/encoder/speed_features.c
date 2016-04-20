@@ -407,7 +407,7 @@ static void set_rt_speed_feature(VP10_COMP *cpi, SPEED_FEATURES *sf, int speed,
     sf->mv.fullpel_search_step_param = 10;
 #if CONFIG_PVQ
     sf->partition_search_type = VAR_BASED_PARTITION;
-    sf->tx_size_search_method = USE_LARGESTALL;
+    //sf->tx_size_search_method = USE_LARGESTALL;
 #endif
   }
   if (speed >= 8) {
@@ -424,7 +424,7 @@ static void set_rt_speed_feature(VP10_COMP *cpi, SPEED_FEATURES *sf, int speed,
 #endif
   }
 #if CONFIG_PVQ
-    sf->tx_size_search_method = USE_LARGESTALL;
+    //sf->tx_size_search_method = USE_LARGESTALL;
 #endif
 
 }
