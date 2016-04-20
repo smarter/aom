@@ -624,9 +624,16 @@ static void write_modes_b(VP10_COMP *cpi, const TileInfo *const tile,
             pvq = &m->bmi[block].pvq[plane];
           else {
 #if 1
-            MODE_INFO **mi = cm->mi_grid_visible +
-                ((mi_row + idy / (step >> 1)) * cm->mi_stride +
-                    mi_col + idx / (step >> 1));
+            //MODE_INFO **mi = cm->mi_grid_visible +
+            //    ((mi_row + idy / (step >> 1)) * cm->mi_stride +
+            //        mi_col + idx / (step >> 1));
+
+            int step = 1 << tx_size;
+            int mi_offset = (idy >> 1) * xd->mi_stride +
+                              idx >> 1;
+            MODE_INFO **mi = xd->mi + mi_offset;
+            mi[0] = mi + mi_offset;
+
             pvq = &mi[0]->mbmi.pvq[plane];
 #else
             pvq = &m->mbmi.pvq[plane];
