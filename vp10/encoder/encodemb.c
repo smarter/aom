@@ -897,18 +897,17 @@ void vp10_xform_quant(MACROBLOCK *x, int plane, int block, int blk_row,
   else
     pvq_info = &mbmi->pvq[plane];
 #else
-    {
     int step = 1 << tx_size;
     int mi_offset = (blk_row >> 1) * xd->mi_stride +
                       blk_col >> 1;
-    MODE_INFO **mi = xd->mi + mi_offset;
-    mi[0] = mi + mi_offset;
+
+    //MODE_INFO *mi = xd->mi[mi_offset];
+    MODE_INFO *mi = xd->mi[0] + mi_offset;
 
     if (tx_size == TX_4X4)
-      pvq_info = &xd->mi[0]->bmi[block].pvq[plane];
+      pvq_info = &mi->bmi[block].pvq[plane];
     else
-      pvq_info = &mi[0]->mbmi.pvq[plane];
-    }
+      pvq_info = &mi->mbmi.pvq[plane];
 #endif
 
   DECLARE_ALIGNED(16, int16_t, coeff_pvq[64 * 64]);
@@ -1349,21 +1348,17 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
   else
     pvq_info = &mbmi->pvq[plane];
 #else
-    {
     int step = 1 << tx_size;
     int mi_offset = (blk_row >> 1) * xd->mi_stride +
                       blk_col >> 1;
 
-    //xd->mi = cm->mi_grid_visible + idx_str;
-    //xd->mi[0] = cm->mi + idx_str;
-    MODE_INFO **mi = xd->mi + mi_offset;
-    mi[0] = mi + mi_offset;
+    //MODE_INFO *mi = xd->mi[mi_offset];
+    MODE_INFO *mi = xd->mi[0] + mi_offset;
 
     if (tx_size == TX_4X4)
-      pvq_info = &xd->mi[0]->bmi[block].pvq[plane];
+      pvq_info = &mi->bmi[block].pvq[plane];
     else
-      pvq_info = &mi[0]->mbmi.pvq[plane];
-    }
+      pvq_info = &mi->mbmi.pvq[plane];
 #endif
 
   DECLARE_ALIGNED(16, int16_t, coeff_pvq[64 * 64]);

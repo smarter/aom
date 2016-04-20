@@ -2862,7 +2862,7 @@ static void encode_superblock(VP10_COMP *cpi, ThreadData *td, TOKENEXTRA **t,
   ctx->is_coded = 1;
   x->use_lp32x32fdct = cpi->sf.use_lp32x32fdct;
 
-#if CONFIG_PVQ
+#if 0//CONFIG_PVQ
     if (!(bsize == BLOCK_4X4 || bsize == BLOCK_8X8 || bsize == BLOCK_16X16 ||
         bsize == BLOCK_32X32 || bsize == BLOCK_64X64)) {
       printf("non-square partition not supported yet with PVQ!");
