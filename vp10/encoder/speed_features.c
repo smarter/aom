@@ -350,7 +350,7 @@ static void set_rt_speed_feature(VP10_COMP *cpi, SPEED_FEATURES *sf, int speed,
 
   if (speed >= 5) {
     sf->use_quant_fp = !is_keyframe;
-#if 0//CONFIG_PVQ
+#if CONFIG_PVQ
     sf->use_quant_fp = 0;
 #endif
     sf->auto_min_max_partition_size =
