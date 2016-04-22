@@ -542,10 +542,7 @@ void vp10_xform_quant_fp(MACROBLOCK *x, int plane, int block, int blk_row,
   int i, j;
   int skip;
   PVQ_INFO *pvq_info;
-
-  //int step = 1 << tx_size;
   int mi_offset = (blk_row >> 1) * xd->mi_stride + (blk_col >> 1);
-
   MODE_INFO *mi = xd->mi[0] + mi_offset;
 
   if (tx_size == TX_4X4) {
@@ -722,6 +719,7 @@ void vp10_xform_quant_fp(MACROBLOCK *x, int plane, int block, int blk_row,
   }
 
   // pvq of daala will be called here for inter mode block
+  if (!x->skip_block)
   skip = pvq_encode_helper2(coeff,          // target original vector
                             ref_coeff,      // reference vector
                             dqcoeff,        // de-quantized vector
@@ -893,19 +891,15 @@ void vp10_xform_quant(MACROBLOCK *x, int plane, int block, int blk_row,
 #else
   MB_MODE_INFO *mbmi = &xd->mi[0]->mbmi;
   tran_low_t *ref_coeff = BLOCK_OFFSET(pd->pvq_ref_coeff, block);
-  int16_t *pred = &pd->pred[4 * (blk_row * diff_stride + blk_col)];
   uint8_t *src, *dst;
-  int16_t *src_int16;
+  int16_t *src_int16, *pred;
   const int src_stride = p->src.stride;
   const int dst_stride = pd->dst.stride;
   int tx_blk_size;
   int i, j;
   int skip;
   PVQ_INFO *pvq_info;
-
-  //int step = 1 << tx_size;
   int mi_offset = (blk_row >> 1) * xd->mi_stride + (blk_col >> 1);
-
   MODE_INFO *mi = xd->mi[0] + mi_offset;
 
   if (tx_size == TX_4X4) {
@@ -920,12 +914,10 @@ void vp10_xform_quant(MACROBLOCK *x, int plane, int block, int blk_row,
   else
     pvq_info = &mi->mbmi.pvq[plane];
 
-  DECLARE_ALIGNED(16, int16_t, coeff_pvq[64 * 64]);
-  DECLARE_ALIGNED(16, int16_t, dqcoeff_pvq[64 * 64]);
-  DECLARE_ALIGNED(16, int16_t, ref_coeff_pvq[64 * 64]);
   dst = &pd->dst.buf[4 * (blk_row * dst_stride + blk_col)];
   src = &p->src.buf[4 * (blk_row * src_stride + blk_col)];
   src_int16 = &p->src_int16[4 * (blk_row * diff_stride + blk_col)];
+  pred = &pd->pred[4 * (blk_row * diff_stride + blk_col)];
 #endif
 
 #if CONFIG_PVQ
