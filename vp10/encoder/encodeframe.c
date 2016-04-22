@@ -1314,6 +1314,12 @@ static void encode_sb(VP10_COMP *cpi, ThreadData *td,
 
   if (mi_row >= cm->mi_rows || mi_col >= cm->mi_cols) return;
 
+#if CONFIG_PVQ && YUSHIN_DEBUG
+  if (output_enabled)
+  if (bsize == BLOCK_64X64)
+    printf("------------------------------------------------------\n");
+#endif
+
   if (bsize >= BLOCK_8X8) {
     ctx = partition_plane_context(xd, mi_row, mi_col, bsize);
     subsize = get_subsize(bsize, pc_tree->partitioning);
@@ -1956,7 +1962,7 @@ static void rd_pick_partition(VP10_COMP *cpi, ThreadData *td,
   int do_rect = 1;
 
   // Override skipping rectangular partition operations for edge blocks
-#if !CONFIG_PVQ
+#if 1//!CONFIG_PVQ
   const int force_horz_split = (mi_row + mi_step >= cm->mi_rows);
   const int force_vert_split = (mi_col + mi_step >= cm->mi_cols);
 #else
@@ -2409,12 +2415,8 @@ static void encode_rd_sb_row(VP10_COMP *cpi, ThreadData *td,
       set_fixed_partitioning(cpi, tile_info, mi, mi_row, mi_col, bsize);
       rd_use_partition(cpi, td, tile_data, mi, tp, mi_row, mi_col, BLOCK_64X64,
                        &dummy_rate, &dummy_dist, 1, td->pc_root);
-#if 1//!CONFIG_PVQ
     } else if (sf->partition_search_type == VAR_BASED_PARTITION &&
                cm->frame_type != KEY_FRAME) {
-#else
-    } else if (sf->partition_search_type == VAR_BASED_PARTITION) {
-#endif
       choose_partitioning(cpi, tile_info, x, mi_row, mi_col);
       rd_use_partition(cpi, td, tile_data, mi, tp, mi_row, mi_col, BLOCK_64X64,
                        &dummy_rate, &dummy_dist, 1, td->pc_root);
@@ -2862,14 +2864,8 @@ static void encode_superblock(VP10_COMP *cpi, ThreadData *td, TOKENEXTRA **t,
   ctx->is_coded = 1;
   x->use_lp32x32fdct = cpi->sf.use_lp32x32fdct;
 
-#if CONFIG_PVQ
-    //if (!(bsize == BLOCK_4X4 || bsize == BLOCK_8X8 || bsize == BLOCK_16X16 ||
-      //  bsize == BLOCK_32X32 || bsize == BLOCK_64X64)) {
-      //printf("non-square partition not supported yet with PVQ!");
-      //assert(0);
-    //}
-
-  if (output_enabled &&
+#if CONFIG_PVQ && YUSHIN_DEBUG
+  /*if (output_enabled &&
       ( (bsize == BLOCK_16X16 && mbmi->tx_size == TX_8X8) ||
           (bsize == BLOCK_16X16 && mbmi->tx_size == TX_4X4) ||
           (bsize == BLOCK_32X32 && mbmi->tx_size == TX_16X16) ||
@@ -2879,8 +2875,13 @@ static void encode_superblock(VP10_COMP *cpi, ThreadData *td, TOKENEXTRA **t,
           (bsize == BLOCK_64X64 && mbmi->tx_size == TX_8X8) ||
           (bsize == BLOCK_64X64 && mbmi->tx_size == TX_4X4)   )
           ) {
-          printf("bsize = %d, tx_size = %d\n", bsize, mbmi->tx_size);
+          printf("frame# %d (%d, %d): bsize = %d, tx_size = %d\n",
+              cm->current_video_frame, mi_row, mi_col, bsize, mbmi->tx_size);
           }
+
+  if (output_enabled && (bsize % 3 != 0))
+    printf("frame# %d (%d, %d): bsize = %d, tx_size = %d\n",
+        cm->current_video_frame, mi_row, mi_col, bsize, mbmi->tx_size);*/
 #endif
 
   if (!is_inter_block(mbmi)) {
@@ -2891,9 +2892,9 @@ static void encode_superblock(VP10_COMP *cpi, ThreadData *td, TOKENEXTRA **t,
     if (output_enabled)
       sum_intra_stats(td->counts, mi, xd->above_mi, xd->left_mi,
                       frame_is_intra_only(cm));
-#if !CONFIG_PVQ
+#if 1//!CONFIG_PVQ
     //NOTE: if pvq encoder is used, this should not be called.
-    vp10_tokenize_sb(cpi, td, t, !output_enabled, VPXMAX(bsize, BLOCK_8X8));
+    //vp10_tokenize_sb(cpi, td, t, !output_enabled, VPXMAX(bsize, BLOCK_8X8));
 #endif
   } else {
     int ref;
@@ -2913,9 +2914,9 @@ static void encode_superblock(VP10_COMP *cpi, ThreadData *td, TOKENEXTRA **t,
                                      VPXMAX(bsize, BLOCK_8X8));
 
     vp10_encode_sb(x, VPXMAX(bsize, BLOCK_8X8));
-#if !CONFIG_PVQ
+#if 1//!CONFIG_PVQ
     //NOTE: if pvq encoder is used, this should not be called.
-    vp10_tokenize_sb(cpi, td, t, !output_enabled, VPXMAX(bsize, BLOCK_8X8));
+    //vp10_tokenize_sb(cpi, td, t, !output_enabled, VPXMAX(bsize, BLOCK_8X8));
 #endif
   }
 
@@ -2952,5 +2953,12 @@ static void encode_superblock(VP10_COMP *cpi, ThreadData *td, TOKENEXTRA **t,
                                                 [mbmi->mode]][mbmi->tx_type];
       }
     }
+#if CONFIG_PVQ && YUSHIN_DEBUG
+    printf("enc: frame# %d (%2d, %2d): bsize %d, tx_size %d, skip %d - ",
+        cpi->common.current_video_frame, mi_row, mi_col, bsize, mbmi->tx_size,
+        mbmi->skip);
+    if (is_inter_block(mbmi)) printf("inter\n");
+    else printf("intra\n");
+#endif
   }
 }

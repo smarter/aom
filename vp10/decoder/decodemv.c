@@ -218,7 +218,11 @@ static int read_skip(VP10_COMMON *cm, const MACROBLOCKD *xd, int segment_id,
     return 1;
   } else {
     const int ctx = vp10_get_skip_context(xd);
+#if 1//!CONFIG_PVQ
     const int skip = vpx_read(r, cm->fc->skip_probs[ctx]);
+#else
+    const int skip = vpx_read(r, 128);
+#endif
     FRAME_COUNTS *counts = xd->counts;
     if (counts) ++counts->skip[ctx][skip];
     return skip;

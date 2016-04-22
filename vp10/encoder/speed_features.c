@@ -425,6 +425,7 @@ static void set_rt_speed_feature(VP10_COMP *cpi, SPEED_FEATURES *sf, int speed,
   }
 #if CONFIG_PVQ
     //sf->tx_size_search_method = USE_LARGESTALL;
+    sf->tx_size_search_method = USE_FULL_RD;
 #endif
 
 }

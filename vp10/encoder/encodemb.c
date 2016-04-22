@@ -897,7 +897,6 @@ void vp10_xform_quant(MACROBLOCK *x, int plane, int block, int blk_row,
   MODE_INFO *mi = xd->mi[0] + mi_offset;
 
   if (tx_size == TX_4X4) {
-#if 1
     const int num_4x4_w = num_4x4_blocks_wide_lookup[plane_bsize];
     int row, col;
     int b = block % (2 * num_4x4_w);
@@ -905,9 +904,6 @@ void vp10_xform_quant(MACROBLOCK *x, int plane, int block, int blk_row,
     col = b & 1;
     b = row * 2 + col;
     pvq_info = &mi->bmi[b].pvq[plane];
-#else
-    pvq_info = &mi->bmi[block].pvq[plane];
-#endif
   }
   else
     pvq_info = &mi->mbmi.pvq[plane];
@@ -1098,11 +1094,29 @@ static void encode_block(int plane, int block, int blk_row, int blk_col,
 #if CONFIG_PVQ
   int tx_blk_size;
   int i, j;
-  tran_low_t *ref_coeff = BLOCK_OFFSET(pd->pvq_ref_coeff, block);
+  //tran_low_t *ref_coeff = BLOCK_OFFSET(pd->pvq_ref_coeff, block);
   MB_MODE_INFO *mbmi = &xd->mi[0]->mbmi;
   //block skip info from pvq, 0 means both DC and AC are skipped.
   int skip;
+  PVQ_INFO *pvq_info;
+
+  int mi_offset = (blk_row >> 1) * xd->mi_stride + (blk_col >> 1);
+
+  MODE_INFO *mi = xd->mi[0] + mi_offset;
+
+  if (tx_size == TX_4X4) {
+    const int num_4x4_w = num_4x4_blocks_wide_lookup[plane_bsize];
+    int row, col;
+    int b = block % (2 * num_4x4_w);
+    row = b / num_4x4_w;
+    col = b & 1;
+    b = row * 2 + col;
+    pvq_info = &mi->bmi[b].pvq[plane];
+  }
+  else
+    pvq_info = &mi->mbmi.pvq[plane];
 #endif
+
   dst = &pd->dst.buf[4 * blk_row * pd->dst.stride + 4 * blk_col];
   a = &ctx->ta[plane][blk_col];
   l = &ctx->tl[plane][blk_row];
@@ -1163,10 +1177,10 @@ static void encode_block(int plane, int block, int blk_row, int blk_col,
 
   if (p->eobs[block] == 0) return;
 #else
-  if (mbmi->pvq[plane].ac_dc_coded)
+  if (pvq_info->ac_dc_coded)
     *(args->skip) = 0;
 
-  if (!mbmi->pvq[plane].ac_dc_coded) return;
+  if (!pvq_info->ac_dc_coded) return;
 
   // transform block size in pixels
   tx_blk_size = 1 << (tx_size + 2);
@@ -1174,7 +1188,7 @@ static void encode_block(int plane, int block, int blk_row, int blk_col,
   // Since vp10 does not have inverse transform only function
   // but contain adding the inverse transform to predicted image,
   // pass blank dummy image to vp10_inv_txfm_add_*x*(), i.e. set dst as zeros
-  if (mbmi->pvq[plane].ac_dc_coded)
+  if (pvq_info->ac_dc_coded)
   for (j=0; j < tx_blk_size; j++)
     memset(dst + j * pd->dst.stride, 0, tx_blk_size);
 #endif
@@ -1349,7 +1363,6 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
   MODE_INFO *mi = xd->mi[0] + mi_offset;
 
   if (tx_size == TX_4X4) {
-#if 1
     const int num_4x4_w = num_4x4_blocks_wide_lookup[plane_bsize];
     int row, col;
     int b = block % (2 * num_4x4_w);
@@ -1357,9 +1370,6 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
     col = b & 1;
     b = row * 2 + col;
     pvq_info = &mi->bmi[b].pvq[plane];
-#else
-    pvq_info = &mi->bmi[block].pvq[plane];
-#endif
   }
   else
     pvq_info = &mi->mbmi.pvq[plane];
