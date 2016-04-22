@@ -543,10 +543,22 @@ void vp10_xform_quant_fp(MACROBLOCK *x, int plane, int block, int blk_row,
   int skip;
   PVQ_INFO *pvq_info;
 
-  if (tx_size == TX_4X4)
-    pvq_info = &xd->mi[0]->bmi[block].pvq[plane];
+  //int step = 1 << tx_size;
+  int mi_offset = (blk_row >> 1) * xd->mi_stride + (blk_col >> 1);
+
+  MODE_INFO *mi = xd->mi[0] + mi_offset;
+
+  if (tx_size == TX_4X4) {
+    const int num_4x4_w = num_4x4_blocks_wide_lookup[plane_bsize];
+    int row, col;
+    int b = block % (2 * num_4x4_w);
+    row = b / num_4x4_w;
+    col = b & 1;
+    b = row * 2 + col;
+    pvq_info = &mi->bmi[b].pvq[plane];
+  }
   else
-    pvq_info = &mbmi->pvq[plane];
+    pvq_info = &mi->mbmi.pvq[plane];
 
   dst = &pd->dst.buf[4 * (blk_row * dst_stride + blk_col)];
   src = &p->src.buf[4 * (blk_row * src_stride + blk_col)];

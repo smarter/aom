@@ -350,7 +350,7 @@ static void set_rt_speed_feature(VP10_COMP *cpi, SPEED_FEATURES *sf, int speed,
 
   if (speed >= 5) {
     sf->use_quant_fp = !is_keyframe;
-#if CONFIG_PVQ
+#if 0//CONFIG_PVQ
     sf->use_quant_fp = 0;
 #endif
     sf->auto_min_max_partition_size =
@@ -405,7 +405,7 @@ static void set_rt_speed_feature(VP10_COMP *cpi, SPEED_FEATURES *sf, int speed,
     sf->adaptive_rd_thresh = 3;
     sf->mv.search_method = FAST_DIAMOND;
     sf->mv.fullpel_search_step_param = 10;
-#if CONFIG_PVQ
+#if 0//CONFIG_PVQ
     sf->partition_search_type = VAR_BASED_PARTITION;
     //sf->tx_size_search_method = USE_LARGESTALL;
 #endif
@@ -414,7 +414,7 @@ static void set_rt_speed_feature(VP10_COMP *cpi, SPEED_FEATURES *sf, int speed,
     sf->adaptive_rd_thresh = 4;
     sf->mv.subpel_force_stop = 2;
     sf->lpf_pick = LPF_PICK_MINIMAL_LPF;
-#if CONFIG_PVQ
+#if 0//CONFIG_PVQ
     sf->partition_search_type = FIXED_PARTITION;
     sf->always_this_block_size = BLOCK_16X16;
     //sf->default_max_partition_size = sf->always_this_block_size;
@@ -423,7 +423,7 @@ static void set_rt_speed_feature(VP10_COMP *cpi, SPEED_FEATURES *sf, int speed,
     sf->disable_filter_search_var_thresh = 5000;
 #endif
   }
-#if CONFIG_PVQ
+#if 0//CONFIG_PVQ
     //sf->tx_size_search_method = USE_LARGESTALL;
     sf->tx_size_search_method = USE_FULL_RD;
 #endif

@@ -133,11 +133,7 @@ static int write_skip(const VP10_COMMON *cm, const MACROBLOCKD *xd,
     return 1;
   } else {
     const int skip = mi->mbmi.skip;
-#if 1//!CONFIG_PVQ
     vpx_write(w, skip, vp10_get_skip_prob(cm, xd));
-#else
-    vpx_write(w, skip, 128);
-#endif
     return skip;
   }
 }
