@@ -513,16 +513,18 @@ void vp10_xform_quant_fp(MACROBLOCK *x, int plane, int block, int blk_row,
   struct macroblock_plane *const p = &x->plane[plane];
   struct macroblockd_plane *const pd = &xd->plane[plane];
 #endif
-  MB_MODE_INFO *mbmi = &xd->mi[0]->mbmi;
   PLANE_TYPE plane_type = (plane == 0) ? PLANE_TYPE_Y : PLANE_TYPE_UV;
   TX_TYPE tx_type = get_tx_type(plane_type, xd, block);
+  if (tx_type != DCT_DCT) {
+    int a = 0;
+  }
   const scan_order *const scan_order = get_scan(tx_size, tx_type);
   tran_low_t *const coeff = BLOCK_OFFSET(p->coeff, block);
   tran_low_t *const qcoeff = BLOCK_OFFSET(p->qcoeff, block);
   tran_low_t *const dqcoeff = BLOCK_OFFSET(pd->dqcoeff, block);
   uint16_t *const eob = &p->eobs[block];
   const int diff_stride = 4 * num_4x4_blocks_wide_lookup[plane_bsize];
-  int seg_id = mbmi->segment_id;
+  int seg_id = xd->mi[0]->mbmi.segment_id;
 #if CONFIG_AOM_QM
   int is_intra = !is_inter_block(&xd->mi[0]->mbmi);
   const qm_val_t *qmatrix = pd->seg_qmatrix[seg_id][is_intra][tx_size];
@@ -533,15 +535,17 @@ void vp10_xform_quant_fp(MACROBLOCK *x, int plane, int block, int blk_row,
   const int16_t *src_diff;
   src_diff = &p->src_diff[4 * (blk_row * diff_stride + blk_col)];
 #else
-  uint8_t *src, *dst;
+  MB_MODE_INFO *mbmi = &xd->mi[0]->mbmi;
   tran_low_t *ref_coeff = BLOCK_OFFSET(pd->pvq_ref_coeff, block);
+  uint8_t *src, *dst;
   int16_t *src_int16, *pred;
   const int src_stride = p->src.stride;
   const int dst_stride = pd->dst.stride;
   int tx_blk_size;
   int i, j;
-  int skip;
+  int skip = 1;
   PVQ_INFO *pvq_info;
+  {
   int mi_offset = (blk_row >> 1) * xd->mi_stride + (blk_col >> 1);
   MODE_INFO *mi = xd->mi[0] + mi_offset;
 
@@ -556,7 +560,7 @@ void vp10_xform_quant_fp(MACROBLOCK *x, int plane, int block, int blk_row,
   }
   else
     pvq_info = &mi->mbmi.pvq[plane];
-
+  }
   dst = &pd->dst.buf[4 * (blk_row * dst_stride + blk_col)];
   src = &p->src.buf[4 * (blk_row * src_stride + blk_col)];
   src_int16 = &p->src_int16[4 * (blk_row * diff_stride + blk_col)];
@@ -897,8 +901,9 @@ void vp10_xform_quant(MACROBLOCK *x, int plane, int block, int blk_row,
   const int dst_stride = pd->dst.stride;
   int tx_blk_size;
   int i, j;
-  int skip;
+  int skip = 1;
   PVQ_INFO *pvq_info;
+  {
   int mi_offset = (blk_row >> 1) * xd->mi_stride + (blk_col >> 1);
   MODE_INFO *mi = xd->mi[0] + mi_offset;
 
@@ -913,14 +918,12 @@ void vp10_xform_quant(MACROBLOCK *x, int plane, int block, int blk_row,
   }
   else
     pvq_info = &mi->mbmi.pvq[plane];
-
+  }
   dst = &pd->dst.buf[4 * (blk_row * dst_stride + blk_col)];
   src = &p->src.buf[4 * (blk_row * src_stride + blk_col)];
   src_int16 = &p->src_int16[4 * (blk_row * diff_stride + blk_col)];
   pred = &pd->pred[4 * (blk_row * diff_stride + blk_col)];
-#endif
 
-#if CONFIG_PVQ
   // transform block size in pixels
   tx_blk_size = 1 << (tx_size + 2);
 
@@ -1104,8 +1107,8 @@ static void encode_block(int plane, int block, int blk_row, int blk_col,
   int skip;
   PVQ_INFO *pvq_info;
 
+  {
   int mi_offset = (blk_row >> 1) * xd->mi_stride + (blk_col >> 1);
-
   MODE_INFO *mi = xd->mi[0] + mi_offset;
 
   if (tx_size == TX_4X4) {
@@ -1119,6 +1122,7 @@ static void encode_block(int plane, int block, int blk_row, int blk_col,
   }
   else
     pvq_info = &mi->mbmi.pvq[plane];
+  }
 #endif
 
   dst = &pd->dst.buf[4 * blk_row * pd->dst.stride + 4 * blk_col];
@@ -1228,7 +1232,6 @@ static void encode_block(int plane, int block, int blk_row, int blk_col,
     return;
   }
 #endif  // CONFIG_VPX_HIGHBITDEPTH
-
   switch (tx_size) {
     case TX_32X32:
       vp10_inv_txfm_add_32x32(dqcoeff, dst, pd->dst.stride, p->eobs[block],
@@ -1359,7 +1362,7 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
   int tx_blk_size;
   int i, j;
   int16_t *pred = &pd->pred[4 * (blk_row * diff_stride + blk_col)];
-  int skip;
+  int skip = 1;
   PVQ_INFO *pvq_info;
 
   //int step = 1 << tx_size;

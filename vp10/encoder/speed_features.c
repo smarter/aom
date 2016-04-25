@@ -349,7 +349,9 @@ static void set_rt_speed_feature(VP10_COMP *cpi, SPEED_FEATURES *sf, int speed,
   }
 
   if (speed >= 5) {
+#if !CONFIG_PVQ
     sf->use_quant_fp = !is_keyframe;
+#endif
     sf->auto_min_max_partition_size =
         is_keyframe ? RELAXED_NEIGHBORING_MIN_MAX : STRICT_NEIGHBORING_MIN_MAX;
     sf->default_max_partition_size = BLOCK_32X32;

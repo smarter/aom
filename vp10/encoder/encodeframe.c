@@ -2885,9 +2885,9 @@ static void encode_superblock(VP10_COMP *cpi, ThreadData *td, TOKENEXTRA **t,
     if (output_enabled)
       sum_intra_stats(td->counts, mi, xd->above_mi, xd->left_mi,
                       frame_is_intra_only(cm));
-#if 1//!CONFIG_PVQ
+#if !CONFIG_PVQ
     //NOTE: if pvq encoder is used, this should not be called.
-    //vp10_tokenize_sb(cpi, td, t, !output_enabled, VPXMAX(bsize, BLOCK_8X8));
+    vp10_tokenize_sb(cpi, td, t, !output_enabled, VPXMAX(bsize, BLOCK_8X8));
 #endif
   } else {
     int ref;
@@ -2907,9 +2907,9 @@ static void encode_superblock(VP10_COMP *cpi, ThreadData *td, TOKENEXTRA **t,
                                      VPXMAX(bsize, BLOCK_8X8));
 
     vp10_encode_sb(x, VPXMAX(bsize, BLOCK_8X8));
-#if 1//!CONFIG_PVQ
+#if !CONFIG_PVQ
     //NOTE: if pvq encoder is used, this should not be called.
-    //vp10_tokenize_sb(cpi, td, t, !output_enabled, VPXMAX(bsize, BLOCK_8X8));
+    vp10_tokenize_sb(cpi, td, t, !output_enabled, VPXMAX(bsize, BLOCK_8X8));
 #endif
   }
 
