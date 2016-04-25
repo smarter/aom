@@ -725,7 +725,7 @@ void vp10_xform_quant_fp(MACROBLOCK *x, int plane, int block, int blk_row,
                             dqcoeff,        // de-quantized vector
                             eob,             // End of Block marker
                             pd->dequant[0], // vpx's DC quantization step size
-                            0,              // keyframe (daala's definition)? 0 for now
+                            plane,          // image plane
                             tx_size,        // block size in log_2 - 2, 0 for 4x4.
                             &x->rate,       // rate measured
                             pvq_info); // PVQ info for a block
