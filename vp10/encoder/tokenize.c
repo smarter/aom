@@ -498,8 +498,8 @@ int vp10_has_high_freq_in_plane(MACROBLOCK *x, BLOCK_SIZE bsize, int plane) {
 }
 
 #if CONFIG_PVQ
-// NOTE : not really generate tokens but store pvq info for each block is
-//        saved in buffer in encoding order, which later in packing stage
+// NOTE : not really generate tokens but save the pvq info for each block
+//        in buffer in encoding order, which later at packing stage
 //        is then written to bitstream via write_modes_b().
 static void tokenize_pvq(int plane, int block, int blk_row, int blk_col,
                        BLOCK_SIZE plane_bsize, TX_SIZE tx_size, void *arg) {
