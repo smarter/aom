@@ -451,7 +451,7 @@ static void block_rd_txfm(int plane, int block, int blk_row, int blk_col,
   int rate;
   int64_t dist;
   int64_t sse;
-#if CONFIG_PVQ
+#if 0//CONFIG_PVQ
   PVQ_INFO *pvq_info;
   {
   int mi_offset = (blk_row >> 1) * xd->mi_stride + (blk_col >> 1);
@@ -522,7 +522,7 @@ static void block_rd_txfm(int plane, int block, int blk_row, int blk_col,
     args->exit_early = 1;
     return;
   }
-#if !CONFIG_PVQ
+#if 1//!CONFIG_PVQ
   rate = rate_block(plane, block, blk_row, blk_col, tx_size, args);
 #else
   rate = x->rate;
@@ -534,7 +534,7 @@ static void block_rd_txfm(int plane, int block, int blk_row, int blk_col,
   rd = VPXMIN(rd1, rd2);
   if (plane == 0)
     x->zcoeff_blk[tx_size][block] =
-#if !CONFIG_PVQ
+#if 1//!CONFIG_PVQ
         !x->plane[plane].eobs[block] ||
 #else
         !pvq_info->ac_dc_coded ||
@@ -550,7 +550,7 @@ static void block_rd_txfm(int plane, int block, int blk_row, int blk_col,
     args->exit_early = 1;
     return;
   }
-#if !CONFIG_PVQ
+#if 1//!CONFIG_PVQ
   args->skippable &= !x->plane[plane].eobs[block];
 #else
   args->skippable &= !pvq_info->ac_dc_coded;
