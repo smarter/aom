@@ -498,6 +498,18 @@ int vp10_has_high_freq_in_plane(MACROBLOCK *x, BLOCK_SIZE bsize, int plane) {
 }
 
 #if CONFIG_PVQ
+void add_pvq_block(MACROBLOCK *const x, PVQ_INFO *pvq) {
+
+  PVQ_QUEUE *q = x->pvq_q;
+  if (q->curr_pos >= q->buf_len) {
+    int new_size = q->buf_len + 1;
+    q->buf = vpx_realloc(q->buf, new_size * sizeof(PVQ_INFO));
+    ++q->buf_len;
+  }
+  memcpy(q->buf + q->curr_pos, pvq, sizeof(PVQ_INFO));
+  ++q->curr_pos;
+}
+
 // NOTE : not really generate tokens but save the pvq info for each block
 //        in buffer in encoding order, which later at packing stage
 //        is then written to bitstream via write_modes_b().
@@ -508,17 +520,33 @@ static void tokenize_pvq(int plane, int block, int blk_row, int blk_col,
   ThreadData *const td = args->td;
   MACROBLOCK *const x = &td->mb;
   MACROBLOCKD *const xd = &x->e_mbd;
-  TOKENEXTRA **tp = args->tp;
-  uint8_t token_cache[32 * 32];
-  struct macroblock_plane *p = &x->plane[plane];
+  //TOKENEXTRA **tp = args->tp;
+  //uint8_t token_cache[32 * 32];
+  //struct macroblock_plane *p = &x->plane[plane];
   struct macroblockd_plane *pd = &xd->plane[plane];
   MB_MODE_INFO *mbmi = &xd->mi[0]->mbmi;
 
-  const tran_low_t *qcoeff = BLOCK_OFFSET(p->qcoeff, block);
-  const int segment_id = mbmi->segment_id;
+  //const tran_low_t *qcoeff = BLOCK_OFFSET(p->qcoeff, block);
+  //const int segment_id = mbmi->segment_id;
+  PVQ_INFO *pvq_info;
+  {
+  int mi_offset = (blk_row >> 1) * xd->mi_stride + (blk_col >> 1);
+  MODE_INFO *mi = xd->mi[0] + mi_offset;
 
+  if (tx_size == TX_4X4) {
+    const int num_4x4_w = num_4x4_blocks_wide_lookup[plane_bsize];
+    int row, col;
+    int b = block % (2 * num_4x4_w);
+    row = b / num_4x4_w;
+    col = b & 1;
+    b = row * 2 + col;
+    pvq_info = &mi->bmi[b].pvq[plane];
+  }
+  else
+    pvq_info = &mi->mbmi.pvq[plane];
+  }
 
-
+  add_pvq_block(x, pvq_info);
 }
 #endif
 

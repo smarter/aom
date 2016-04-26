@@ -60,7 +60,8 @@ typedef struct PVQ_INFO {
   int size[PVQ_MAX_PARTITIONS];
   int skip_rest;
   int skip_dir;
-  int bs;         // log of the block size minus two
+  int bs;         // log of the block size minus two,
+                  // i.e. equivalent to vpx's TX_SIZE
   int ac_dc_coded;// block skip info, indicating whether DC/AC is coded.
                   // bit0: DC coded, bit1 : AC coded (1 means coded)
   tran_low_t dq_dc_residue;
@@ -69,9 +70,10 @@ typedef struct PVQ_INFO {
 } PVQ_INFO;
 
 typedef struct PVQ_QUEUE {
-  PVQ_INFO *pvq_buff; // buffer for pvq info, stored in encoding order
+  PVQ_INFO *buf; // buffer for pvq info, stored in encoding order
   int curr_pos; // curr position to write PVQ_INFO
   int buf_len;  // allocated buffer length
+  int last_pos; // last written position of PVQ_INFO in a tile
 } PVQ_QUEUE;
 #endif
 

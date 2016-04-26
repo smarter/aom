@@ -360,7 +360,7 @@ static void dealloc_compressor_data(VP10_COMP *cpi) {
     for (tile_col = 0; tile_col < tile_cols; ++tile_col) {
       TileDataEnc *tile_data =
           &cpi->tile_data[tile_row * tile_cols + tile_col];
-      vpx_free(tile_data->pvq_q.pvq_buff);
+      vpx_free(tile_data->pvq_q.buf);
     }
   }
 #endif

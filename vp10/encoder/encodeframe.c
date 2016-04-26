@@ -2521,7 +2521,9 @@ void vp10_init_tile_data(VP10_COMP *cpi) {
         }
 #if CONFIG_PVQ
         // This will be dynamically increased as more pvq block is encoded.
-        tile_data->pvq_q.pvq_buff = vpx_calloc(1, sizeof(PVQ_INFO));
+        if (tile_data->pvq_q.buf)
+          vpx_free(tile_data->pvq_q.buf);
+        tile_data->pvq_q.buf = vpx_calloc(1, sizeof(PVQ_INFO));
         tile_data->pvq_q.buf_len = 1;
         tile_data->pvq_q.curr_pos = 0;
 #endif
@@ -2537,6 +2539,9 @@ void vp10_init_tile_data(VP10_COMP *cpi) {
       cpi->tile_tok[tile_row][tile_col] = pre_tok + tile_tok;
       pre_tok = cpi->tile_tok[tile_row][tile_col];
       tile_tok = allocated_tokens(*tile_info);
+#if CONFIG_PVQ
+      cpi->tile_data[tile_row * tile_cols + tile_col].pvq_q.curr_pos = 0;
+#endif
     }
   }
 }
@@ -2562,6 +2567,12 @@ void vp10_encode_tile(VP10_COMP *cpi, ThreadData *td, int tile_row,
       (unsigned int)(tok - cpi->tile_tok[tile_row][tile_col]);
   assert(tok - cpi->tile_tok[tile_row][tile_col] <=
          allocated_tokens(*tile_info));
+#if CONFIG_PVQ
+  td->mb.pvq_q->last_pos = td->mb.pvq_q->curr_pos;
+  // rewind current position so that bitstream can be written
+  // from the 1st pvq block
+  td->mb.pvq_q->curr_pos = 0;
+#endif
 }
 
 static void encode_tiles(VP10_COMP *cpi) {

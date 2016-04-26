@@ -505,6 +505,16 @@ static void write_mb_modes_kf(const VP10_COMMON *cm, const MACROBLOCKD *xd,
   }
 }
 
+#if CONFIG_PVQ
+PVQ_INFO *get_pvq_block(PVQ_QUEUE *pvq_q) {
+  PVQ_INFO* pvq;
+
+  pvq = pvq_q->buf + pvq_q->curr_pos;
+  ++pvq_q->curr_pos;
+  return pvq;
+}
+#endif
+
 static void write_modes_b(VP10_COMP *cpi, const TileInfo *const tile,
                           vpx_writer *w, TOKENEXTRA **tok,
                           const TOKENEXTRA *const tok_end, int mi_row,
@@ -538,22 +548,6 @@ static void write_modes_b(VP10_COMP *cpi, const TileInfo *const tile,
       mbmi->skip);
   if (is_inter_block(mbmi)) printf("inter\n");
   else printf("intra\n");
-
-  if (cpi->common.current_video_frame == 1 && mi_row == 4 && mi_col == 26) {
-    int a = 0;
-  }
-
-  if ( ( (bsize == BLOCK_16X16 && mbmi->tx_size == TX_8X8) ||
-          (bsize == BLOCK_16X16 && mbmi->tx_size == TX_4X4) ||
-          (bsize == BLOCK_32X32 && mbmi->tx_size == TX_16X16) ||
-          (bsize == BLOCK_32X32 && mbmi->tx_size == TX_8X8) ||
-          (bsize == BLOCK_32X32 && mbmi->tx_size == TX_4X4) ||
-          (bsize == BLOCK_64X64 && mbmi->tx_size == TX_16X16) ||
-          (bsize == BLOCK_64X64 && mbmi->tx_size == TX_8X8) ||
-          (bsize == BLOCK_64X64 && mbmi->tx_size == TX_4X4)   )
-          ) {
-          printf("bitstream : bsize = %d, tx_size = %d\n", bsize, mbmi->tx_size);
-          }
 #endif
 
   if (frame_is_intra_only(cm)) {
@@ -627,7 +621,7 @@ static void write_modes_b(VP10_COMP *cpi, const TileInfo *const tile,
           int *exg = &xd->adapt.pvq.pvq_exg[plane][tx_size][0];
           int *ext = xd->adapt.pvq.pvq_ext + tx_size*PVQ_MAX_PARTITIONS;
           generic_encoder *model = xd->adapt.pvq.pvq_param_model;
-
+#if 0
           int mi_offset = (idy >> 1) * xd->mi_stride + (idx >> 1);
           MODE_INFO *mi = xd->mi[0] + mi_offset;
 
@@ -645,7 +639,9 @@ static void write_modes_b(VP10_COMP *cpi, const TileInfo *const tile,
 #endif
           }  else
             pvq = &mi->mbmi.pvq[plane];
-
+#else//fetch pvq block from a buffer instead of from mode info
+          pvq = get_pvq_block(cpi->td.mb.pvq_q);
+#endif
           //assert(pvq->bs <= tx_size);
 
           // encode block skip info
@@ -801,6 +797,11 @@ static void write_modes(VP10_COMP *cpi, const TileInfo *const tile,
       write_modes_sb(cpi, tile, w, tok, tok_end, mi_row, mi_col, BLOCK_64X64);
     }
   }
+#if CONFIG_PVQ
+  // check # of pvq blocks that are encoded and written to bitstream
+  // are the same
+  assert(cpi->td.mb.pvq_q->curr_pos == cpi->td.mb.pvq_q->last_pos);
+#endif
 }
 
 static void build_tree_distribution(VP10_COMP *cpi, TX_SIZE tx_size,
