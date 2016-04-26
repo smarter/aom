@@ -451,7 +451,7 @@ static void block_rd_txfm(int plane, int block, int blk_row, int blk_col,
   int rate;
   int64_t dist;
   int64_t sse;
-#if 0//CONFIG_PVQ
+#if CONFIG_PVQ
   PVQ_INFO *pvq_info;
   {
   int mi_offset = (blk_row >> 1) * xd->mi_stride + (blk_col >> 1);
@@ -522,7 +522,7 @@ static void block_rd_txfm(int plane, int block, int blk_row, int blk_col,
     args->exit_early = 1;
     return;
   }
-#if 1//!CONFIG_PVQ
+#if !CONFIG_PVQ
   rate = rate_block(plane, block, blk_row, blk_col, tx_size, args);
 #else
   rate = x->rate;
@@ -537,7 +537,8 @@ static void block_rd_txfm(int plane, int block, int blk_row, int blk_col,
 #if 1//!CONFIG_PVQ
         !x->plane[plane].eobs[block] ||
 #else
-        !pvq_info->ac_dc_coded ||
+        !pvq_info->ac_dc_coded || // FIXIME(yushin): This causes corrupted
+                                  // outputs from both enc and dec
 #endif
         (rd1 > rd2 && !xd->lossless[mbmi->segment_id]);
 
@@ -550,7 +551,7 @@ static void block_rd_txfm(int plane, int block, int blk_row, int blk_col,
     args->exit_early = 1;
     return;
   }
-#if 1//!CONFIG_PVQ
+#if !CONFIG_PVQ
   args->skippable &= !x->plane[plane].eobs[block];
 #else
   args->skippable &= !pvq_info->ac_dc_coded;
