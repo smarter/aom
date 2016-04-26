@@ -543,15 +543,18 @@ void vp10_tokenize_sb(VP10_COMP *cpi, ThreadData *td, TOKENEXTRA **t,
     int plane;
 
     td->counts->skip[ctx][0] += skip_inc;
-
+#if !CONFIG_PVQ
     for (plane = 0; plane < MAX_MB_PLANE; ++plane) {
       vp10_foreach_transformed_block_in_plane(xd, bsize, plane, tokenize_b,
                                               &arg);
       (*t)->token = EOSB_TOKEN;
       (*t)++;
     }
+#endif
   } else {
+#if !CONFIG_PVQ
     vp10_foreach_transformed_block(xd, bsize, set_entropy_context_b, &arg);
+#endif
   }
 #else
   if (!dry_run) {

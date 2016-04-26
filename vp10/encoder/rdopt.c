@@ -451,6 +451,25 @@ static void block_rd_txfm(int plane, int block, int blk_row, int blk_col,
   int rate;
   int64_t dist;
   int64_t sse;
+#if CONFIG_PVQ
+  PVQ_INFO *pvq_info;
+  {
+  int mi_offset = (blk_row >> 1) * xd->mi_stride + (blk_col >> 1);
+  MODE_INFO *mi = xd->mi[0] + mi_offset;
+
+  if (tx_size == TX_4X4) {
+    const int num_4x4_w = num_4x4_blocks_wide_lookup[plane_bsize];
+    int row, col;
+    int b = block % (2 * num_4x4_w);
+    row = b / num_4x4_w;
+    col = b & 1;
+    b = row * 2 + col;
+    pvq_info = &mi->bmi[b].pvq[plane];
+  }
+  else
+    pvq_info = &mi->mbmi.pvq[plane];
+  }
+#endif
 
   if (args->exit_early) return;
 
@@ -515,7 +534,11 @@ static void block_rd_txfm(int plane, int block, int blk_row, int blk_col,
   rd = VPXMIN(rd1, rd2);
   if (plane == 0)
     x->zcoeff_blk[tx_size][block] =
+#if !CONFIG_PVQ
         !x->plane[plane].eobs[block] ||
+#else
+        !pvq_info->ac_dc_coded ||
+#endif
         (rd1 > rd2 && !xd->lossless[mbmi->segment_id]);
 
   args->this_rate += rate;
@@ -527,8 +550,11 @@ static void block_rd_txfm(int plane, int block, int blk_row, int blk_col,
     args->exit_early = 1;
     return;
   }
-
+#if !CONFIG_PVQ
   args->skippable &= !x->plane[plane].eobs[block];
+#else
+  args->skippable &= !pvq_info->ac_dc_coded;
+#endif
 }
 
 static void txfm_rd_in_plane(MACROBLOCK *x, int *rate, int64_t *distortion,
@@ -2654,8 +2680,6 @@ static int64_t handle_inter_mode(
     rdcosty = RDCOST(x->rdmult, x->rddiv, *rate2, *distortion);
     rdcosty = VPXMIN(rdcosty, RDCOST(x->rdmult, x->rddiv, 0, *psse));
 
-    vp10_subtract_plane(x, bsize, 1);
-    vp10_subtract_plane(x, bsize, 2);
     if (!super_block_uvrd(cpi, x, rate_uv, &distortion_uv, &skippable_uv,
                           &sseuv, bsize, ref_best_rd - rdcosty)) {
       *rate2 = INT_MAX;

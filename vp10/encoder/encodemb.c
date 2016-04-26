@@ -513,16 +513,18 @@ void vp10_xform_quant_fp(MACROBLOCK *x, int plane, int block, int blk_row,
   struct macroblock_plane *const p = &x->plane[plane];
   struct macroblockd_plane *const pd = &xd->plane[plane];
 #endif
-  MB_MODE_INFO *mbmi = &xd->mi[0]->mbmi;
   PLANE_TYPE plane_type = (plane == 0) ? PLANE_TYPE_Y : PLANE_TYPE_UV;
   TX_TYPE tx_type = get_tx_type(plane_type, xd, block);
+  if (tx_type != DCT_DCT) {
+    int a = 0;
+  }
   const scan_order *const scan_order = get_scan(tx_size, tx_type);
   tran_low_t *const coeff = BLOCK_OFFSET(p->coeff, block);
   tran_low_t *const qcoeff = BLOCK_OFFSET(p->qcoeff, block);
   tran_low_t *const dqcoeff = BLOCK_OFFSET(pd->dqcoeff, block);
   uint16_t *const eob = &p->eobs[block];
   const int diff_stride = 4 * num_4x4_blocks_wide_lookup[plane_bsize];
-  int seg_id = mbmi->segment_id;
+  int seg_id = xd->mi[0]->mbmi.segment_id;
 #if CONFIG_AOM_QM
   int is_intra = !is_inter_block(&xd->mi[0]->mbmi);
   const qm_val_t *qmatrix = pd->seg_qmatrix[seg_id][is_intra][tx_size];
@@ -533,21 +535,32 @@ void vp10_xform_quant_fp(MACROBLOCK *x, int plane, int block, int blk_row,
   const int16_t *src_diff;
   src_diff = &p->src_diff[4 * (blk_row * diff_stride + blk_col)];
 #else
-  uint8_t *src, *dst;
+  MB_MODE_INFO *mbmi = &xd->mi[0]->mbmi;
   tran_low_t *ref_coeff = BLOCK_OFFSET(pd->pvq_ref_coeff, block);
+  uint8_t *src, *dst;
   int16_t *src_int16, *pred;
   const int src_stride = p->src.stride;
   const int dst_stride = pd->dst.stride;
   int tx_blk_size;
   int i, j;
-  int skip;
+  int skip = 1;
   PVQ_INFO *pvq_info;
+  {
+  int mi_offset = (blk_row >> 1) * xd->mi_stride + (blk_col >> 1);
+  MODE_INFO *mi = xd->mi[0] + mi_offset;
 
-  if (tx_size == TX_4X4)
-    pvq_info = &xd->mi[0]->bmi[block].pvq[plane];
+  if (tx_size == TX_4X4) {
+    const int num_4x4_w = num_4x4_blocks_wide_lookup[plane_bsize];
+    int row, col;
+    int b = block % (2 * num_4x4_w);
+    row = b / num_4x4_w;
+    col = b & 1;
+    b = row * 2 + col;
+    pvq_info = &mi->bmi[b].pvq[plane];
+  }
   else
-    pvq_info = &mbmi->pvq[plane];
-
+    pvq_info = &mi->mbmi.pvq[plane];
+  }
   dst = &pd->dst.buf[4 * (blk_row * dst_stride + blk_col)];
   src = &p->src.buf[4 * (blk_row * src_stride + blk_col)];
   src_int16 = &p->src_int16[4 * (blk_row * diff_stride + blk_col)];
@@ -710,12 +723,13 @@ void vp10_xform_quant_fp(MACROBLOCK *x, int plane, int block, int blk_row,
   }
 
   // pvq of daala will be called here for inter mode block
+  if (!x->skip_block)
   skip = pvq_encode_helper2(coeff,          // target original vector
                             ref_coeff,      // reference vector
                             dqcoeff,        // de-quantized vector
                             eob,             // End of Block marker
                             pd->dequant[0], // vpx's DC quantization step size
-                            0,              // keyframe (daala's definition)? 0 for now
+                            plane,          // image plane
                             tx_size,        // block size in log_2 - 2, 0 for 4x4.
                             &x->rate,       // rate measured
                             pvq_info); // PVQ info for a block
@@ -881,30 +895,35 @@ void vp10_xform_quant(MACROBLOCK *x, int plane, int block, int blk_row,
 #else
   MB_MODE_INFO *mbmi = &xd->mi[0]->mbmi;
   tran_low_t *ref_coeff = BLOCK_OFFSET(pd->pvq_ref_coeff, block);
-  int16_t *pred = &pd->pred[4 * (blk_row * diff_stride + blk_col)];
   uint8_t *src, *dst;
-  int16_t *src_int16;
+  int16_t *src_int16, *pred;
   const int src_stride = p->src.stride;
   const int dst_stride = pd->dst.stride;
   int tx_blk_size;
   int i, j;
-  int skip;
+  int skip = 1;
   PVQ_INFO *pvq_info;
+  {
+  int mi_offset = (blk_row >> 1) * xd->mi_stride + (blk_col >> 1);
+  MODE_INFO *mi = xd->mi[0] + mi_offset;
 
-  if (tx_size == TX_4X4)
-    pvq_info = &xd->mi[0]->bmi[block].pvq[plane];
+  if (tx_size == TX_4X4) {
+    const int num_4x4_w = num_4x4_blocks_wide_lookup[plane_bsize];
+    int row, col;
+    int b = block % (2 * num_4x4_w);
+    row = b / num_4x4_w;
+    col = b & 1;
+    b = row * 2 + col;
+    pvq_info = &mi->bmi[b].pvq[plane];
+  }
   else
-    pvq_info = &mbmi->pvq[plane];
-
-  DECLARE_ALIGNED(16, int16_t, coeff_pvq[64 * 64]);
-  DECLARE_ALIGNED(16, int16_t, dqcoeff_pvq[64 * 64]);
-  DECLARE_ALIGNED(16, int16_t, ref_coeff_pvq[64 * 64]);
+    pvq_info = &mi->mbmi.pvq[plane];
+  }
   dst = &pd->dst.buf[4 * (blk_row * dst_stride + blk_col)];
   src = &p->src.buf[4 * (blk_row * src_stride + blk_col)];
   src_int16 = &p->src_int16[4 * (blk_row * diff_stride + blk_col)];
-#endif
+  pred = &pd->pred[4 * (blk_row * diff_stride + blk_col)];
 
-#if CONFIG_PVQ
   // transform block size in pixels
   tx_blk_size = 1 << (tx_size + 2);
 
@@ -1082,11 +1101,30 @@ static void encode_block(int plane, int block, int blk_row, int blk_col,
 #if CONFIG_PVQ
   int tx_blk_size;
   int i, j;
-  tran_low_t *ref_coeff = BLOCK_OFFSET(pd->pvq_ref_coeff, block);
+  //tran_low_t *ref_coeff = BLOCK_OFFSET(pd->pvq_ref_coeff, block);
   MB_MODE_INFO *mbmi = &xd->mi[0]->mbmi;
   //block skip info from pvq, 0 means both DC and AC are skipped.
   int skip;
+  PVQ_INFO *pvq_info;
+
+  {
+  int mi_offset = (blk_row >> 1) * xd->mi_stride + (blk_col >> 1);
+  MODE_INFO *mi = xd->mi[0] + mi_offset;
+
+  if (tx_size == TX_4X4) {
+    const int num_4x4_w = num_4x4_blocks_wide_lookup[plane_bsize];
+    int row, col;
+    int b = block % (2 * num_4x4_w);
+    row = b / num_4x4_w;
+    col = b & 1;
+    b = row * 2 + col;
+    pvq_info = &mi->bmi[b].pvq[plane];
+  }
+  else
+    pvq_info = &mi->mbmi.pvq[plane];
+  }
 #endif
+
   dst = &pd->dst.buf[4 * blk_row * pd->dst.stride + 4 * blk_col];
   a = &ctx->ta[plane][blk_col];
   l = &ctx->tl[plane][blk_row];
@@ -1147,10 +1185,10 @@ static void encode_block(int plane, int block, int blk_row, int blk_col,
 
   if (p->eobs[block] == 0) return;
 #else
-  if (mbmi->pvq[plane].ac_dc_coded)
+  if (pvq_info->ac_dc_coded)
     *(args->skip) = 0;
 
-  if (!mbmi->pvq[plane].ac_dc_coded) return;
+  if (!pvq_info->ac_dc_coded) return;
 
   // transform block size in pixels
   tx_blk_size = 1 << (tx_size + 2);
@@ -1158,7 +1196,7 @@ static void encode_block(int plane, int block, int blk_row, int blk_col,
   // Since vp10 does not have inverse transform only function
   // but contain adding the inverse transform to predicted image,
   // pass blank dummy image to vp10_inv_txfm_add_*x*(), i.e. set dst as zeros
-  if (mbmi->pvq[plane].ac_dc_coded)
+  if (pvq_info->ac_dc_coded)
   for (j=0; j < tx_blk_size; j++)
     memset(dst + j * pd->dst.stride, 0, tx_blk_size);
 #endif
@@ -1194,7 +1232,6 @@ static void encode_block(int plane, int block, int blk_row, int blk_col,
     return;
   }
 #endif  // CONFIG_VPX_HIGHBITDEPTH
-
   switch (tx_size) {
     case TX_32X32:
       vp10_inv_txfm_add_32x32(dqcoeff, dst, pd->dst.stride, p->eobs[block],
@@ -1325,13 +1362,24 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
   int tx_blk_size;
   int i, j;
   int16_t *pred = &pd->pred[4 * (blk_row * diff_stride + blk_col)];
-  int skip;
+  int skip = 1;
   PVQ_INFO *pvq_info;
 
-  if (tx_size == TX_4X4)
-    pvq_info = &xd->mi[0]->bmi[block].pvq[plane];
+  //int step = 1 << tx_size;
+  int mi_offset = (blk_row >> 1) * xd->mi_stride + (blk_col >> 1);
+  MODE_INFO *mi = xd->mi[0] + mi_offset;
+
+  if (tx_size == TX_4X4) {
+    const int num_4x4_w = num_4x4_blocks_wide_lookup[plane_bsize];
+    int row, col;
+    int b = block % (2 * num_4x4_w);
+    row = b / num_4x4_w;
+    col = b & 1;
+    b = row * 2 + col;
+    pvq_info = &mi->bmi[b].pvq[plane];
+  }
   else
-    pvq_info = &mbmi->pvq[plane];
+    pvq_info = &mi->mbmi.pvq[plane];
 
   DECLARE_ALIGNED(16, int16_t, coeff_pvq[64 * 64]);
   DECLARE_ALIGNED(16, int16_t, dqcoeff_pvq[64 * 64]);

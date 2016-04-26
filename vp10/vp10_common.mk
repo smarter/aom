@@ -67,8 +67,9 @@ VP10_COMMON_SRCS-yes += common/od_dering.c
 VP10_COMMON_SRCS-yes += common/od_dering.h
 VP10_COMMON_SRCS-yes += common/dering.c
 VP10_COMMON_SRCS-yes += common/dering.h
-VP10_COMMON_SRCS-yes += common/odintrin.h
 endif
+VP10_COMMON_SRCS-yes += common/odintrin.c
+VP10_COMMON_SRCS-yes += common/odintrin.h
 
 ifeq ($(CONFIG_PVQ),yes)
 # PVQ from daala

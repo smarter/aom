@@ -36,6 +36,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 #include "pvq_decoder.h"
 #include "vp10/common/partition.h"
 #include "vp10/common/odintrin.h"
+#include "./vpx_config.h"
 
 static void od_decode_pvq_codeword(od_ec_dec *ec, od_pvq_codeword_ctx *ctx,
  od_coeff *y, int n, int k, int noref, int bs) {
@@ -281,10 +282,10 @@ static void pvq_decode_partition(od_ec_dec *ec,
   }
 
   k = od_pvq_compute_k(qcg, itheta, theta, *noref, n, beta, nodesync);
-
-  //if (n == 15)
-  //  printf("plane %d, qg = %d, k = %d", pli, qg-1, k);
-
+#if CONFIG_PVQ && YUSHIN_DEBUG
+  if (n == 15)
+    printf("k = %d", k);
+#endif
   if (k != 0) {
     /* when noref==0, y is actually size n-1 */
     od_decode_pvq_codeword(ec, &adapt->pvq.pvq_codeword_ctx, y, n, k, *noref, bs);
