@@ -537,8 +537,8 @@ static void block_rd_txfm(int plane, int block, int blk_row, int blk_col,
 #if 1//!CONFIG_PVQ
         !x->plane[plane].eobs[block] ||
 #else
-        !pvq_info->ac_dc_coded || // FIXIME(yushin): This causes corrupted
-                                  // outputs from both enc and dec
+        // FIXIME(yushin): This causes corrupted outputs from both enc and dec
+        !pvq_info->ac_dc_coded ||
 #endif
         (rd1 > rd2 && !xd->lossless[mbmi->segment_id]);
 
