@@ -545,6 +545,7 @@ void vp10_xform_quant_fp(MACROBLOCK *x, int plane, int block, int blk_row,
   int i, j;
   int skip = 1;
   PVQ_INFO *pvq_info;
+#if 0
   {
   int mi_offset = (blk_row >> 1) * xd->mi_stride + (blk_col >> 1);
   MODE_INFO *mi = xd->mi[0] + mi_offset;
@@ -561,6 +562,10 @@ void vp10_xform_quant_fp(MACROBLOCK *x, int plane, int block, int blk_row,
   else
     pvq_info = &mi->mbmi.pvq[plane];
   }
+#else
+  int pvq_blk_offset = blk_row * 16 + blk_col;
+  pvq_info = *(x->pvq + pvq_blk_offset) + plane;
+#endif
   dst = &pd->dst.buf[4 * (blk_row * dst_stride + blk_col)];
   src = &p->src.buf[4 * (blk_row * src_stride + blk_col)];
   src_int16 = &p->src_int16[4 * (blk_row * diff_stride + blk_col)];
@@ -903,6 +908,7 @@ void vp10_xform_quant(MACROBLOCK *x, int plane, int block, int blk_row,
   int i, j;
   int skip = 1;
   PVQ_INFO *pvq_info;
+#if 0
   {
   int mi_offset = (blk_row >> 1) * xd->mi_stride + (blk_col >> 1);
   MODE_INFO *mi = xd->mi[0] + mi_offset;
@@ -919,6 +925,10 @@ void vp10_xform_quant(MACROBLOCK *x, int plane, int block, int blk_row,
   else
     pvq_info = &mi->mbmi.pvq[plane];
   }
+#else
+  int pvq_blk_offset = blk_row * 16 + blk_col;
+  pvq_info = *(x->pvq + pvq_blk_offset) + plane;
+#endif
   dst = &pd->dst.buf[4 * (blk_row * dst_stride + blk_col)];
   src = &p->src.buf[4 * (blk_row * src_stride + blk_col)];
   src_int16 = &p->src_int16[4 * (blk_row * diff_stride + blk_col)];
@@ -1106,7 +1116,7 @@ static void encode_block(int plane, int block, int blk_row, int blk_col,
   //block skip info from pvq, 0 means both DC and AC are skipped.
   int skip;
   PVQ_INFO *pvq_info;
-
+#if 0
   {
   int mi_offset = (blk_row >> 1) * xd->mi_stride + (blk_col >> 1);
   MODE_INFO *mi = xd->mi[0] + mi_offset;
@@ -1123,6 +1133,10 @@ static void encode_block(int plane, int block, int blk_row, int blk_col,
   else
     pvq_info = &mi->mbmi.pvq[plane];
   }
+#else
+  int pvq_blk_offset = blk_row * 16 + blk_col;
+  pvq_info = *(x->pvq + pvq_blk_offset) + plane;
+#endif
 #endif
 
   dst = &pd->dst.buf[4 * blk_row * pd->dst.stride + 4 * blk_col];
@@ -1364,7 +1378,7 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
   int16_t *pred = &pd->pred[4 * (blk_row * diff_stride + blk_col)];
   int skip = 1;
   PVQ_INFO *pvq_info;
-
+#if 0
   //int step = 1 << tx_size;
   int mi_offset = (blk_row >> 1) * xd->mi_stride + (blk_col >> 1);
   MODE_INFO *mi = xd->mi[0] + mi_offset;
@@ -1380,7 +1394,10 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
   }
   else
     pvq_info = &mi->mbmi.pvq[plane];
-
+#else
+  int pvq_blk_offset = blk_row * 16 + blk_col;
+  pvq_info = *(x->pvq + pvq_blk_offset) + plane;
+#endif
   DECLARE_ALIGNED(16, int16_t, coeff_pvq[64 * 64]);
   DECLARE_ALIGNED(16, int16_t, dqcoeff_pvq[64 * 64]);
   DECLARE_ALIGNED(16, int16_t, ref_coeff_pvq[64 * 64]);

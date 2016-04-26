@@ -146,6 +146,7 @@ struct macroblock {
   int rate;
   int64_t dist;
   PVQ_QUEUE *pvq_q;
+  PVQ_INFO pvq[256][3]; // 16x16 of 4x4 blocks, YUV
 #endif
 };
 

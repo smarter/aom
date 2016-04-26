@@ -453,6 +453,7 @@ static void block_rd_txfm(int plane, int block, int blk_row, int blk_col,
   int64_t sse;
 #if CONFIG_PVQ
   PVQ_INFO *pvq_info;
+#if 0
   {
   int mi_offset = (blk_row >> 1) * xd->mi_stride + (blk_col >> 1);
   MODE_INFO *mi = xd->mi[0] + mi_offset;
@@ -469,6 +470,10 @@ static void block_rd_txfm(int plane, int block, int blk_row, int blk_col,
   else
     pvq_info = &mi->mbmi.pvq[plane];
   }
+#else
+  int pvq_blk_offset = blk_row * 16 + blk_col;
+  pvq_info = *(x->pvq + pvq_blk_offset) + plane;
+#endif
 #endif
 
   if (args->exit_early) return;
@@ -977,9 +982,12 @@ static int64_t rd_pick_intra4x4block(VP10_COMP *cpi, MACROBLOCK *x, int row,
         TX_TYPE tx_type = get_tx_type(PLANE_TYPE_Y, xd, block);
         int rate_pvq;
         int skip;
-
+#if 0
         PVQ_INFO *pvq_info = &xd->mi[0]->bmi[block].pvq[0];
-
+#else
+        int pvq_blk_offset = idy * 16 + idx;
+        PVQ_INFO *pvq_info = *(x->pvq + pvq_blk_offset) + 0;//plane 0
+#endif
         src_int16 = &p->src_int16[4 * (row * diff_stride + col)];
 #endif
         xd->mi[0]->bmi[block].as_mode = mode;

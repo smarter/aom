@@ -85,7 +85,7 @@ typedef struct {
   PREDICTION_MODE as_mode;
   int_mv as_mv[2];  // first, second inter predictor motion vectors
 #if CONFIG_PVQ
-  PVQ_INFO pvq[3];  // 3 for YUV 3 channels
+  //PVQ_INFO pvq[3];  // 3 for YUV 3 channels
 #endif
 } b_mode_info;
 
@@ -127,7 +127,7 @@ typedef struct {
   /* deringing gain *per-superblock* */
   int8_t dering_gain;
 #if CONFIG_PVQ
-  PVQ_INFO pvq[3];  // 3 for YUV 3 channels
+  //PVQ_INFO pvq[3];  // 3 for YUV 3 channels
 #endif
 } MB_MODE_INFO;
 

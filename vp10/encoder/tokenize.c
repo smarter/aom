@@ -529,6 +529,7 @@ static void tokenize_pvq(int plane, int block, int blk_row, int blk_col,
   //const tran_low_t *qcoeff = BLOCK_OFFSET(p->qcoeff, block);
   //const int segment_id = mbmi->segment_id;
   PVQ_INFO *pvq_info;
+#if 0
   {
   int mi_offset = (blk_row >> 1) * xd->mi_stride + (blk_col >> 1);
   MODE_INFO *mi = xd->mi[0] + mi_offset;
@@ -545,6 +546,10 @@ static void tokenize_pvq(int plane, int block, int blk_row, int blk_col,
   else
     pvq_info = &mi->mbmi.pvq[plane];
   }
+#else
+  int pvq_blk_offset = blk_row * 16 + blk_col;
+  pvq_info = *(x->pvq + pvq_blk_offset) + plane;
+#endif
 
   add_pvq_block(x, pvq_info);
 }
