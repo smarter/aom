@@ -2877,26 +2877,6 @@ static void encode_superblock(VP10_COMP *cpi, ThreadData *td, TOKENEXTRA **t,
   ctx->is_coded = 1;
   x->use_lp32x32fdct = cpi->sf.use_lp32x32fdct;
 
-#if CONFIG_PVQ && YUSHIN_DEBUG
-  /*if (output_enabled &&
-      ( (bsize == BLOCK_16X16 && mbmi->tx_size == TX_8X8) ||
-          (bsize == BLOCK_16X16 && mbmi->tx_size == TX_4X4) ||
-          (bsize == BLOCK_32X32 && mbmi->tx_size == TX_16X16) ||
-          (bsize == BLOCK_32X32 && mbmi->tx_size == TX_8X8) ||
-          (bsize == BLOCK_32X32 && mbmi->tx_size == TX_4X4) ||
-          (bsize == BLOCK_64X64 && mbmi->tx_size == TX_16X16) ||
-          (bsize == BLOCK_64X64 && mbmi->tx_size == TX_8X8) ||
-          (bsize == BLOCK_64X64 && mbmi->tx_size == TX_4X4)   )
-          ) {
-          printf("frame# %d (%d, %d): bsize = %d, tx_size = %d\n",
-              cm->current_video_frame, mi_row, mi_col, bsize, mbmi->tx_size);
-          }
-
-  if (output_enabled && (bsize % 3 != 0))
-    printf("frame# %d (%d, %d): bsize = %d, tx_size = %d\n",
-        cm->current_video_frame, mi_row, mi_col, bsize, mbmi->tx_size);*/
-#endif
-
   if (!is_inter_block(mbmi)) {
     int plane;
     mbmi->skip = 1;
@@ -2905,10 +2885,8 @@ static void encode_superblock(VP10_COMP *cpi, ThreadData *td, TOKENEXTRA **t,
     if (output_enabled)
       sum_intra_stats(td->counts, mi, xd->above_mi, xd->left_mi,
                       frame_is_intra_only(cm));
-#if 1//!CONFIG_PVQ
-    //NOTE: if pvq encoder is used, this should not be called.
+
     vp10_tokenize_sb(cpi, td, t, !output_enabled, VPXMAX(bsize, BLOCK_8X8));
-#endif
   } else {
     int ref;
     const int is_compound = has_second_ref(mbmi);
@@ -2927,10 +2905,8 @@ static void encode_superblock(VP10_COMP *cpi, ThreadData *td, TOKENEXTRA **t,
                                      VPXMAX(bsize, BLOCK_8X8));
 
     vp10_encode_sb(x, VPXMAX(bsize, BLOCK_8X8));
-#if 1//!CONFIG_PVQ
-    //NOTE: if pvq encoder is used, this should not be called.
+
     vp10_tokenize_sb(cpi, td, t, !output_enabled, VPXMAX(bsize, BLOCK_8X8));
-#endif
   }
 
   if (output_enabled) {

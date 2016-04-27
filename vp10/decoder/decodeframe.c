@@ -1058,13 +1058,6 @@ static void decode_block(VP10Decoder *const pbi, MACROBLOCKD *const xd,
       mbmi->skip);
   if (is_inter_block(mbmi)) printf("inter\n");
   else printf("intra\n");
-
-  /*if (mbmi->tx_size == TX_4X4) {
-    if (bsize != BLOCK_4X4)
-      printf("dec: frame# %d (%d, %d): TX_4X4, bsize = %d, skip = %d\n",
-          pbi->common.current_video_frame, mi_row, mi_col, bsize, mbmi->skip);
-    //assert(bsize == BLOCK_4X4);
-  }*/
 #endif
 
   if (!is_inter_block(mbmi)) {
