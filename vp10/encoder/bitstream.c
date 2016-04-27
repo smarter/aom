@@ -472,6 +472,7 @@ static void write_mb_modes_kf(const VP10_COMMON *cm, const MACROBLOCKD *xd,
 
   write_skip(cm, xd, mbmi->segment_id, mi, w);
 
+  if (!mbmi->skip)
   if (bsize >= BLOCK_8X8 && cm->tx_mode == TX_MODE_SELECT &&
       !xd->lossless[mbmi->segment_id])
     write_selected_tx_size(cm, xd, w);
