@@ -1035,6 +1035,9 @@ static void decode_block(VP10Decoder *const pbi, MACROBLOCKD *const xd,
 
   MB_MODE_INFO *mbmi = set_offsets(cm, xd, bsize, mi_row, mi_col, bw, bh, x_mis,
                                    y_mis, bwl, bhl);
+#if CONFIG_PVQ && YUSHIN_DEBUG
+  int tell = od_ec_dec_tell(&r->ec);
+#endif
   if (pbi->common.current_video_frame == 1 && mi_row == 4 && mi_col == 26) {
     int a = 0;
   }
@@ -1126,7 +1129,9 @@ static void decode_block(VP10Decoder *const pbi, MACROBLOCKD *const xd,
 #endif
     }
   }
-
+#if CONFIG_PVQ && YUSHIN_DEBUG
+  printf("%d bits / partition\n", od_ec_dec_tell(&r->ec) - tell);
+#endif
   xd->corrupted |= vpx_reader_has_error(r);
 }
 

@@ -527,7 +527,9 @@ static void write_modes_b(VP10_COMP *cpi, const TileInfo *const tile,
   MB_MODE_INFO *mbmi;
   BLOCK_SIZE bsize;
 #endif
-
+#if CONFIG_PVQ && YUSHIN_DEBUG
+  int tell = od_ec_enc_tell(&w->ec);
+#endif
   xd->mi = cm->mi_grid_visible + (mi_row * cm->mi_stride + mi_col);
   m = xd->mi[0];
   cpi->td.mb.mbmi_ext = cpi->mbmi_ext_base + (mi_row * cm->mi_cols + mi_col);
@@ -690,6 +692,9 @@ static void write_modes_b(VP10_COMP *cpi, const TileInfo *const tile,
       }//for (idy = 0;
     }//for (plane =
   }//if (!m->mbmi.skip)
+#if CONFIG_PVQ && YUSHIN_DEBUG
+  printf("%d bits / partition\n", od_ec_enc_tell(&w->ec) - tell);
+#endif
 #endif
 }
 

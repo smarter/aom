@@ -284,7 +284,7 @@ static void pvq_decode_partition(od_ec_dec *ec,
   k = od_pvq_compute_k(qcg, itheta, theta, *noref, n, beta, nodesync);
 #if CONFIG_PVQ && YUSHIN_DEBUG
   if (n == 15)
-    printf("k = %d", k);
+    printf("k[0] = %d", k);
 #endif
   if (k != 0) {
     /* when noref==0, y is actually size n-1 */
