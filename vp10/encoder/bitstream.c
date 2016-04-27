@@ -527,7 +527,7 @@ static void write_modes_b(VP10_COMP *cpi, const TileInfo *const tile,
   MB_MODE_INFO *mbmi;
   BLOCK_SIZE bsize;
 #endif
-#if CONFIG_PVQ && YUSHIN_DEBUG
+#if CONFIG_PVQ && DEBUG_PVQ
   int tell = od_ec_enc_tell(&w->ec);
 #endif
   xd->mi = cm->mi_grid_visible + (mi_row * cm->mi_stride + mi_col);
@@ -542,7 +542,7 @@ static void write_modes_b(VP10_COMP *cpi, const TileInfo *const tile,
   bsize = mbmi->sb_type;
 #endif
 
-#if CONFIG_PVQ && YUSHIN_DEBUG
+#if CONFIG_PVQ && DEBUG_PVQ
   assert(m->mbmi.sb_type != BLOCK_4X8 && m->mbmi.sb_type != BLOCK_8X4);
 
   printf("enc-bitstream: frame# %d (%2d, %2d): bsize %d, tx_size %d, skip %d - ",
@@ -679,7 +679,7 @@ static void write_modes_b(VP10_COMP *cpi, const TileInfo *const tile,
           if ((pvq->ac_dc_coded & 1)) {  // DC coded?
             od_ec_enc_bits(&w->ec, pvq->dq_dc_residue < 0, 1);
           }
-#if CONFIG_PVQ && YUSHIN_DEBUG
+#if CONFIG_PVQ && DEBUG_PVQ
           printf("row,col = %d, %d, plane %d : ac_dc_coded %d",
                 idy, idx, plane, pvq->ac_dc_coded);
           if (pvq->ac_dc_coded)
@@ -692,7 +692,7 @@ static void write_modes_b(VP10_COMP *cpi, const TileInfo *const tile,
       }//for (idy = 0;
     }//for (plane =
   }//if (!m->mbmi.skip)
-#if CONFIG_PVQ && YUSHIN_DEBUG
+#if CONFIG_PVQ && DEBUG_PVQ
   printf("%d bits / partition\n", od_ec_enc_tell(&w->ec) - tell);
 #endif
 #endif
@@ -796,7 +796,7 @@ static void write_modes(VP10_COMP *cpi, const TileInfo *const tile,
     vp10_zero(xd->left_seg_context);
     for (mi_col = tile->mi_col_start; mi_col < tile->mi_col_end;
          mi_col += MI_BLOCK_SIZE) {
-#if CONFIG_PVQ && YUSHIN_DEBUG
+#if CONFIG_PVQ && DEBUG_PVQ
       printf("------------------------------------------------------\n");
 #endif
       write_modes_sb(cpi, tile, w, tok, tok_end, mi_row, mi_col, BLOCK_64X64);

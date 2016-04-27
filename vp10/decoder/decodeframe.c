@@ -502,7 +502,7 @@ static void predict_and_reconstruct_intra_block(MACROBLOCKD *const xd,
     ac_dc_coded = od_decode_cdf_adapt(daala_dec.ec,
      daala_dec.state.adapt.skip_cdf[2*tx_size + (plane != 0)], 4,
      daala_dec.state.adapt.skip_increment, "skip");
-#if CONFIG_PVQ && YUSHIN_DEBUG
+#if CONFIG_PVQ && DEBUG_PVQ
     printf("row,col = %d, %d : ac_dc_coded %d, ",  row, col, ac_dc_coded);
 #endif
     if (ac_dc_coded) {
@@ -530,7 +530,7 @@ static void predict_and_reconstruct_intra_block(MACROBLOCKD *const xd,
                                   pd->dst.stride, eob);
 #if CONFIG_PVQ
     }
-#if CONFIG_PVQ && YUSHIN_DEBUG
+#if CONFIG_PVQ && DEBUG_PVQ
     printf("\n");
 #endif
 #endif
@@ -598,7 +598,7 @@ static int reconstruct_inter_block(MACROBLOCKD *const xd, vpx_reader *r,
    daala_dec.state.adapt.skip_cdf[2*tx_size + (plane != 0)], 4,
    daala_dec.state.adapt.skip_increment, "skip");
 
-#if CONFIG_PVQ && YUSHIN_DEBUG
+#if CONFIG_PVQ && DEBUG_PVQ
   printf("row,col = %d, %d, plane %d : ac_dc_coded %d, ",  row, col, plane, ac_dc_coded);
 #endif
 
@@ -629,7 +629,7 @@ static int reconstruct_inter_block(MACROBLOCKD *const xd, vpx_reader *r,
       pd->dst.stride, eob, block_idx);
 #if CONFIG_PVQ
   }
-#if CONFIG_PVQ && YUSHIN_DEBUG
+#if CONFIG_PVQ && DEBUG_PVQ
   printf("\n");
 #endif
 #endif
@@ -1035,7 +1035,7 @@ static void decode_block(VP10Decoder *const pbi, MACROBLOCKD *const xd,
 
   MB_MODE_INFO *mbmi = set_offsets(cm, xd, bsize, mi_row, mi_col, bw, bh, x_mis,
                                    y_mis, bwl, bhl);
-#if CONFIG_PVQ && YUSHIN_DEBUG
+#if CONFIG_PVQ && DEBUG_PVQ
   int tell = od_ec_dec_tell(&r->ec);
 #endif
   if (pbi->common.current_video_frame == 1 && mi_row == 4 && mi_col == 26) {
@@ -1055,7 +1055,7 @@ static void decode_block(VP10Decoder *const pbi, MACROBLOCKD *const xd,
     dec_reset_skip_context(xd);
   }
 
-#if CONFIG_PVQ && YUSHIN_DEBUG
+#if CONFIG_PVQ && DEBUG_PVQ
   printf("dec: frame# %d (%2d, %2d): bsize %d, tx_size %d, skip %d - ",
       pbi->common.current_video_frame, mi_row, mi_col, bsize, mbmi->tx_size,
       mbmi->skip);
@@ -1129,7 +1129,7 @@ static void decode_block(VP10Decoder *const pbi, MACROBLOCKD *const xd,
 #endif
     }
   }
-#if CONFIG_PVQ && YUSHIN_DEBUG
+#if CONFIG_PVQ && DEBUG_PVQ
   printf("%d bits / partition\n", od_ec_dec_tell(&r->ec) - tell);
 #endif
   xd->corrupted |= vpx_reader_has_error(r);
@@ -1861,7 +1861,7 @@ static const uint8_t *decode_tiles(VP10Decoder *pbi, const uint8_t *data,
         vp10_zero(tile_data->xd.left_seg_context);
         for (mi_col = tile.mi_col_start; mi_col < tile.mi_col_end;
              mi_col += MI_BLOCK_SIZE) {
-#if CONFIG_PVQ && YUSHIN_DEBUG
+#if CONFIG_PVQ && DEBUG_PVQ
           printf("------------------------------------------------------\n");
 #endif
           decode_partition(pbi, &tile_data->xd, mi_row, mi_col,

@@ -1314,7 +1314,7 @@ static void encode_sb(VP10_COMP *cpi, ThreadData *td,
 
   if (mi_row >= cm->mi_rows || mi_col >= cm->mi_cols) return;
 
-#if CONFIG_PVQ && YUSHIN_DEBUG
+#if CONFIG_PVQ && DEBUG_PVQ
   if (output_enabled)
   if (bsize == BLOCK_64X64)
     printf("------------------------------------------------------\n");
@@ -2942,7 +2942,7 @@ static void encode_superblock(VP10_COMP *cpi, ThreadData *td, TOKENEXTRA **t,
                                                 [mbmi->mode]][mbmi->tx_type];
       }
     }
-#if CONFIG_PVQ && YUSHIN_DEBUG
+#if CONFIG_PVQ && DEBUG_PVQ
     printf("enc: frame# %d (%2d, %2d): bsize %d, tx_size %d, skip %d - ",
         cpi->common.current_video_frame, mi_row, mi_col, bsize, mbmi->tx_size,
         mbmi->skip);
