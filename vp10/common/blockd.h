@@ -65,7 +65,6 @@ typedef struct PVQ_INFO {
   int ac_dc_coded;// block skip info, indicating whether DC/AC is coded.
                   // bit0: DC coded, bit1 : AC coded (1 means coded)
   tran_low_t dq_dc_residue;
-  //tran_low_t ref_coeff[OD_BSIZE_MAX*OD_BSIZE_MAX];  // for DEBUG, reference vector for PVQ!
   int eob;
 } PVQ_INFO;
 
@@ -84,9 +83,6 @@ typedef struct PVQ_QUEUE {
 typedef struct {
   PREDICTION_MODE as_mode;
   int_mv as_mv[2];  // first, second inter predictor motion vectors
-#if CONFIG_PVQ
-  //PVQ_INFO pvq[3];  // 3 for YUV 3 channels
-#endif
 } b_mode_info;
 
 // Note that the rate-distortion optimization loop, bit-stream writer, and
@@ -126,9 +122,6 @@ typedef struct {
   int_mv mv[2];
   /* deringing gain *per-superblock* */
   int8_t dering_gain;
-#if CONFIG_PVQ
-  //PVQ_INFO pvq[3];  // 3 for YUV 3 channels
-#endif
 } MB_MODE_INFO;
 
 typedef struct MODE_INFO {

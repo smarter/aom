@@ -82,6 +82,7 @@ static const int plane_rd_mult[PLANE_TYPES] = { 4, 2 };
     }                                                   \
   }
 
+#if !CONFIG_PVQ
 // This function is a place holder for now but may ultimately need
 // to scan previous tokens to work out the correct context.
 static int trellis_get_coeff_context(const int16_t *scan, const int16_t *nb,
@@ -339,6 +340,7 @@ static int optimize_b(MACROBLOCK *mb, int plane, int block, TX_SIZE tx_size,
   mb->plane[plane].eobs[block] = final_eob;
   return final_eob;
 }
+#endif
 
 static INLINE void fdct32x32(int rd_transform, const int16_t *src,
                              tran_low_t *dst, int src_stride) {
@@ -545,27 +547,9 @@ void vp10_xform_quant_fp(MACROBLOCK *x, int plane, int block, int blk_row,
   int i, j;
   int skip = 1;
   PVQ_INFO *pvq_info;
-#if 0
-  {
-  int mi_offset = (blk_row >> 1) * xd->mi_stride + (blk_col >> 1);
-  MODE_INFO *mi = xd->mi[0] + mi_offset;
-
-  if (tx_size == TX_4X4) {
-    const int num_4x4_w = num_4x4_blocks_wide_lookup[plane_bsize];
-    int row, col;
-    int b = block % (2 * num_4x4_w);
-    row = b / num_4x4_w;
-    col = b & 1;
-    b = row * 2 + col;
-    pvq_info = &mi->bmi[b].pvq[plane];
-  }
-  else
-    pvq_info = &mi->mbmi.pvq[plane];
-  }
-#else
   int pvq_blk_offset = blk_row * 16 + blk_col;
   pvq_info = *(x->pvq + pvq_blk_offset) + plane;
-#endif
+
   dst = &pd->dst.buf[4 * (blk_row * dst_stride + blk_col)];
   src = &p->src.buf[4 * (blk_row * src_stride + blk_col)];
   src_int16 = &p->src_int16[4 * (blk_row * diff_stride + blk_col)];
@@ -727,15 +711,15 @@ void vp10_xform_quant_fp(MACROBLOCK *x, int plane, int block, int blk_row,
     default: assert(0); break;
   }
 
-  // pvq of daala will be called here for inter mode block
+  // PVQ for inter mode block
   if (!x->skip_block)
   skip = pvq_encode_helper2(coeff,          // target original vector
                             ref_coeff,      // reference vector
                             dqcoeff,        // de-quantized vector
                             eob,             // End of Block marker
-                            pd->dequant[0], // vpx's DC quantization step size
+                            pd->dequant[0], // vpx's DC quantizer
                             plane,          // image plane
-                            tx_size,        // block size in log_2 - 2, 0 for 4x4.
+                            tx_size,        // block size in log_2 - 2
                             &x->rate,       // rate measured
                             pvq_info); // PVQ info for a block
 
@@ -908,27 +892,9 @@ void vp10_xform_quant(MACROBLOCK *x, int plane, int block, int blk_row,
   int i, j;
   int skip = 1;
   PVQ_INFO *pvq_info;
-#if 0
-  {
-  int mi_offset = (blk_row >> 1) * xd->mi_stride + (blk_col >> 1);
-  MODE_INFO *mi = xd->mi[0] + mi_offset;
-
-  if (tx_size == TX_4X4) {
-    const int num_4x4_w = num_4x4_blocks_wide_lookup[plane_bsize];
-    int row, col;
-    int b = block % (2 * num_4x4_w);
-    row = b / num_4x4_w;
-    col = b & 1;
-    b = row * 2 + col;
-    pvq_info = &mi->bmi[b].pvq[plane];
-  }
-  else
-    pvq_info = &mi->mbmi.pvq[plane];
-  }
-#else
   int pvq_blk_offset = blk_row * 16 + blk_col;
   pvq_info = *(x->pvq + pvq_blk_offset) + plane;
-#endif
+
   dst = &pd->dst.buf[4 * (blk_row * dst_stride + blk_col)];
   src = &p->src.buf[4 * (blk_row * src_stride + blk_col)];
   src_int16 = &p->src_int16[4 * (blk_row * diff_stride + blk_col)];
@@ -1078,15 +1044,15 @@ void vp10_xform_quant(MACROBLOCK *x, int plane, int block, int blk_row,
     default: assert(0); break;
   }
 
-  // pvq of daala will be called here for inter mode block
+  // PVQ for inter mode block
   if (!x->skip_block)
   skip = pvq_encode_helper2(coeff,          // target original vector
                             ref_coeff,      // reference vector
                             dqcoeff,        // de-quantized vector
                             eob,            // End of Block marker
-                            pd->dequant[0], // vpx's DC quantization step size
+                            pd->dequant[0], // vpx's DC quantizer
                             plane,          // image plane
-                            tx_size,        // block size in log_2 - 2, 0 for 4x4.
+                            tx_size,        // block size in log_2 - 2
                             &x->rate,       // rate measured
                             pvq_info); // PVQ info for a block
 
@@ -1113,30 +1079,8 @@ static void encode_block(int plane, int block, int blk_row, int blk_col,
   int i, j;
   //tran_low_t *ref_coeff = BLOCK_OFFSET(pd->pvq_ref_coeff, block);
   MB_MODE_INFO *mbmi = &xd->mi[0]->mbmi;
-  //block skip info from pvq, 0 means both DC and AC are skipped.
-  int skip;
-  PVQ_INFO *pvq_info;
-#if 0
-  {
-  int mi_offset = (blk_row >> 1) * xd->mi_stride + (blk_col >> 1);
-  MODE_INFO *mi = xd->mi[0] + mi_offset;
-
-  if (tx_size == TX_4X4) {
-    const int num_4x4_w = num_4x4_blocks_wide_lookup[plane_bsize];
-    int row, col;
-    int b = block % (2 * num_4x4_w);
-    row = b / num_4x4_w;
-    col = b & 1;
-    b = row * 2 + col;
-    pvq_info = &mi->bmi[b].pvq[plane];
-  }
-  else
-    pvq_info = &mi->mbmi.pvq[plane];
-  }
-#else
   int pvq_blk_offset = blk_row * 16 + blk_col;
-  pvq_info = *(x->pvq + pvq_blk_offset) + plane;
-#endif
+  PVQ_INFO *pvq_info = *(x->pvq + pvq_blk_offset) + plane;
 #endif
 
   dst = &pd->dst.buf[4 * blk_row * pd->dst.stride + 4 * blk_col];
@@ -1187,6 +1131,7 @@ static void encode_block(int plane, int block, int blk_row, int blk_col,
     }
   }
 
+#if !CONFIG_PVQ
   if (x->optimize && (!x->skip_recode || !x->skip_optimize)) {
     const int ctx = combine_entropy_contexts(*a, *l);
     *a = *l = optimize_b(x, plane, block, tx_size, ctx) > 0;
@@ -1194,7 +1139,6 @@ static void encode_block(int plane, int block, int blk_row, int blk_col,
     *a = *l = p->eobs[block] > 0;
   }
 
-#if !CONFIG_PVQ
   if (p->eobs[block]) *(args->skip) = 0;
 
   if (p->eobs[block] == 0) return;
@@ -1207,8 +1151,9 @@ static void encode_block(int plane, int block, int blk_row, int blk_col,
   // transform block size in pixels
   tx_blk_size = 1 << (tx_size + 2);
 
-  // Since vp10 does not have inverse transform only function
-  // but contain adding the inverse transform to predicted image,
+  // Since vp10 does not have separate function which does inverse transform
+  // but vp10_inv_txfm_add_*x*() also does addition of predicted image to
+  // inverse transformed image,
   // pass blank dummy image to vp10_inv_txfm_add_*x*(), i.e. set dst as zeros
   if (pvq_info->ac_dc_coded)
   for (j=0; j < tx_blk_size; j++)
@@ -1377,27 +1322,9 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
   int i, j;
   int16_t *pred = &pd->pred[4 * (blk_row * diff_stride + blk_col)];
   int skip = 1;
-  PVQ_INFO *pvq_info;
-#if 0
-  //int step = 1 << tx_size;
-  int mi_offset = (blk_row >> 1) * xd->mi_stride + (blk_col >> 1);
-  MODE_INFO *mi = xd->mi[0] + mi_offset;
-
-  if (tx_size == TX_4X4) {
-    const int num_4x4_w = num_4x4_blocks_wide_lookup[plane_bsize];
-    int row, col;
-    int b = block % (2 * num_4x4_w);
-    row = b / num_4x4_w;
-    col = b & 1;
-    b = row * 2 + col;
-    pvq_info = &mi->bmi[b].pvq[plane];
-  }
-  else
-    pvq_info = &mi->mbmi.pvq[plane];
-#else
   int pvq_blk_offset = blk_row * 16 + blk_col;
-  pvq_info = *(x->pvq + pvq_blk_offset) + plane;
-#endif
+  PVQ_INFO *pvq_info = *(x->pvq + pvq_blk_offset) + plane;
+
   DECLARE_ALIGNED(16, int16_t, coeff_pvq[64 * 64]);
   DECLARE_ALIGNED(16, int16_t, dqcoeff_pvq[64 * 64]);
   DECLARE_ALIGNED(16, int16_t, ref_coeff_pvq[64 * 64]);
@@ -1585,12 +1512,6 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
   // transform block size in pixels
   tx_blk_size = 1 << (tx_size + 2);
 
-  // Instead of computing residue in pixel domain,
-  // pvq uses the residue defined in freq domain.
-  // For this, forward transform is applied to 1) predicted image
-  // and 2) target original image.
-  // Note that pvq in decoder also need to apply forward transform
-  // to predicted image to obtain reference vector.
   if (!x->skip_recode) {
     // copy uint8 orig and predicted block to int16 buffer
     // in order to use existing VP10 transform functions
@@ -1625,31 +1546,24 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
         break;
       default: assert(0); break;
     }
-    // pvq of daala will be called here for intra mode block
+    // PVQ for intra mode block
     if (!x->skip_block)
     skip = pvq_encode_helper2(coeff,          // target original vector
                               ref_coeff,      // reference vector
                               dqcoeff,        // de-quantized vector
                               eob,            // End of Block marker
-                              pd->dequant[0], // vpx's DC quantization step size
+                              pd->dequant[0], // vpx's DC quantizer
                               plane,          // image plane
-                              tx_size,        // block size in log_2 - 2, 0 for 4x4.
+                              tx_size,        // block size in log_2 - 2
                               &x->rate,       // rate measured
                               pvq_info);      // PVQ info for a block
-
     if (!skip)
       mbmi->skip = 0;
+  }
 
-    // NOTE: *eob == 0 and skip == 0 are not equivalent,
-    // since the later means PVQ has not coded both DC and AC,
-    // while the former can be false when skip == 0 but the ref vector is nonzero.
-    // *eob == 0 is superset to skip == 0.
-    // If *eob == 0, decoder does not call pvq_decode().
-    // If skip == 0, decoder just use spatial domain prediction.
-  }//if (!x->skip_recode) {
-
-  // Since vp10 does not have inverse transform only function
-  // but contain adding the inverse transform to predicted image,
+  // Since vp10 does not have separate function which does inverse transform
+  // but vp10_inv_txfm_add_*x*() also does addition of predicted image to
+  // inverse transformed image,
   // pass blank dummy image to vp10_inv_txfm_add_*x*(), i.e. set dst as zeros
 
   if (!skip) {
