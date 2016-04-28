@@ -654,10 +654,14 @@ static void write_modes_b(VP10_COMP *cpi, const TileInfo *const tile,
             od_ec_enc_bits(&w->ec, pvq->dq_dc_residue < 0, 1);
           }
 #if CONFIG_PVQ && DEBUG_PVQ
-          printf("row,col = %d, %d, plane %d : ac_dc_coded %d",
+          printf("row,col = %d, %d, plane %d : ac_dc_coded %d, ",
                 idy, idx, plane, pvq->ac_dc_coded);
-          if (pvq->ac_dc_coded)
-            printf(", k[0] = %d\n", pvq->k[0]);
+          if (pvq->ac_dc_coded & 2) { // AC coded?
+            int i;
+            for (i = 0; i < pvq->nb_bands; i++)
+              printf("[%d, %d] ", pvq->k[i], pvq->theta[i] == -1);
+            printf("\n");
+          }
           else
             printf("\n");
 #endif

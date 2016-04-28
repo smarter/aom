@@ -1038,9 +1038,6 @@ static void decode_block(VP10Decoder *const pbi, MACROBLOCKD *const xd,
 #if CONFIG_PVQ && DEBUG_PVQ
   int tell = od_ec_dec_tell(&r->ec);
 #endif
-  if (pbi->common.current_video_frame == 1 && mi_row == 4 && mi_col == 26) {
-    int a = 0;
-  }
   if (bsize >= BLOCK_8X8 && (cm->subsampling_x || cm->subsampling_y)) {
     const BLOCK_SIZE uv_subsize =
         ss_size_lookup[bsize][cm->subsampling_x][cm->subsampling_y];
