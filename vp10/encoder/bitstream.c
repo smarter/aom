@@ -573,9 +573,6 @@ static void write_modes_b(VP10_COMP *cpi, const TileInfo *const tile,
 #else
   // PVQ writes its tokens (i.e. symbols) here.
   if (!m->mbmi.skip) {
-    //if (m->mbmi.tx_size == TX_4X4)
-    //  assert(m->mbmi.sb_type == BLOCK_4X4);
-
     for (plane = 0; plane < MAX_MB_PLANE; ++plane) {
       PVQ_INFO* pvq;
       TX_SIZE tx_size =
@@ -593,11 +590,6 @@ static void write_modes_b(VP10_COMP *cpi, const TileInfo *const tile,
       if (tx_size == TX_4X4 && bsize <= BLOCK_8X8) {
         num_4x4_w = 2 >> xd->plane[plane].subsampling_x;
         num_4x4_h = 2 >> xd->plane[plane].subsampling_y;
-        //TODO: if vpx is not padded for 8x8, we need below.
-        /*if (bsize == BLOCK_4X8)
-          num_4x4_w = 1;
-        if (bsize == BLOCK_8X4)
-          num_4x4_h = 1;*/
       } else {
         num_4x4_w = num_4x4_blocks_wide_lookup[bsize] >>
             xd->plane[plane].subsampling_x;
@@ -623,28 +615,10 @@ static void write_modes_b(VP10_COMP *cpi, const TileInfo *const tile,
           int *exg = &xd->adapt.pvq.pvq_exg[plane][tx_size][0];
           int *ext = xd->adapt.pvq.pvq_ext + tx_size*PVQ_MAX_PARTITIONS;
           generic_encoder *model = xd->adapt.pvq.pvq_param_model;
-#if 0
-          int mi_offset = (idy >> 1) * xd->mi_stride + (idx >> 1);
-          MODE_INFO *mi = xd->mi[0] + mi_offset;
 
-          if (tx_size == TX_4X4) {
-#if 1
-            const int num_4x4_w = max_blocks_wide;
-            int row, col;
-            int b = block % (2 * num_4x4_w);
-            row = b / num_4x4_w;
-            col = b & 1;
-            b = row * 2 + col;
-            pvq = &mi->bmi[b].pvq[plane];
-#else
-            pvq = &mi->bmi[block].pvq[plane];
-#endif
-          }  else
-            pvq = &mi->mbmi.pvq[plane];
-#else//fetch pvq block from a buffer instead of from mode info
           pvq = get_pvq_block(cpi->td.mb.pvq_q);
-#endif
-          //assert(pvq->bs <= tx_size);
+
+          assert(pvq->bs <= tx_size);
 
           // encode block skip info
           od_encode_cdf_adapt(&w->ec, pvq->ac_dc_coded,

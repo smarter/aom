@@ -453,27 +453,8 @@ static void block_rd_txfm(int plane, int block, int blk_row, int blk_col,
   int64_t sse;
 #if CONFIG_PVQ
   PVQ_INFO *pvq_info;
-#if 0
-  {
-  int mi_offset = (blk_row >> 1) * xd->mi_stride + (blk_col >> 1);
-  MODE_INFO *mi = xd->mi[0] + mi_offset;
-
-  if (tx_size == TX_4X4) {
-    const int num_4x4_w = num_4x4_blocks_wide_lookup[plane_bsize];
-    int row, col;
-    int b = block % (2 * num_4x4_w);
-    row = b / num_4x4_w;
-    col = b & 1;
-    b = row * 2 + col;
-    pvq_info = &mi->bmi[b].pvq[plane];
-  }
-  else
-    pvq_info = &mi->mbmi.pvq[plane];
-  }
-#else
   int pvq_blk_offset = blk_row * 16 + blk_col;
   pvq_info = *(x->pvq + pvq_blk_offset) + plane;
-#endif
 #endif
 
   if (args->exit_early) return;

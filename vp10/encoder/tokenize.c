@@ -520,36 +520,12 @@ static void tokenize_pvq(int plane, int block, int blk_row, int blk_col,
   ThreadData *const td = args->td;
   MACROBLOCK *const x = &td->mb;
   MACROBLOCKD *const xd = &x->e_mbd;
-  //TOKENEXTRA **tp = args->tp;
-  //uint8_t token_cache[32 * 32];
-  //struct macroblock_plane *p = &x->plane[plane];
   struct macroblockd_plane *pd = &xd->plane[plane];
   MB_MODE_INFO *mbmi = &xd->mi[0]->mbmi;
-
-  //const tran_low_t *qcoeff = BLOCK_OFFSET(p->qcoeff, block);
-  //const int segment_id = mbmi->segment_id;
   PVQ_INFO *pvq_info;
-#if 0
-  {
-  int mi_offset = (blk_row >> 1) * xd->mi_stride + (blk_col >> 1);
-  MODE_INFO *mi = xd->mi[0] + mi_offset;
-
-  if (tx_size == TX_4X4) {
-    const int num_4x4_w = num_4x4_blocks_wide_lookup[plane_bsize];
-    int row, col;
-    int b = block % (2 * num_4x4_w);
-    row = b / num_4x4_w;
-    col = b & 1;
-    b = row * 2 + col;
-    pvq_info = &mi->bmi[b].pvq[plane];
-  }
-  else
-    pvq_info = &mi->mbmi.pvq[plane];
-  }
-#else
   int pvq_blk_offset = blk_row * 16 + blk_col;
+
   pvq_info = *(x->pvq + pvq_blk_offset) + plane;
-#endif
 
   add_pvq_block(x, pvq_info);
 }
