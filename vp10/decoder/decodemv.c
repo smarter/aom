@@ -244,7 +244,6 @@ static void read_intra_frame_mode_info(VP10_COMMON *const cm,
 
   mbmi->segment_id = read_intra_segment_id(cm, xd, mi_offset, x_mis, y_mis, r);
   mbmi->skip = read_skip(cm, xd, mbmi->segment_id, r);
-  if (!mbmi->skip)
   mbmi->tx_size = read_tx_size(cm, xd, 1, r);
   mbmi->ref_frame[0] = INTRA_FRAME;
   mbmi->ref_frame[1] = NONE;
