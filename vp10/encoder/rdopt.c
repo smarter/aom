@@ -434,12 +434,14 @@ static void dist_block(MACROBLOCK *x, int plane, int block, TX_SIZE tx_size,
   *out_sse = this_sse >> shift;
 }
 
+#if !CONFIG_PVQ
 static int rate_block(int plane, int block, int blk_row, int blk_col,
                       TX_SIZE tx_size, struct rdcost_block_args *args) {
   return cost_coeffs(args->x, plane, block, args->t_above + blk_col,
                      args->t_left + blk_row, tx_size, args->so->scan,
                      args->so->neighbors, args->use_fast_coef_costing);
 }
+#endif
 
 static void block_rd_txfm(int plane, int block, int blk_row, int blk_col,
                           BLOCK_SIZE plane_bsize, TX_SIZE tx_size, void *arg) {
@@ -954,22 +956,17 @@ static int64_t rd_pick_intra4x4block(VP10_COMP *cpi, MACROBLOCK *x, int row,
         tran_low_t *const coeff = BLOCK_OFFSET(x->plane[0].coeff, block);
 #if CONFIG_PVQ
         const BLOCK_SIZE plane_bsize = get_plane_block_size(bsize, pd);
-        const int diff_stride = 4 * num_4x4_blocks_wide_lookup[plane_bsize];
+        const int diff_stride = 8;
         tran_low_t *const dqcoeff = BLOCK_OFFSET(pd->dqcoeff, block);
         tran_low_t *ref_coeff = BLOCK_OFFSET(pd->pvq_ref_coeff, block);
         int16_t *pred = &pd->pred[4 * (row * diff_stride + col)];
-        int16_t *src_int16;
+        int16_t *src_int16 = &p->src_int16[4 * (row * diff_stride + col)];;
         int i, j, tx_blk_size;
         TX_TYPE tx_type = get_tx_type(PLANE_TYPE_Y, xd, block);
         int rate_pvq;
         int skip;
-#if 0
-        PVQ_INFO *pvq_info = &xd->mi[0]->bmi[block].pvq[0];
-#else
-        int pvq_blk_offset = idy * 16 + idx;
+        int pvq_blk_offset = (row + idy) * 16 + (col + idx);
         PVQ_INFO *pvq_info = *(x->pvq + pvq_blk_offset) + 0;//plane 0
-#endif
-        src_int16 = &p->src_int16[4 * (row * diff_stride + col)];
 #endif
         xd->mi[0]->bmi[block].as_mode = mode;
         vp10_predict_intra_block(xd, 1, 1, TX_4X4, mode, dst, dst_stride, dst,
@@ -977,6 +974,8 @@ static int64_t rd_pick_intra4x4block(VP10_COMP *cpi, MACROBLOCK *x, int row,
 #if !CONFIG_PVQ
         vpx_subtract_block(4, 4, src_diff, 8, src, src_stride, dst, dst_stride);
 #else
+        if (xd->lossless[xd->mi[0]->mbmi.segment_id])
+          tx_type = DCT_DCT;
         // transform block size in pixels
         tx_blk_size = 4;
 
@@ -988,14 +987,14 @@ static int64_t rd_pick_intra4x4block(VP10_COMP *cpi, MACROBLOCK *x, int row,
             pred[diff_stride * j + i] = dst[dst_stride * j + i];
           }
 
-        vp10_fwd_txfm_4x4(src_int16, coeff, 8, tx_type, 0);
-        vp10_fwd_txfm_4x4(pred, ref_coeff, 8, tx_type, 0);
+        vp10_fwd_txfm_4x4(src_int16, coeff, diff_stride, tx_type, 0);
+        vp10_fwd_txfm_4x4(pred, ref_coeff, diff_stride, tx_type, 0);
 #endif
 
         if (xd->lossless[xd->mi[0]->mbmi.segment_id]) {
+#if !CONFIG_PVQ
           TX_TYPE tx_type = get_tx_type(PLANE_TYPE_Y, xd, block);
           const scan_order *so = get_scan(TX_4X4, tx_type);
-#if !CONFIG_PVQ
           vp10_fwd_txfm_4x4(src_diff, coeff, 8, DCT_DCT, 1);
           vp10_regular_quantize_b_4x4(x, 0, block, so->scan, so->iscan);
           ratey += cost_coeffs(x, 0, block, tempa + idx, templ + idy, TX_4X4,
@@ -1007,6 +1006,11 @@ static int64_t rd_pick_intra4x4block(VP10_COMP *cpi, MACROBLOCK *x, int row,
               &p->eobs[block], pd->dequant[0],
               0, TX_4X4, &rate_pvq, pvq_info);
           ratey += rate_pvq;
+
+          if (!skip) {
+            for (j=0; j < tx_blk_size; j++)
+              memset(dst + j * dst_stride, 0, tx_blk_size);
+          }
 #endif
           if (RDCOST(x->rdmult, x->rddiv, ratey, distortion) >= best_rd)
             goto next;
@@ -1014,9 +1018,9 @@ static int64_t rd_pick_intra4x4block(VP10_COMP *cpi, MACROBLOCK *x, int row,
                                 dst_stride, p->eobs[block], DCT_DCT, 1);
         } else {
           int64_t unused;
+#if !CONFIG_PVQ
           TX_TYPE tx_type = get_tx_type(PLANE_TYPE_Y, xd, block);
           const scan_order *so = get_scan(TX_4X4, tx_type);
-#if !CONFIG_PVQ
           vp10_fwd_txfm_4x4(src_diff, coeff, 8, tx_type, 0);
           vp10_regular_quantize_b_4x4(x, 0, block, so->scan, so->iscan);
           ratey += cost_coeffs(x, 0, block, tempa + idx, templ + idy, TX_4X4,
@@ -1028,18 +1032,22 @@ static int64_t rd_pick_intra4x4block(VP10_COMP *cpi, MACROBLOCK *x, int row,
               &p->eobs[block], pd->dequant[0],
               0, TX_4X4, &rate_pvq, pvq_info);
           ratey += rate_pvq;
+
+          if (!skip) {
+            for (j=0; j < tx_blk_size; j++)
+              memset(dst + j * dst_stride, 0, tx_blk_size);
+          }
 #endif
           distortion +=
               vp10_block_error(coeff, BLOCK_OFFSET(pd->dqcoeff, block), 16,
-                               &unused) >>
-              2;
+                               &unused) >> 2;
           if (RDCOST(x->rdmult, x->rddiv, ratey, distortion) >= best_rd)
             goto next;
           vp10_inv_txfm_add_4x4(BLOCK_OFFSET(pd->dqcoeff, block), dst,
                                 dst_stride, p->eobs[block], tx_type, 0);
         }
       }
-    }
+    }//for (idy =
 
     rate += ratey;
     this_rd = RDCOST(x->rdmult, x->rddiv, rate, distortion);
@@ -1057,7 +1065,7 @@ static int64_t rd_pick_intra4x4block(VP10_COMP *cpi, MACROBLOCK *x, int row,
                num_4x4_blocks_wide * 4);
     }
   next : {}
-  }
+  }//for (mode =
 
   if (best_rd >= rd_thresh) return best_rd;
 
@@ -1407,6 +1415,7 @@ static int64_t encode_inter_mb_segment(VP10_COMP *cpi, MACROBLOCK *x,
   fwd_txm4x4 = xd->lossless[mi->mbmi.segment_id] ? vp10_fwht4x4 : vpx_fdct4x4;
 #endif  // CONFIG_VPX_HIGHBITDEPTH
 
+#if !CONFIG_PVQ
 #if CONFIG_VPX_HIGHBITDEPTH
   if (xd->cur_buf->flags & YV12_FLAG_HIGHBITDEPTH) {
     vpx_highbd_subtract_block(
@@ -1423,18 +1432,58 @@ static int64_t encode_inter_mb_segment(VP10_COMP *cpi, MACROBLOCK *x,
                      vp10_raster_block_offset_int16(BLOCK_8X8, i, p->src_diff),
                      8, src, p->src.stride, dst, pd->dst.stride);
 #endif  // CONFIG_VPX_HIGHBITDEPTH
+#endif
 
   k = i;
   for (idy = 0; idy < height / 4; ++idy) {
     for (idx = 0; idx < width / 4; ++idx) {
       int64_t ssz, rd, rd1, rd2;
       tran_low_t *coeff;
-
+#if CONFIG_PVQ
+      const int src_stride = p->src.stride;
+      const int dst_stride = pd->dst.stride;
+      const int diff_stride = 8;
+      tran_low_t *dqcoeff;
+      tran_low_t *ref_coeff;
+      int16_t *pred = &pd->pred[4 * (ir * diff_stride + ic)];
+      int16_t *src_int16 = &p->src_int16[4 * (ir * diff_stride + ic)];
+      int i, j, tx_blk_size;
+      int rate_pvq;
+      int skip;
+      int pvq_blk_offset = (ir + idy) * 16 + (ic + idx);
+      assert(pvq_blk_offset < 16 * 16);
+      PVQ_INFO *pvq_info = *(x->pvq + pvq_blk_offset) + 0;//plane 0
+#endif
       k += (idy * 2 + idx);
       coeff = BLOCK_OFFSET(p->coeff, k);
+#if !CONFIG_PVQ
       fwd_txm4x4(vp10_raster_block_offset_int16(BLOCK_8X8, k, p->src_diff),
                  coeff, 8);
       vp10_regular_quantize_b_4x4(x, 0, k, so->scan, so->iscan);
+#else
+      //TODO: Check whether 'k' is correct index
+      dqcoeff = BLOCK_OFFSET(pd->dqcoeff, k);
+      ref_coeff = BLOCK_OFFSET(pd->pvq_ref_coeff, k);
+
+      // transform block size in pixels
+      tx_blk_size = 4;
+
+      // copy uint8 orig and predicted block to int16 buffer
+      // in order to use existing VP10 transform functions
+      for (j = 0; j < tx_blk_size; j++)
+        for (i = 0; i < tx_blk_size; i++) {
+          src_int16[diff_stride * j + i] = src[src_stride * j + i];
+          pred[diff_stride * j + i] = dst[dst_stride * j + i];
+        }
+
+      vp10_fwd_txfm_4x4(src_int16, coeff, diff_stride, tx_type, 0);
+      vp10_fwd_txfm_4x4(pred, ref_coeff, diff_stride, tx_type, 0);
+
+      skip = pvq_encode_helper2(coeff, ref_coeff, dqcoeff,
+          &p->eobs[k], pd->dequant[0],
+          0, TX_4X4, &rate_pvq, pvq_info);
+#endif
+
 #if CONFIG_VPX_HIGHBITDEPTH
       if (xd->cur_buf->flags & YV12_FLAG_HIGHBITDEPTH) {
         thisdistortion += vp10_highbd_block_error(
@@ -1448,9 +1497,13 @@ static int64_t encode_inter_mb_segment(VP10_COMP *cpi, MACROBLOCK *x,
           vp10_block_error(coeff, BLOCK_OFFSET(pd->dqcoeff, k), 16, &ssz);
 #endif  // CONFIG_VPX_HIGHBITDEPTH
       thissse += ssz;
+#if !CONFIG_PVQ
       thisrate +=
           cost_coeffs(x, 0, k, ta + (k & 1), tl + (k >> 1), TX_4X4, so->scan,
                       so->neighbors, cpi->sf.use_fast_coef_costing);
+#else
+      thisrate += rate_pvq;
+#endif
       rd1 = RDCOST(x->rdmult, x->rddiv, thisrate, thisdistortion >> 2);
       rd2 = RDCOST(x->rdmult, x->rddiv, 0, thissse >> 2);
       rd = VPXMIN(rd1, rd2);

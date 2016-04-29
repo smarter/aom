@@ -752,7 +752,6 @@ int od_pvq_encode(daala_enc_ctx *enc,
   model = enc->state.adapt.pvq.pvq_param_model;
   nb_bands = OD_BAND_OFFSETS[bs][0];
   off = &OD_BAND_OFFSETS[bs][1];
-  // FIXME : somehow pvq_qm[] seems fetching wrong value.
   //dc_quant = OD_MAXI(1, q0*pvq_qm[od_qm_get_index(bs, 0)] >> 4);
   dc_quant = OD_MAXI(1, q0);
   tell = 0;

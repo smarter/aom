@@ -545,9 +545,9 @@ static void write_modes_b(VP10_COMP *cpi, const TileInfo *const tile,
 #if CONFIG_PVQ && DEBUG_PVQ
   assert(m->mbmi.sb_type != BLOCK_4X8 && m->mbmi.sb_type != BLOCK_8X4);
 
-  printf("enc-bitstream: frame# %d (%2d, %2d): bsize %d, tx_size %d, skip %d - ",
+  printf("enc-bitstream: frame# %d (%2d, %2d): bsize %d, tx_size %d, tx_type %d, skip %d - ",
       cpi->common.current_video_frame, mi_row, mi_col, bsize, mbmi->tx_size,
-      mbmi->skip);
+      mbmi->tx_type, mbmi->skip);
   if (is_inter_block(mbmi)) printf("inter\n");
   else printf("intra\n");
 #endif
