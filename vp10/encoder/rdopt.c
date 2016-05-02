@@ -1448,10 +1448,10 @@ static int64_t encode_inter_mb_segment(VP10_COMP *cpi, MACROBLOCK *x,
       int16_t *src_int16 = &p->src_int16[4 * (ir * diff_stride + ic)];
       int i, j, tx_blk_size;
       int rate_pvq;
-      int skip;
       int pvq_blk_offset = (ir + idy) * 16 + (ic + idx);
+      PVQ_INFO *pvq_info;
       assert(pvq_blk_offset < 16 * 16);
-      PVQ_INFO *pvq_info = *(x->pvq + pvq_blk_offset) + 0;//plane 0
+      pvq_info = *(x->pvq + pvq_blk_offset) + 0;//plane 0
 #endif
       k += (idy * 2 + idx);
       coeff = BLOCK_OFFSET(p->coeff, k);
@@ -1478,7 +1478,7 @@ static int64_t encode_inter_mb_segment(VP10_COMP *cpi, MACROBLOCK *x,
       vp10_fwd_txfm_4x4(src_int16, coeff, diff_stride, tx_type, 0);
       vp10_fwd_txfm_4x4(pred, ref_coeff, diff_stride, tx_type, 0);
 
-      skip = pvq_encode_helper2(coeff, ref_coeff, dqcoeff,
+      pvq_encode_helper2(coeff, ref_coeff, dqcoeff,
           &p->eobs[k], pd->dequant[0],
           0, TX_4X4, &rate_pvq, pvq_info);
 #endif

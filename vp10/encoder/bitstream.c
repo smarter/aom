@@ -526,8 +526,8 @@ static void write_modes_b(VP10_COMP *cpi, const TileInfo *const tile,
 #if CONFIG_PVQ
   MB_MODE_INFO *mbmi;
   BLOCK_SIZE bsize;
-  (void **) tok;
-  (void *const) tok_end;
+  (void) tok;
+  (void) tok_end;
 #endif
 #if CONFIG_PVQ && DEBUG_PVQ
   int tell = od_ec_enc_tell(&w->ec);
