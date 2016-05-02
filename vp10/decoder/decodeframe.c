@@ -55,7 +55,7 @@
 #include "vp10/decoder/detokenize.h"
 #else
 #include "vp10/encoder/encodemb.h"
-#include "vp10/decoder/pvq_decoder.h"!cmp
+#include "vp10/decoder/pvq_decoder.h"
 
 #include "vp10/decoder/decint.h"
 #include "vp10/common/partition.h"
@@ -450,6 +450,8 @@ static void predict_and_reconstruct_intra_block(MACROBLOCKD *const xd,
   const int diff_stride = tx_blk_size;
   int16_t *pred = pd->pred;
   tran_low_t *const dqcoeff = pd->dqcoeff;
+
+  (void) r;
 #endif
   dst = &pd->dst.buf[4 * row * pd->dst.stride + 4 * col];
 
@@ -566,6 +568,7 @@ static int reconstruct_inter_block(MACROBLOCKD *const xd, vpx_reader *r,
   int seg_id = mbmi->segment_id;
   int quant;
 
+  (void) r;
   dst = &pd->dst.buf[4 * row * pd->dst.stride + 4 * col];
 
   for (j=0; j < tx_blk_size; j++)

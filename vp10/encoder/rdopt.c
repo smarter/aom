@@ -1397,10 +1397,14 @@ static int64_t encode_inter_mb_segment(VP10_COMP *cpi, MACROBLOCK *x,
       &pd->dst.buf[vp10_raster_block_offset(BLOCK_8X8, i, pd->dst.stride)];
   int64_t thisdistortion = 0, thissse = 0;
   int thisrate = 0;
-  TX_TYPE tx_type = get_tx_type(PLANE_TYPE_Y, xd, i);
 #if !CONFIG_PVQ
+  TX_TYPE tx_type = get_tx_type(PLANE_TYPE_Y, xd, i);
   const scan_order *so = get_scan(TX_4X4, tx_type);
 #endif
+  (void) cpi;
+  (void) ta;
+  (void) tl;
+
   vp10_build_inter_predictor_sub8x8(xd, 0, i, ir, ic, mi_row, mi_col);
 
 #if CONFIG_VPX_HIGHBITDEPTH
@@ -1475,8 +1479,8 @@ static int64_t encode_inter_mb_segment(VP10_COMP *cpi, MACROBLOCK *x,
           pred[diff_stride * j + i] = dst[dst_stride * j + i];
         }
 
-      vp10_fwd_txfm_4x4(src_int16, coeff, diff_stride, tx_type, 0);
-      vp10_fwd_txfm_4x4(pred, ref_coeff, diff_stride, tx_type, 0);
+      fwd_txm4x4(src_int16, coeff, diff_stride);
+      fwd_txm4x4(pred, ref_coeff, diff_stride);
 
       pvq_encode_helper2(coeff, ref_coeff, dqcoeff,
           &p->eobs[k], pd->dequant[0],

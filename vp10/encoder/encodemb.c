@@ -534,8 +534,6 @@ void vp10_xform_quant_fp(MACROBLOCK *x, int plane, int block, int blk_row,
   const int16_t *src_diff;
   src_diff = &p->src_diff[4 * (blk_row * diff_stride + blk_col)];
 #else
-  (void) scan_order;
-  (void) qcoeff;
   MB_MODE_INFO *mbmi = &xd->mi[0]->mbmi;
   tran_low_t *ref_coeff = BLOCK_OFFSET(pd->pvq_ref_coeff, block);
   uint8_t *src, *dst;
@@ -547,8 +545,10 @@ void vp10_xform_quant_fp(MACROBLOCK *x, int plane, int block, int blk_row,
   int skip = 1;
   PVQ_INFO *pvq_info;
   int pvq_blk_offset = blk_row * 16 + blk_col;
-  pvq_info = *(x->pvq + pvq_blk_offset) + plane;
 
+  (void) scan_order;
+  (void) qcoeff;
+  pvq_info = *(x->pvq + pvq_blk_offset) + plane;
   dst = &pd->dst.buf[4 * (blk_row * dst_stride + blk_col)];
   src = &p->src.buf[4 * (blk_row * src_stride + blk_col)];
   src_int16 = &p->src_int16[4 * (blk_row * diff_stride + blk_col)];
@@ -881,8 +881,6 @@ void vp10_xform_quant(MACROBLOCK *x, int plane, int block, int blk_row,
   const int16_t *src_diff;
   src_diff = &p->src_diff[4 * (blk_row * diff_stride + blk_col)];
 #else
-  (void) scan_order;
-  (void) qcoeff;
   MB_MODE_INFO *mbmi = &xd->mi[0]->mbmi;
   tran_low_t *ref_coeff = BLOCK_OFFSET(pd->pvq_ref_coeff, block);
   uint8_t *src, *dst;
@@ -894,8 +892,10 @@ void vp10_xform_quant(MACROBLOCK *x, int plane, int block, int blk_row,
   int skip = 1;
   PVQ_INFO *pvq_info;
   int pvq_blk_offset = blk_row * 16 + blk_col;
-  pvq_info = *(x->pvq + pvq_blk_offset) + plane;
 
+  (void) scan_order;
+  (void) qcoeff;
+  pvq_info = *(x->pvq + pvq_blk_offset) + plane;
   dst = &pd->dst.buf[4 * (blk_row * dst_stride + blk_col)];
   src = &p->src.buf[4 * (blk_row * src_stride + blk_col)];
   src_int16 = &p->src_int16[4 * (blk_row * diff_stride + blk_col)];
@@ -1316,8 +1316,6 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
   int16_t *src_diff;
   src_diff = &p->src_diff[4 * (blk_row * diff_stride + blk_col)];
 #else
-  (void) scan_order;
-  (void) qcoeff;
    tran_low_t *ref_coeff = BLOCK_OFFSET(pd->pvq_ref_coeff, block);
   int16_t *src_int16;
   int tx_blk_size;
@@ -1326,6 +1324,9 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
   int skip = 1;
   int pvq_blk_offset = blk_row * 16 + blk_col;
   PVQ_INFO *pvq_info = *(x->pvq + pvq_blk_offset) + plane;
+
+  (void) scan_order;
+  (void) qcoeff;
   src_int16 = &p->src_int16[4 * (blk_row * diff_stride + blk_col)];
 #endif
   dst = &pd->dst.buf[4 * (blk_row * dst_stride + blk_col)];
