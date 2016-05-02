@@ -1400,10 +1400,11 @@ static int64_t encode_inter_mb_segment(VP10_COMP *cpi, MACROBLOCK *x,
 #if !CONFIG_PVQ
   TX_TYPE tx_type = get_tx_type(PLANE_TYPE_Y, xd, i);
   const scan_order *so = get_scan(TX_4X4, tx_type);
-#endif
+#else
   (void) cpi;
   (void) ta;
   (void) tl;
+#endif
 
   vp10_build_inter_predictor_sub8x8(xd, 0, i, ir, ic, mi_row, mi_col);
 
