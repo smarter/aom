@@ -1078,7 +1078,6 @@ static void encode_block(int plane, int block, int blk_row, int blk_col,
 #if CONFIG_PVQ
   int tx_blk_size;
   int j;
-  //tran_low_t *ref_coeff = BLOCK_OFFSET(pd->pvq_ref_coeff, block);
   int pvq_blk_offset = blk_row * 16 + blk_col;
   PVQ_INFO *pvq_info = *(x->pvq + pvq_blk_offset) + plane;
 #endif
@@ -1269,8 +1268,9 @@ void vp10_encode_sb(MACROBLOCK *x, BLOCK_SIZE bsize) {
   if (x->skip) return;
 
   for (plane = 0; plane < MAX_MB_PLANE; ++plane) {
+#if !CONFIG_PVQ
     if (!x->skip_recode) vp10_subtract_plane(x, bsize, plane);
-
+#endif
     if (x->optimize && (!x->skip_recode || !x->skip_optimize)) {
       const struct macroblockd_plane *const pd = &xd->plane[plane];
       const TX_SIZE tx_size = plane ? get_uv_tx_size(mbmi, pd) : mbmi->tx_size;
@@ -1558,38 +1558,37 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
                               pvq_info);      // PVQ info for a block
     if (!skip)
       mbmi->skip = 0;
-  }
 
   // Since vp10 does not have separate function which does inverse transform
   // but vp10_inv_txfm_add_*x*() also does addition of predicted image to
   // inverse transformed image,
   // pass blank dummy image to vp10_inv_txfm_add_*x*(), i.e. set dst as zeros
 
-  if (!skip) {
-    if (!x->skip_recode)
-    for (j=0; j < tx_blk_size; j++)
-      memset(dst + j * dst_stride, 0, tx_blk_size);
+    if (!skip) {
+      for (j=0; j < tx_blk_size; j++)
+        memset(dst + j * dst_stride, 0, tx_blk_size);
 
-    switch (tx_size) {
-      case TX_32X32:
-       vp10_inv_txfm_add_32x32(dqcoeff, dst, dst_stride, *eob, tx_type);
-        break;
-      case TX_16X16:
-        vp10_inv_txfm_add_16x16(dqcoeff, dst, dst_stride, *eob, tx_type);
-        break;
-      case TX_8X8:
-        vp10_inv_txfm_add_8x8(dqcoeff, dst, dst_stride, *eob, tx_type);
-        break;
-      case TX_4X4:
-        // this is like vp10_short_idct4x4 but has a special case around eob<=1
-        // which is significant (not just an optimization) for the lossless
-        // case.
-        vp10_inv_txfm_add_4x4(dqcoeff, dst, dst_stride, *eob, tx_type,
-                              xd->lossless[seg_id]);
-        break;
-      default: assert(0); break;
+      switch (tx_size) {
+        case TX_32X32:
+         vp10_inv_txfm_add_32x32(dqcoeff, dst, dst_stride, *eob, tx_type);
+          break;
+        case TX_16X16:
+          vp10_inv_txfm_add_16x16(dqcoeff, dst, dst_stride, *eob, tx_type);
+          break;
+        case TX_8X8:
+          vp10_inv_txfm_add_8x8(dqcoeff, dst, dst_stride, *eob, tx_type);
+          break;
+        case TX_4X4:
+          // this is like vp10_short_idct4x4 but has a special case around eob<=1
+          // which is significant (not just an optimization) for the lossless
+          // case.
+          vp10_inv_txfm_add_4x4(dqcoeff, dst, dst_stride, *eob, tx_type,
+                                xd->lossless[seg_id]);
+          break;
+        default: assert(0); break;
+      }
     }
-  }
+  }//if (!x->skip_recode) {
 #endif//#if !CONFIG_PVQ
 
 #if !CONFIG_PVQ

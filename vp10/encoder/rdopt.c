@@ -1207,13 +1207,13 @@ static int super_block_uvrd(const VP10_COMP *cpi, MACROBLOCK *x, int *rate,
   int is_cost_valid = 1;
 
   if (ref_best_rd < 0) is_cost_valid = 0;
-
+#if !CONFIG_PVQ
   if (is_inter_block(mbmi) && is_cost_valid) {
     int plane;
     for (plane = 1; plane < MAX_MB_PLANE; ++plane)
       vp10_subtract_plane(x, bsize, plane);
   }
-
+#endif
   *rate = 0;
   *distortion = 0;
   *sse = 0;
@@ -2710,7 +2710,9 @@ static int64_t handle_inter_mode(
     int64_t rdcosty = INT64_MAX;
 
     // Y cost and distortion
+#if !CONFIG_PVQ
     vp10_subtract_plane(x, bsize, 0);
+#endif
     super_block_yrd(cpi, x, rate_y, &distortion_y, &skippable_y, psse, bsize,
                     ref_best_rd);
 
