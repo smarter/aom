@@ -517,9 +517,6 @@ void vp10_xform_quant_fp(MACROBLOCK *x, int plane, int block, int blk_row,
 #endif
   PLANE_TYPE plane_type = (plane == 0) ? PLANE_TYPE_Y : PLANE_TYPE_UV;
   TX_TYPE tx_type = get_tx_type(plane_type, xd, block);
-  if (tx_type != DCT_DCT) {
-    int a = 0;
-  }
   const scan_order *const scan_order = get_scan(tx_size, tx_type);
   tran_low_t *const coeff = BLOCK_OFFSET(p->coeff, block);
   tran_low_t *const qcoeff = BLOCK_OFFSET(p->qcoeff, block);
@@ -1076,9 +1073,8 @@ static void encode_block(int plane, int block, int blk_row, int blk_col,
   int seg_id = xd->mi[0]->mbmi.segment_id;
 #if CONFIG_PVQ
   int tx_blk_size;
-  int i, j;
+  int j;
   //tran_low_t *ref_coeff = BLOCK_OFFSET(pd->pvq_ref_coeff, block);
-  MB_MODE_INFO *mbmi = &xd->mi[0]->mbmi;
   int pvq_blk_offset = blk_row * 16 + blk_col;
   PVQ_INFO *pvq_info = *(x->pvq + pvq_blk_offset) + plane;
 #endif
@@ -1155,7 +1151,7 @@ static void encode_block(int plane, int block, int blk_row, int blk_col,
   // but vp10_inv_txfm_add_*x*() also does addition of predicted image to
   // inverse transformed image,
   // pass blank dummy image to vp10_inv_txfm_add_*x*(), i.e. set dst as zeros
-  if (pvq_info->ac_dc_coded)
+
   for (j=0; j < tx_blk_size; j++)
     memset(dst + j * pd->dst.stride, 0, tx_blk_size);
 #endif
@@ -1325,8 +1321,6 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
   int pvq_blk_offset = blk_row * 16 + blk_col;
   PVQ_INFO *pvq_info = *(x->pvq + pvq_blk_offset) + plane;
 
-  DECLARE_ALIGNED(16, int16_t, coeff_pvq[64 * 64]);
-  DECLARE_ALIGNED(16, int16_t, dqcoeff_pvq[64 * 64]);
   DECLARE_ALIGNED(16, int16_t, ref_coeff_pvq[64 * 64]);
   src_int16 = &p->src_int16[4 * (blk_row * diff_stride + blk_col)];
 #endif
@@ -1567,6 +1561,7 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
   // pass blank dummy image to vp10_inv_txfm_add_*x*(), i.e. set dst as zeros
 
   if (!skip) {
+    if (!x->skip_recode)
     for (j=0; j < tx_blk_size; j++)
       memset(dst + j * dst_stride, 0, tx_blk_size);
 
@@ -1765,14 +1760,12 @@ void store_pvq_enc_info(PVQ_INFO *pvq_info,
                         int *max_theta,
                         int *k,
                         od_coeff *y,
-                        int *exg,
-                        int *ext,
                         int nb_bands,
-                        int *off,
+                        const int *off,
                         int *size,
                         int skip_rest,
                         int skip_dir,
-                        int bs) {       // log of the block size minus two
+                        int bs) {  // block size in log_2 -2
   int i;
 
   for (i=0; i < PVQ_MAX_PARTITIONS; i++) {
@@ -1792,5 +1785,4 @@ void store_pvq_enc_info(PVQ_INFO *pvq_info,
   pvq_info->skip_dir = skip_dir;
   pvq_info->bs = bs;
 }
-
 #endif

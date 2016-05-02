@@ -314,6 +314,7 @@ int64_t vp10_highbd_block_error_c(const tran_low_t *coeff,
 }
 #endif  // CONFIG_VPX_HIGHBITDEPTH
 
+#if !CONFIG_PVQ
 /* The trailing '0' is a terminator which is used inside cost_coeffs() to
  * decide whether to include cost of a trailing EOB node or not (i.e. we
  * can skip this if the last coefficient in this transform block, e.g. the
@@ -351,7 +352,6 @@ static int cost_coeffs(MACROBLOCK *x, int plane, int block, ENTROPY_CONTEXT *A,
   assert(type == PLANE_TYPE_Y ? mbmi->tx_size == tx_size
                               : get_uv_tx_size(mbmi, pd) == tx_size);
 
-#if !CONFIG_PVQ
   if (eob == 0) {
     // single eob token
     cost = token_costs[0][0][pt][EOB_TOKEN];
@@ -406,11 +406,10 @@ static int cost_coeffs(MACROBLOCK *x, int plane, int block, ENTROPY_CONTEXT *A,
 
   // is eob first coefficient;
   *A = *L = (c > 0);
-#else
-
-#endif
   return cost;
 }
+#endif
+
 
 static void dist_block(MACROBLOCK *x, int plane, int block, TX_SIZE tx_size,
                        int64_t *out_dist, int64_t *out_sse) {
@@ -951,16 +950,16 @@ static int64_t rd_pick_intra4x4block(VP10_COMP *cpi, MACROBLOCK *x, int row,
         const int block = (row + idy) * 2 + (col + idx);
         const uint8_t *const src = &src_init[idx * 4 + idy * 4 * src_stride];
         uint8_t *const dst = &dst_init[idx * 4 + idy * 4 * dst_stride];
+#if !CONFIG_PVQ
         int16_t *const src_diff =
             vp10_raster_block_offset_int16(BLOCK_8X8, block, p->src_diff);
+#else
         tran_low_t *const coeff = BLOCK_OFFSET(x->plane[0].coeff, block);
-#if CONFIG_PVQ
-        const BLOCK_SIZE plane_bsize = get_plane_block_size(bsize, pd);
         const int diff_stride = 8;
         tran_low_t *const dqcoeff = BLOCK_OFFSET(pd->dqcoeff, block);
         tran_low_t *ref_coeff = BLOCK_OFFSET(pd->pvq_ref_coeff, block);
         int16_t *pred = &pd->pred[4 * (row * diff_stride + col)];
-        int16_t *src_int16 = &p->src_int16[4 * (row * diff_stride + col)];;
+        int16_t *src_int16 = &p->src_int16[4 * (row * diff_stride + col)];
         int i, j, tx_blk_size;
         TX_TYPE tx_type = get_tx_type(PLANE_TYPE_Y, xd, block);
         int rate_pvq;
@@ -1392,7 +1391,6 @@ static int64_t encode_inter_mb_segment(VP10_COMP *cpi, MACROBLOCK *x,
   const int height = 4 * num_4x4_blocks_high_lookup[plane_bsize];
   int idx, idy;
   void (*fwd_txm4x4)(const int16_t *input, tran_low_t *output, int stride);
-
   const uint8_t *const src =
       &p->src.buf[vp10_raster_block_offset(BLOCK_8X8, i, p->src.stride)];
   uint8_t *const dst =
@@ -1400,8 +1398,9 @@ static int64_t encode_inter_mb_segment(VP10_COMP *cpi, MACROBLOCK *x,
   int64_t thisdistortion = 0, thissse = 0;
   int thisrate = 0;
   TX_TYPE tx_type = get_tx_type(PLANE_TYPE_Y, xd, i);
+#if !CONFIG_PVQ
   const scan_order *so = get_scan(TX_4X4, tx_type);
-
+#endif
   vp10_build_inter_predictor_sub8x8(xd, 0, i, ir, ic, mi_row, mi_col);
 
 #if CONFIG_VPX_HIGHBITDEPTH

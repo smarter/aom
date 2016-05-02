@@ -48,9 +48,6 @@ extern uint32_t OD_DIVU_SMALL_CONSTS[OD_DIVU_DMAX][2];
 # define OD_DIVU(_x, _d) \
   (((_d) < OD_DIVU_DMAX)?(OD_DIVU_SMALL((_x), (_d))):((_x)/(_d)))
 
-# define OD_DIVU(_x, _d) \
-  (((_d) < OD_DIVU_DMAX)?(OD_DIVU_SMALL((_x),(_d))):((_x)/(_d)))
-
 #define OD_MINI VPXMIN
 #define OD_MAXI VPXMAX
 #define OD_CLAMPI(min, val, max) clamp((val), (min), (max))

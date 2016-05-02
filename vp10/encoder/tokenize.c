@@ -516,14 +516,14 @@ void add_pvq_block(MACROBLOCK *const x, PVQ_INFO *pvq) {
 static void tokenize_pvq(int plane, int block, int blk_row, int blk_col,
                        BLOCK_SIZE plane_bsize, TX_SIZE tx_size, void *arg) {
   struct tokenize_b_args *const args = arg;
-  VP10_COMP *cpi = args->cpi;
   ThreadData *const td = args->td;
   MACROBLOCK *const x = &td->mb;
-  MACROBLOCKD *const xd = &x->e_mbd;
-  struct macroblockd_plane *pd = &xd->plane[plane];
-  MB_MODE_INFO *mbmi = &xd->mi[0]->mbmi;
   PVQ_INFO *pvq_info;
   int pvq_blk_offset = blk_row * 16 + blk_col;
+
+  (void) block;
+  (void) plane_bsize;
+  (void) tx_size;
 
   pvq_info = *(x->pvq + pvq_blk_offset) + plane;
 

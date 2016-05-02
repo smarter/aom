@@ -344,7 +344,7 @@ void od_pvq_decode(daala_dec_ctx *dec,
   generic_encoder *model;
   int skip_rest[3] = {0};
   cfl_ctx cfl;
-  const unsigned char *pvq_qm;
+  //const unsigned char *pvq_qm;
   /*Default to skip=1 and noref=0 for all bands.*/
   for (i = 0; i < PVQ_MAX_PARTITIONS; i++) {
     noref[i] = 0;

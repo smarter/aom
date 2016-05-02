@@ -55,7 +55,10 @@
 #include "vp10/decoder/detokenize.h"
 #else
 #include "vp10/encoder/encodemb.h"
+#include "vp10/decoder/pvq_decoder.h"!cmp
+
 #include "vp10/decoder/decint.h"
+#include "vp10/common/partition.h"
 #include "vpx_dsp/entdec.h"
 od_dec_ctx daala_dec;
 #endif

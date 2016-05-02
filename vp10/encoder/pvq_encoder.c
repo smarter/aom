@@ -737,7 +737,7 @@ int od_pvq_encode(daala_enc_ctx *enc,
   int skip_rest;
   int skip_dir;
   int skip_theta_value;
-  const unsigned char *pvq_qm;
+  //const unsigned char *pvq_qm;
   double dc_rate;
 #if !OD_SIGNAL_Q_SCALING
   OD_UNUSED(q_scaling);
@@ -828,7 +828,7 @@ int od_pvq_encode(daala_enc_ctx *enc,
   // TODO: Better if we can call this function only when mode decision
   //       (i.e. RDO) is over.
   store_pvq_enc_info(pvq_info, qg, theta, max_theta, k,
-    y, exg, ext, nb_bands, off, size,
+    y, nb_bands, off, size,
     skip_rest, skip_dir, bs);
 
   for (i = 0; i < nb_bands; i++) {
