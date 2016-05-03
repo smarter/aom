@@ -704,7 +704,8 @@ int od_pvq_encode(daala_enc_ctx *enc,
                    od_coeff *ref,
                    const od_coeff *in,
                    od_coeff *out,
-                   int q0,
+                   int q_dc,
+                   int q_ac,
                    int pli,
                    int bs,
                    const double *beta,
@@ -754,7 +755,7 @@ int od_pvq_encode(daala_enc_ctx *enc,
   nb_bands = OD_BAND_OFFSETS[bs][0];
   off = &OD_BAND_OFFSETS[bs][1];
   //dc_quant = OD_MAXI(1, q0*pvq_qm[od_qm_get_index(bs, 0)] >> 4);
-  dc_quant = OD_MAXI(1, q0);
+  dc_quant = OD_MAXI(1, q_dc);
   tell = 0;
   for (i = 0; i < nb_bands; i++) size[i] = off[i+1] - off[i];
   skip_diff = 0;
@@ -779,7 +780,7 @@ int od_pvq_encode(daala_enc_ctx *enc,
     int q;
     // TODO: Enable this later, if pvq_qm_q4 is available in AOM.
     //q = OD_MAXI(1, q0*pvq_qm[od_qm_get_index(bs, i + 1)] >> 4);
-    q = OD_MAXI(1, q0);
+    q = OD_MAXI(1, q_ac);
     qg[i] = pvq_theta(out + off[i], in + off[i], ref + off[i], size[i],
      q, y + off[i], &theta[i], &max_theta[i],
      &k[i], beta[i], &skip_diff, robust, is_keyframe, pli, &enc->state.adapt,

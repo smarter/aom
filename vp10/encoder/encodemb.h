@@ -55,11 +55,11 @@ void fwd_txfm_32x32(int rd_transform, const int16_t *src_diff,
 #if CONFIG_PVQ
 int pvq_encode_helper(daala_enc_ctx *daala_enc,
  int16_t *ref, const int16_t *in, int16_t *out,
- int quant, int pli, int bs, int is_keyframe, PVQ_INFO *pvq_info);
+ const int16_t *quant, int pli, int bs, int is_keyframe, PVQ_INFO *pvq_info);
 
 int pvq_encode_helper2(tran_low_t *const coeff, tran_low_t *ref_coeff,
     tran_low_t *const dqcoeff,
-    uint16_t *eob, int quant,
+    uint16_t *eob, const int16_t *quant,
     int plane, int tx_size, int *rate, PVQ_INFO *pvq_info);
 
 void store_pvq_enc_info(PVQ_INFO *pvq_info,

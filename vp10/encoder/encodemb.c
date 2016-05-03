@@ -716,7 +716,7 @@ void vp10_xform_quant_fp(MACROBLOCK *x, int plane, int block, int blk_row,
                             ref_coeff,      // reference vector
                             dqcoeff,        // de-quantized vector
                             eob,             // End of Block marker
-                            pd->dequant[0], // vpx's DC quantizer
+                            pd->dequant,    // vpx's quantizers
                             plane,          // image plane
                             tx_size,        // block size in log_2 - 2
                             &x->rate,       // rate measured
@@ -1051,7 +1051,7 @@ void vp10_xform_quant(MACROBLOCK *x, int plane, int block, int blk_row,
                             ref_coeff,      // reference vector
                             dqcoeff,        // de-quantized vector
                             eob,            // End of Block marker
-                            pd->dequant[0], // vpx's DC quantizer
+                            pd->dequant,    // vpx's quantizers
                             plane,          // image plane
                             tx_size,        // block size in log_2 - 2
                             &x->rate,       // rate measured
@@ -1556,7 +1556,7 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
                               ref_coeff,      // reference vector
                               dqcoeff,        // de-quantized vector
                               eob,            // End of Block marker
-                              pd->dequant[0], // vpx's DC quantizer
+                              pd->dequant,    // vpx's quantizers
                               plane,          // image plane
                               tx_size,        // block size in log_2 - 2
                               &x->rate,       // rate measured
@@ -1637,7 +1637,7 @@ int pvq_encode_helper(daala_enc_ctx *daala_enc,
                    int16_t *ref,
                    const int16_t *in,
                    int16_t *out,
-                   int quant,
+                   const int16_t *quant,
                    int pli,
                    int bs,
                    int is_keyframe,
@@ -1657,7 +1657,8 @@ int pvq_encode_helper(daala_enc_ctx *daala_enc,
   }
 
   skip = od_pvq_encode(daala_enc, ref_int32, in_int32, out_int32,
-          quant,//scale/quantizer
+          (int)quant[0],//scale/quantizer
+          (int)quant[1],//scale/quantizer
           pli, bs,
           OD_PVQ_BETA[0/*use_activity_masking*/][pli][bs],
           1,//OD_ROBUST_STREAM
@@ -1680,7 +1681,7 @@ int pvq_encode_helper(daala_enc_ctx *daala_enc,
 
 int pvq_encode_helper2(tran_low_t *const coeff, tran_low_t *ref_coeff,
     tran_low_t *const dqcoeff,
-    uint16_t *eob, int quant,
+    uint16_t *eob, const int16_t *quant,
     int plane, int tx_size, int *rate, PVQ_INFO *pvq_info) {
   const int tx_blk_size = 1 << (tx_size + 2);
   int skip;
@@ -1689,7 +1690,7 @@ int pvq_encode_helper2(tran_low_t *const coeff, tran_low_t *ref_coeff,
   // TODO: Enable this later, if pvq_qm_q4 is available in AOM.
   //int pvq_dc_quant = OD_MAXI(1,
   //  quant * daala_enc.state.pvq_qm_q4[plane][od_qm_get_index(tx_size, 0)] >> 4);
-  int pvq_dc_quant = OD_MAXI(1, quant);
+  int pvq_dc_quant = OD_MAXI(1, quant[0]);
   int tell;
   int has_dc_skip = 1;
 

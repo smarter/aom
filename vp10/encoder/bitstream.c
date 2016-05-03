@@ -526,11 +526,12 @@ static void write_modes_b(VP10_COMP *cpi, const TileInfo *const tile,
 #if CONFIG_PVQ
   MB_MODE_INFO *mbmi;
   BLOCK_SIZE bsize;
-  (void) tok;
-  (void) tok_end;
-#endif
 #if CONFIG_PVQ && DEBUG_PVQ
   int tell = od_ec_enc_tell(&w->ec);
+#endif
+
+  (void) tok;
+  (void) tok_end;
 #endif
   xd->mi = cm->mi_grid_visible + (mi_row * cm->mi_stride + mi_col);
   m = xd->mi[0];

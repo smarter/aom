@@ -360,7 +360,7 @@ static int pvq_decode_helper(
     od_dec_ctx *dec,
     int16_t *ref_coeff,
     int16_t *dqcoeff,
-    int quant,
+    int16_t *quant,
     int pli,
     int bs,
     int xdec,
@@ -370,7 +370,7 @@ static int pvq_decode_helper(
   const int is_keyframe = 0;
   const int has_dc_skip = 1;
   int pvq_dc_quant;
-  int lossless = (quant == 0);
+  int lossless = (quant[0] == 0);
   const int blk_size = 1 << (bs + 2);
   int eob = 0;
   int i, j;
@@ -392,7 +392,7 @@ static int pvq_decode_helper(
     // TODO: Enable this later, if pvq_qm_q4 is available in AOM.
     //pvq_dc_quant = OD_MAXI(1, quant*
     // dec->state.pvq_qm_q4[pli][od_qm_get_index(bs, 0)] >> 4);
-    pvq_dc_quant = OD_MAXI(1, quant);
+    pvq_dc_quant = OD_MAXI(1, quant[0]);
   }
 
   off = od_qm_offset(bs, xdec);
@@ -401,7 +401,7 @@ static int pvq_decode_helper(
   for (i=0; i < blk_size*blk_size; i++)
     ref_int32[i] = ref_coeff_pvq[i];
 
-  od_pvq_decode(dec, ref_int32, out_int32, quant, pli, bs,
+  od_pvq_decode(dec, ref_int32, out_int32, (int)quant[1], pli, bs,
    OD_PVQ_BETA[use_activity_masking][pli][bs],
    1, //OD_ROBUST_STREAM
    is_keyframe,
@@ -473,7 +473,7 @@ static void predict_and_reconstruct_intra_block(MACROBLOCKD *const xd,
     int ac_dc_coded; // bit0: DC coded, bit1 : AC coded
     int xdec = pd->subsampling_x;
     int seg_id = mbmi->segment_id;
-    int quant;
+    int16_t *quant;
 
     for (j=0; j < tx_blk_size; j++)
       for (i=0; i < tx_blk_size; i++) {
@@ -511,7 +511,7 @@ static void predict_and_reconstruct_intra_block(MACROBLOCKD *const xd,
     printf("row,col = %d, %d : ac_dc_coded %d, ",  row, col, ac_dc_coded);
 #endif
     if (ac_dc_coded) {
-    quant = pd->seg_dequant[seg_id][0]; //vpx's DC quantizer
+    quant = &pd->seg_dequant[seg_id][0]; //vpx's quantizer
 
     eob = pvq_decode_helper(&daala_dec,
       pvq_ref_coeff,
@@ -566,7 +566,7 @@ static int reconstruct_inter_block(MACROBLOCKD *const xd, vpx_reader *r,
   int ac_dc_coded;
   int xdec = pd->subsampling_x;
   int seg_id = mbmi->segment_id;
-  int quant;
+  int16_t *quant;
 
   (void) r;
   dst = &pd->dst.buf[4 * row * pd->dst.stride + 4 * col];
@@ -609,7 +609,7 @@ static int reconstruct_inter_block(MACROBLOCKD *const xd, vpx_reader *r,
 #endif
 
   if (ac_dc_coded) {
-  quant = pd->seg_dequant[seg_id][0]; //vpx's DC quantizer
+  quant = &pd->seg_dequant[seg_id][0]; //vpx's DC quantizer
 
   eob = pvq_decode_helper(&daala_dec,
     pvq_ref_coeff,
