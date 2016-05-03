@@ -1077,7 +1077,7 @@ static void encode_block(int plane, int block, int blk_row, int blk_col,
   int seg_id = xd->mi[0]->mbmi.segment_id;
 #if CONFIG_PVQ
   int tx_blk_size;
-  int j;
+  int i, j;
   int pvq_blk_offset = blk_row * 16 + blk_col;
   PVQ_INFO *pvq_info = *(x->pvq + pvq_blk_offset) + plane;
 #endif
@@ -1154,9 +1154,14 @@ static void encode_block(int plane, int block, int blk_row, int blk_col,
   // but vp10_inv_txfm_add_*x*() also does addition of predicted image to
   // inverse transformed image,
   // pass blank dummy image to vp10_inv_txfm_add_*x*(), i.e. set dst as zeros
-
+#if 0
   for (j=0; j < tx_blk_size; j++)
     memset(dst + j * pd->dst.stride, 0, tx_blk_size);
+#else
+    for (j=0; j < tx_blk_size; j++)
+      for (i = 0; i < tx_blk_size; i++)
+        dst[j * pd->dst.stride + i] -= dst[j *  pd->dst.stride + i];
+#endif
 #endif
 
 #if CONFIG_VPX_HIGHBITDEPTH
@@ -1556,9 +1561,13 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
                               tx_size,        // block size in log_2 - 2
                               &x->rate,       // rate measured
                               pvq_info);      // PVQ info for a block
-    if (!skip)
-      mbmi->skip = 0;
   }//if (!x->skip_recode) {
+  else {
+    skip = !pvq_info->ac_dc_coded;
+  }
+
+  if (!skip)
+    mbmi->skip = 0;
 
   // Since vp10 does not have separate function which does inverse transform
   // but vp10_inv_txfm_add_*x*() also does addition of predicted image to
@@ -1566,9 +1575,14 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
   // pass blank dummy image to vp10_inv_txfm_add_*x*(), i.e. set dst as zeros
 
   if (!skip) {
+#if 0
     for (j=0; j < tx_blk_size; j++)
       memset(dst + j * dst_stride, 0, tx_blk_size);
-
+#else
+    for (j=0; j < tx_blk_size; j++)
+      for (i = 0; i < tx_blk_size; i++)
+        dst[j * dst_stride + i] -= dst[j * dst_stride + i];
+#endif
     switch (tx_size) {
       case TX_32X32:
        vp10_inv_txfm_add_32x32(dqcoeff, dst, dst_stride, *eob, tx_type);
@@ -1640,9 +1654,7 @@ int pvq_encode_helper(daala_enc_ctx *daala_enc,
   for (i=0; i < blk_size*blk_size; i++) {
     ref_int32[i] = ref[i];
     in_int32[i] = in[i];
-    //out_int32[i] = out[i];
   }
-  //out_int32[0] = out[0];
 
   skip = od_pvq_encode(daala_enc, ref_int32, in_int32, out_int32,
           quant,//scale/quantizer

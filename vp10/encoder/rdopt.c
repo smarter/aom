@@ -1005,11 +1005,6 @@ static int64_t rd_pick_intra4x4block(VP10_COMP *cpi, MACROBLOCK *x, int row,
               &p->eobs[block], pd->dequant[0],
               0, TX_4X4, &rate_pvq, pvq_info);
           ratey += rate_pvq;
-
-          if (!skip) {
-            for (j=0; j < tx_blk_size; j++)
-              memset(dst + j * dst_stride, 0, tx_blk_size);
-          }
 #endif
           if (RDCOST(x->rdmult, x->rddiv, ratey, distortion) >= best_rd)
             goto next;
@@ -1031,11 +1026,6 @@ static int64_t rd_pick_intra4x4block(VP10_COMP *cpi, MACROBLOCK *x, int row,
               &p->eobs[block], pd->dequant[0],
               0, TX_4X4, &rate_pvq, pvq_info);
           ratey += rate_pvq;
-
-          if (!skip) {
-            for (j=0; j < tx_blk_size; j++)
-              memset(dst + j * dst_stride, 0, tx_blk_size);
-          }
 #endif
           distortion +=
               vp10_block_error(coeff, BLOCK_OFFSET(pd->dqcoeff, block), 16,
@@ -1045,6 +1035,18 @@ static int64_t rd_pick_intra4x4block(VP10_COMP *cpi, MACROBLOCK *x, int row,
           vp10_inv_txfm_add_4x4(BLOCK_OFFSET(pd->dqcoeff, block), dst,
                                 dst_stride, p->eobs[block], tx_type, 0);
         }
+#if CONFIG_PVQ
+        if (!skip) {
+#if 0
+          for (j=0; j < tx_blk_size; j++)
+            memset(dst + j * dst_stride, 0, tx_blk_size);
+#else
+          for (j=0; j < tx_blk_size; j++)
+            for (i = 0; i < tx_blk_size; i++)
+              dst[j * dst_stride + i] -= dst[j * dst_stride + i];
+#endif
+        }
+#endif
       }
     }//for (idy =
 

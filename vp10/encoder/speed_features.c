@@ -412,6 +412,8 @@ static void set_rt_speed_feature(VP10_COMP *cpi, SPEED_FEATURES *sf, int speed,
     sf->mv.subpel_force_stop = 2;
     sf->lpf_pick = LPF_PICK_MINIMAL_LPF;
   }
+  // for DEBUG
+  //sf->tx_size_search_method =USE_LARGESTALL;
 }
 
 void vp10_set_speed_features_framesize_dependent(VP10_COMP *cpi) {
