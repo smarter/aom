@@ -1154,14 +1154,9 @@ static void encode_block(int plane, int block, int blk_row, int blk_col,
   // but vp10_inv_txfm_add_*x*() also does addition of predicted image to
   // inverse transformed image,
   // pass blank dummy image to vp10_inv_txfm_add_*x*(), i.e. set dst as zeros
-#if 0
-  for (j=0; j < tx_blk_size; j++)
-    memset(dst + j * pd->dst.stride, 0, tx_blk_size);
-#else
     for (j=0; j < tx_blk_size; j++)
       for (i = 0; i < tx_blk_size; i++)
         dst[j * pd->dst.stride + i] -= dst[j *  pd->dst.stride + i];
-#endif
 #endif
 
 #if CONFIG_VPX_HIGHBITDEPTH
@@ -1575,14 +1570,9 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
   // pass blank dummy image to vp10_inv_txfm_add_*x*(), i.e. set dst as zeros
 
   if (!skip) {
-#if 0
-    for (j=0; j < tx_blk_size; j++)
-      memset(dst + j * dst_stride, 0, tx_blk_size);
-#else
     for (j=0; j < tx_blk_size; j++)
       for (i = 0; i < tx_blk_size; i++)
         dst[j * dst_stride + i] -= dst[j * dst_stride + i];
-#endif
     switch (tx_size) {
       case TX_32X32:
        vp10_inv_txfm_add_32x32(dqcoeff, dst, dst_stride, *eob, tx_type);

@@ -1039,14 +1039,9 @@ static int64_t rd_pick_intra4x4block(VP10_COMP *cpi, MACROBLOCK *x, int row,
         }
 #if CONFIG_PVQ
         if (!skip) {
-#if 0
-          for (j=0; j < tx_blk_size; j++)
-            memset(dst + j * dst_stride, 0, tx_blk_size);
-#else
           for (j=0; j < tx_blk_size; j++)
             for (i = 0; i < tx_blk_size; i++)
               dst[j * dst_stride + i] -= dst[j * dst_stride + i];
-#endif
         }
 #endif
       }
