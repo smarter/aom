@@ -600,7 +600,8 @@ static void choose_largest_tx_size(VP10_COMP *cpi, MACROBLOCK *x, int *rate,
 
   mbmi->tx_size = VPXMIN(max_tx_size, largest_tx_size);
   if (mbmi->tx_size < TX_32X32 && !xd->lossless[mbmi->segment_id]) {
-    for (tx_type = 0; tx_type < TX_TYPES; ++tx_type) {
+    //for (tx_type = 0; tx_type < TX_TYPES; ++tx_type) {
+    for (tx_type = 0; tx_type < 1; ++tx_type) {
       mbmi->tx_type = tx_type;
       txfm_rd_in_plane(x, &r, &d, &s, &psse, ref_best_rd, 0, bs, mbmi->tx_size,
                        cpi->sf.use_fast_coef_costing);
@@ -692,7 +693,8 @@ static void choose_tx_size_from_rd(VP10_COMP *cpi, MACROBLOCK *x, int *rate,
   *skip = 0;
   *psse = INT64_MAX;
 
-  for (tx_type = DCT_DCT; tx_type < TX_TYPES; ++tx_type) {
+  //for (tx_type = DCT_DCT; tx_type < TX_TYPES; ++tx_type) {
+  for (tx_type = DCT_DCT; tx_type < DCT_DCT + 1; ++tx_type) {
     last_rd = INT64_MAX;
     for (n = start_tx; n >= end_tx; --n) {
       int r_tx_size = 0;
