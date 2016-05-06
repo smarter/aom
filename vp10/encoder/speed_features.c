@@ -415,7 +415,7 @@ static void set_rt_speed_feature(VP10_COMP *cpi, SPEED_FEATURES *sf, int speed,
   // for DEBUG
   //sf->tx_size_search_method =USE_LARGESTALL;
   sf->partition_search_type = FIXED_PARTITION;
-  sf->always_this_block_size = BLOCK_16X16;
+  sf->always_this_block_size = BLOCK_8X8;
   sf->tx_size_search_method = USE_LARGESTALL;
 }
 
