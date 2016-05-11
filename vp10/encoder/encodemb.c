@@ -1737,7 +1737,7 @@ int pvq_encode_helper2(tran_low_t *const coeff, tran_low_t *ref_coeff,
   dqcoeff_pvq[0] = dqcoeff_pvq[0] * pvq_dc_quant;
   dqcoeff_pvq[0] += ref_coeff_pvq[0];
 
-  *rate = od_ec_enc_tell(&daala_enc.ec) - tell;
+  *rate = (od_ec_enc_tell(&daala_enc.ec) - tell) << VP9_PROB_COST_SHIFT;
 
   // Safely initialize dqcoeff since some coeffs (band size > 128 coeffs)
   // are skipped by PVQ.
