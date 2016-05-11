@@ -1059,9 +1059,9 @@ static void decode_block(VP10Decoder *const pbi, MACROBLOCKD *const xd,
   }
 
 #if CONFIG_PVQ && DEBUG_PVQ
-  printf("dec: frame# %d (%2d, %2d): bsize %d, tx_size %d, tx_type %d, skip %d - ",
+  printf("dec: frame# %d (%2d, %2d): bsize %d, tx_size %d, tx_type %d, skip %d mode %d, %d - ",
       pbi->common.current_video_frame, mi_row, mi_col, bsize, mbmi->tx_size,
-      mbmi->tx_type, mbmi->skip);
+      mbmi->tx_type, mbmi->skip, mbmi->mode, mbmi->uv_mode);
   if (is_inter_block(mbmi)) printf("inter\n");
   else printf("intra\n");
 #endif
