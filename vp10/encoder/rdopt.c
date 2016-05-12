@@ -952,11 +952,11 @@ static int64_t rd_pick_intra4x4block(VP10_COMP *cpi, MACROBLOCK *x, int row,
         const int block = (row + idy) * 2 + (col + idx);
         const uint8_t *const src = &src_init[idx * 4 + idy * 4 * src_stride];
         uint8_t *const dst = &dst_init[idx * 4 + idy * 4 * dst_stride];
+        tran_low_t *const coeff = BLOCK_OFFSET(x->plane[0].coeff, block);
 #if !CONFIG_PVQ
         int16_t *const src_diff =
             vp10_raster_block_offset_int16(BLOCK_8X8, block, p->src_diff);
 #else
-        tran_low_t *const coeff = BLOCK_OFFSET(x->plane[0].coeff, block);
         const int diff_stride = 8;
         tran_low_t *const dqcoeff = BLOCK_OFFSET(pd->dqcoeff, block);
         tran_low_t *ref_coeff = BLOCK_OFFSET(pd->pvq_ref_coeff, block);
