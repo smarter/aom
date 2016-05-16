@@ -143,6 +143,7 @@ struct macroblock {
   uint8_t color_sensitivity[2];
 
 #if CONFIG_PVQ
+  int rdo;  // rdo search mode? 0: no, 1: yes
   int rate;
   int64_t dist;
   PVQ_QUEUE *pvq_q;

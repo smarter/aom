@@ -1545,6 +1545,7 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
         break;
       default: assert(0); break;
     }
+
     // PVQ for intra mode block
     if (!x->skip_block)
     skip = pvq_encode_helper2(coeff,          // target original vector

@@ -42,6 +42,11 @@
 #include "vp10/encoder/rdopt.h"
 #include "vp10/encoder/aq_variance.h"
 
+#if CONFIG_PVQ
+#include "vp10/encoder/pvq_encoder.h"
+extern daala_enc_ctx daala_enc;
+#endif
+
 #define LAST_FRAME_MODE_MASK \
   ((1 << GOLDEN_FRAME) | (1 << ALTREF_FRAME) | (1 << INTRA_FRAME))
 #define GOLDEN_FRAME_MODE_MASK \
@@ -597,14 +602,23 @@ static void choose_largest_tx_size(VP10_COMP *cpi, MACROBLOCK *x, int *rate,
   int s0 = vp10_cost_bit(skip_prob, 0);
   int s1 = vp10_cost_bit(skip_prob, 1);
   const int is_inter = is_inter_block(mbmi);
+#if CONFIG_PVQ
+  od_rollback_buffer buf;
+#endif
 
   mbmi->tx_size = VPXMIN(max_tx_size, largest_tx_size);
   if (mbmi->tx_size < TX_32X32 && !xd->lossless[mbmi->segment_id]) {
     //for (tx_type = 0; tx_type < TX_TYPES; ++tx_type) {
     for (tx_type = 0; tx_type < 1; ++tx_type) {
       mbmi->tx_type = tx_type;
+#if CONFIG_PVQ
+      od_encode_checkpoint(&daala_enc, &buf);
+#endif
       txfm_rd_in_plane(x, &r, &d, &s, &psse, ref_best_rd, 0, bs, mbmi->tx_size,
                        cpi->sf.use_fast_coef_costing);
+#if CONFIG_PVQ
+      od_encode_rollback(&daala_enc, &buf);
+#endif
       if (r == INT_MAX) continue;
       if (is_inter)
         r += cpi->inter_tx_type_costs[mbmi->tx_size][mbmi->tx_type];
@@ -674,6 +688,11 @@ static void choose_tx_size_from_rd(VP10_COMP *cpi, MACROBLOCK *x, int *rate,
   const int is_inter = is_inter_block(mbmi);
 
   const vpx_prob *tx_probs = get_tx_probs2(max_tx_size, xd, &cm->fc->tx_probs);
+
+#if CONFIG_PVQ
+  od_rollback_buffer buf;
+#endif
+
   assert(skip_prob > 0);
   s0 = vp10_cost_bit(skip_prob, 0);
   s1 = vp10_cost_bit(skip_prob, 1);
@@ -709,8 +728,14 @@ static void choose_tx_size_from_rd(VP10_COMP *cpi, MACROBLOCK *x, int *rate,
         continue;
       }
       mbmi->tx_type = tx_type;
+#if CONFIG_PVQ
+      od_encode_checkpoint(&daala_enc, &buf);
+#endif
       txfm_rd_in_plane(x, &r, &d, &s, &sse, ref_best_rd, 0, bs, n,
                        cpi->sf.use_fast_coef_costing);
+#if CONFIG_PVQ
+      od_encode_rollback(&daala_enc, &buf);
+#endif
       if (n < TX_32X32 && !xd->lossless[xd->mi[0]->mbmi.segment_id] &&
           r != INT_MAX) {
         if (is_inter)
@@ -1157,6 +1182,9 @@ static int64_t rd_pick_intra_sby_mode(VP10_COMP *cpi, MACROBLOCK *x, int *rate,
   const MODE_INFO *left_mi = xd->left_mi;
   const PREDICTION_MODE A = vp10_above_block_mode(mic, above_mi, 0);
   const PREDICTION_MODE L = vp10_left_block_mode(mic, left_mi, 0);
+#if CONFIG_PVQ
+  od_rollback_buffer buf;
+#endif
   bmode_costs = cpi->y_mode_costs[A][L];
 
   memset(x->skip_txfm, SKIP_TXFM_NONE, sizeof(x->skip_txfm));
@@ -1164,10 +1192,14 @@ static int64_t rd_pick_intra_sby_mode(VP10_COMP *cpi, MACROBLOCK *x, int *rate,
   /* Y Search for intra prediction mode */
   for (mode = DC_PRED; mode <= TM_PRED; mode++) {
     mic->mbmi.mode = mode;
-
+#if CONFIG_PVQ
+    od_encode_checkpoint(&daala_enc, &buf);
+#endif
     super_block_yrd(cpi, x, &this_rate_tokenonly, &this_distortion, &s, NULL,
                     bsize, best_rd);
-
+#if CONFIG_PVQ
+    od_encode_rollback(&daala_enc, &buf);
+#endif
     if (this_rate_tokenonly == INT_MAX) continue;
 
     this_rate = this_rate_tokenonly + bmode_costs[mode];
