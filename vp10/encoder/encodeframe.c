@@ -46,6 +46,12 @@
 #include "vp10/encoder/segmentation.h"
 #include "vp10/encoder/tokenize.h"
 
+#if CONFIG_PVQ
+#include "vp10/encoder/pvq_encoder.h"
+extern daala_enc_ctx daala_enc;
+  od_rollback_buffer buf;
+#endif
+
 static void encode_superblock(VP10_COMP *cpi, ThreadData *td, TOKENEXTRA **t,
                               int output_enabled, int mi_row, int mi_col,
                               BLOCK_SIZE bsize, PICK_MODE_CONTEXT *ctx);
@@ -1696,6 +1702,10 @@ static void rd_use_partition(VP10_COMP *cpi, ThreadData *td,
 
   if (do_recon) {
     int output_enabled = (bsize == BLOCK_64X64);
+#if CONFIG_PVQ
+    if (output_enabled)
+      od_encode_rollback(&daala_enc, &buf);
+#endif
     encode_sb(cpi, td, tile_info, tp, mi_row, mi_col, output_enabled, bsize,
               pc_tree);
   }
@@ -2326,6 +2336,10 @@ static void rd_pick_partition(VP10_COMP *cpi, ThreadData *td,
   if (best_rdc.rate < INT_MAX && best_rdc.dist < INT64_MAX &&
       pc_tree->index != 3) {
     int output_enabled = (bsize == BLOCK_64X64);
+#if CONFIG_PVQ
+    if (output_enabled)
+      od_encode_rollback(&daala_enc, &buf);
+#endif
     encode_sb(cpi, td, tile_info, tp, mi_row, mi_col, output_enabled, bsize,
               pc_tree);
   }
@@ -2399,6 +2413,7 @@ static void encode_rd_sb_row(VP10_COMP *cpi, ThreadData *td,
     x->source_variance = UINT_MAX;
 #if CONFIG_PVQ
     x->rdo = 1;
+    od_encode_checkpoint(&daala_enc, &buf);
 #endif
     if (sf->partition_search_type == FIXED_PARTITION || seg_skip) {
       const BLOCK_SIZE bsize =
