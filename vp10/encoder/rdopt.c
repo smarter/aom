@@ -1285,16 +1285,29 @@ static int64_t rd_pick_intra_sbuv_mode(VP10_COMP *cpi, MACROBLOCK *x,
   int64_t best_rd = INT64_MAX, this_rd;
   int this_rate_tokenonly, this_rate, s;
   int64_t this_distortion, this_sse;
+#if CONFIG_PVQ
+  od_rollback_buffer buf;
+#endif
 
   memset(x->skip_txfm, SKIP_TXFM_NONE, sizeof(x->skip_txfm));
   for (mode = DC_PRED; mode <= TM_PRED; ++mode) {
     if (!(cpi->sf.intra_uv_mode_mask[max_tx_size] & (1 << mode))) continue;
 
     xd->mi[0]->mbmi.uv_mode = mode;
-
+#if CONFIG_PVQ
+    od_encode_checkpoint(&daala_enc, &buf);
+#endif
     if (!super_block_uvrd(cpi, x, &this_rate_tokenonly, &this_distortion, &s,
-                          &this_sse, bsize, best_rd))
+                          &this_sse, bsize, best_rd)) {
+#if CONFIG_PVQ
+      od_encode_rollback(&daala_enc, &buf);
+#endif
       continue;
+    }
+#if CONFIG_PVQ
+    od_encode_rollback(&daala_enc, &buf);
+#endif
+
     this_rate = this_rate_tokenonly +
                 cpi->intra_uv_mode_cost[xd->mi[0]->mbmi.mode][mode];
     this_rd = RDCOST(x->rdmult, x->rddiv, this_rate, this_distortion);
