@@ -1618,8 +1618,6 @@ int pvq_encode_helper(tran_low_t *const coeff, tran_low_t *ref_coeff,
     int plane, int tx_size, int *rate, PVQ_INFO *pvq_info) {
   const int tx_blk_size = 1 << (tx_size + 2);
   int skip;
-  int j;
-
   // TODO: Enable this later, if pvq_qm_q4 is available in AOM.
   //int pvq_dc_quant = OD_MAXI(1,
   //  quant * daala_enc.state.pvq_qm_q4[plane][od_qm_get_index(tx_size, 0)] >> 4);
@@ -1710,8 +1708,10 @@ int pvq_encode_helper(tran_low_t *const coeff, tran_low_t *ref_coeff,
   od_coding_order_to_raster(dqcoeff, tx_blk_size, dqcoeff_pvq, tx_blk_size);
 
   // Mark last nonzero coeff position.
-  for (j = 0; j < tx_blk_size * tx_blk_size; j++)
-    if (dqcoeff[j]) *eob = j + 1;
+  //for (j = 0; j < tx_blk_size * tx_blk_size; j++)
+  //  if (dqcoeff[j]) *eob = j + 1;
+
+  *eob = tx_blk_size * tx_blk_size - 1;
 
   pvq_info->eob = *eob;
 

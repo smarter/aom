@@ -373,7 +373,7 @@ static int pvq_decode_helper(
   int lossless = (quant[0] == 0);
   const int blk_size = 1 << (bs + 2);
   int eob = 0;
-  int i, j;
+  int i;
   //int use_activity_masking = dec->use_activity_masking;
   int use_activity_masking = 0;
 
@@ -425,8 +425,10 @@ static int pvq_decode_helper(
   od_coding_order_to_raster(dqcoeff, blk_size, dqcoeff_pvq, blk_size);
 
   // Mark last nonzero coeff position.
-  for (j = 0; j < blk_size*blk_size; j++)
-    if (dqcoeff[j]) eob = j + 1;
+  //for (j = 0; j < blk_size * blk_size; j++)
+  //  if (dqcoeff[j]) eob = j + 1;
+
+  eob = blk_size * blk_size - 1;
 
   return eob;
 }
