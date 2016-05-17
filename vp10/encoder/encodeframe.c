@@ -1594,6 +1594,14 @@ static void rd_use_partition(VP10_COMP *cpi, ThreadData *td,
       last_part_rdc.rate = 0;
       last_part_rdc.dist = 0;
       last_part_rdc.rdcost = 0;
+      {
+#if CONFIG_PVQ
+      od_rollback_buffer split_buf;
+      int output_enabled = (bsize == BLOCK_64X64);
+
+      if (!output_enabled)
+        od_encode_checkpoint(&daala_enc, &split_buf);
+#endif
       for (i = 0; i < 4; i++) {
         int x_idx = (i & 1) * (mi_step >> 1);
         int y_idx = (i >> 1) * (mi_step >> 1);
@@ -1614,10 +1622,14 @@ static void rd_use_partition(VP10_COMP *cpi, ThreadData *td,
         last_part_rdc.rate += tmp_rdc.rate;
         last_part_rdc.dist += tmp_rdc.dist;
       }
+#if CONFIG_PVQ
+      if (!output_enabled)
+        od_encode_rollback(&daala_enc, &split_buf);
+#endif
+      }
       break;
     default: assert(0); break;
   }
-
   pl = partition_plane_context(xd, mi_row, mi_col, bsize);
   if (last_part_rdc.rate < INT_MAX) {
     last_part_rdc.rate += cpi->partition_cost[pl][partition];
@@ -1673,6 +1685,7 @@ static void rd_use_partition(VP10_COMP *cpi, ThreadData *td,
                                    split_subsize);
       chosen_rdc.rate += cpi->partition_cost[pl][PARTITION_NONE];
     }
+
     pl = partition_plane_context(xd, mi_row, mi_col, bsize);
     if (chosen_rdc.rate < INT_MAX) {
       chosen_rdc.rate += cpi->partition_cost[pl][PARTITION_SPLIT];
