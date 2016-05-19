@@ -345,13 +345,13 @@ static void set_rt_speed_feature(VP10_COMP *cpi, SPEED_FEATURES *sf, int speed,
     sf->inter_mode_mask[BLOCK_64X32] = INTER_NEAREST;
     sf->inter_mode_mask[BLOCK_64X64] = INTER_NEAREST;
     sf->max_intra_bsize = BLOCK_32X32;
-#if !CONFIG_PVQ
+#if !CONFIG_PVQ && !CONFIG_DAALA_EC
     sf->allow_skip_recode = 1;
 #endif
   }
 
   if (speed >= 5) {
-#if !CONFIG_PVQ
+#if !CONFIG_PVQ && !CONFIG_DAALA_EC
     sf->use_quant_fp = !is_keyframe;
 #endif
     sf->auto_min_max_partition_size =
@@ -414,6 +414,9 @@ static void set_rt_speed_feature(VP10_COMP *cpi, SPEED_FEATURES *sf, int speed,
   }
   // for DEBUG
   //sf->tx_size_search_method =USE_LARGESTALL;
+  sf->partition_search_type = FIXED_PARTITION;
+  sf->always_this_block_size = BLOCK_8X8;
+  sf->tx_size_search_method = USE_LARGESTALL;
 }
 
 void vp10_set_speed_features_framesize_dependent(VP10_COMP *cpi) {

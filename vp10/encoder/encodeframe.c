@@ -46,6 +46,12 @@
 #include "vp10/encoder/segmentation.h"
 #include "vp10/encoder/tokenize.h"
 
+#if CONFIG_PVQ
+#include "vp10/encoder/pvq_encoder.h"
+extern daala_enc_ctx daala_enc;
+  od_rollback_buffer buf;
+#endif
+
 static void encode_superblock(VP10_COMP *cpi, ThreadData *td, TOKENEXTRA **t,
                               int output_enabled, int mi_row, int mi_col,
                               BLOCK_SIZE bsize, PICK_MODE_CONTEXT *ctx);
@@ -1588,6 +1594,14 @@ static void rd_use_partition(VP10_COMP *cpi, ThreadData *td,
       last_part_rdc.rate = 0;
       last_part_rdc.dist = 0;
       last_part_rdc.rdcost = 0;
+      {
+#if CONFIG_PVQ
+      od_rollback_buffer split_buf;
+      int output_enabled = (bsize == BLOCK_64X64);
+
+      if (!output_enabled)
+        od_encode_checkpoint(&daala_enc, &split_buf);
+#endif
       for (i = 0; i < 4; i++) {
         int x_idx = (i & 1) * (mi_step >> 1);
         int y_idx = (i >> 1) * (mi_step >> 1);
@@ -1608,10 +1622,14 @@ static void rd_use_partition(VP10_COMP *cpi, ThreadData *td,
         last_part_rdc.rate += tmp_rdc.rate;
         last_part_rdc.dist += tmp_rdc.dist;
       }
+#if CONFIG_PVQ
+      if (!output_enabled)
+        od_encode_rollback(&daala_enc, &split_buf);
+#endif
+      }
       break;
     default: assert(0); break;
   }
-
   pl = partition_plane_context(xd, mi_row, mi_col, bsize);
   if (last_part_rdc.rate < INT_MAX) {
     last_part_rdc.rate += cpi->partition_cost[pl][partition];
@@ -1667,6 +1685,7 @@ static void rd_use_partition(VP10_COMP *cpi, ThreadData *td,
                                    split_subsize);
       chosen_rdc.rate += cpi->partition_cost[pl][PARTITION_NONE];
     }
+
     pl = partition_plane_context(xd, mi_row, mi_col, bsize);
     if (chosen_rdc.rate < INT_MAX) {
       chosen_rdc.rate += cpi->partition_cost[pl][PARTITION_SPLIT];
@@ -1696,6 +1715,10 @@ static void rd_use_partition(VP10_COMP *cpi, ThreadData *td,
 
   if (do_recon) {
     int output_enabled = (bsize == BLOCK_64X64);
+#if CONFIG_PVQ
+    if (output_enabled)
+      od_encode_rollback(&daala_enc, &buf);
+#endif
     encode_sb(cpi, td, tile_info, tp, mi_row, mi_col, output_enabled, bsize,
               pc_tree);
   }
@@ -2326,6 +2349,10 @@ static void rd_pick_partition(VP10_COMP *cpi, ThreadData *td,
   if (best_rdc.rate < INT_MAX && best_rdc.dist < INT64_MAX &&
       pc_tree->index != 3) {
     int output_enabled = (bsize == BLOCK_64X64);
+#if CONFIG_PVQ
+    if (output_enabled)
+      od_encode_rollback(&daala_enc, &buf);
+#endif
     encode_sb(cpi, td, tile_info, tp, mi_row, mi_col, output_enabled, bsize,
               pc_tree);
   }
@@ -2397,6 +2424,10 @@ static void encode_rd_sb_row(VP10_COMP *cpi, ThreadData *td,
     }
 
     x->source_variance = UINT_MAX;
+#if CONFIG_PVQ
+    x->rdo = 1;
+    od_encode_checkpoint(&daala_enc, &buf);
+#endif
     if (sf->partition_search_type == FIXED_PARTITION || seg_skip) {
       const BLOCK_SIZE bsize =
           seg_skip ? BLOCK_64X64 : sf->always_this_block_size;
