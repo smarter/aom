@@ -49,7 +49,6 @@
 #if CONFIG_PVQ
 #include "vp10/encoder/pvq_encoder.h"
 extern daala_enc_ctx daala_enc;
-  od_rollback_buffer buf;
 #endif
 
 static void encode_superblock(VP10_COMP *cpi, ThreadData *td, TOKENEXTRA **t,
@@ -1477,11 +1476,20 @@ static void rd_use_partition(VP10_COMP *cpi, ThreadData *td,
   BLOCK_SIZE bs_type = mi_8x8[0]->mbmi.sb_type;
   int do_partition_search = 1;
   PICK_MODE_CONTEXT *ctx = &pc_tree->none;
+#if CONFIG_PVQ
+  od_rollback_buffer pvq_rollback_buf;
+  int output_enabled = (bsize == BLOCK_64X64);
+#endif
 
   if (mi_row >= cm->mi_rows || mi_col >= cm->mi_cols) return;
 
   assert(num_4x4_blocks_wide_lookup[bsize] ==
          num_4x4_blocks_high_lookup[bsize]);
+
+#if CONFIG_PVQ
+  if (output_enabled)
+    od_encode_checkpoint(&daala_enc, &pvq_rollback_buf);
+#endif
 
   vp10_rd_cost_reset(&last_part_rdc);
   vp10_rd_cost_reset(&none_rdc);
@@ -1713,12 +1721,13 @@ static void rd_use_partition(VP10_COMP *cpi, ThreadData *td,
   if (bsize == BLOCK_64X64)
     assert(chosen_rdc.rate < INT_MAX && chosen_rdc.dist < INT64_MAX);
 
+#if CONFIG_PVQ
+  // if partitioning rdo is done, rollback to pre rdo state.
+  if (output_enabled)
+    od_encode_rollback(&daala_enc, &pvq_rollback_buf);
+#endif
   if (do_recon) {
     int output_enabled = (bsize == BLOCK_64X64);
-#if CONFIG_PVQ
-    if (output_enabled)
-      od_encode_rollback(&daala_enc, &buf);
-#endif
     encode_sb(cpi, td, tile_info, tp, mi_row, mi_col, output_enabled, bsize,
               pc_tree);
   }
@@ -1996,6 +2005,14 @@ static void rd_pick_partition(VP10_COMP *cpi, ThreadData *td,
 #if CONFIG_FP_MB_STATS
   unsigned int src_diff_var = UINT_MAX;
   int none_complexity = 0;
+#endif
+
+#if CONFIG_PVQ
+  od_rollback_buffer pvq_rollback_buf;
+  int output_enabled = (bsize == BLOCK_64X64);
+
+  if (output_enabled)
+    od_encode_checkpoint(&daala_enc, &pvq_rollback_buf);
 #endif
 
   int partition_none_allowed = !force_horz_split && !force_vert_split;
@@ -2346,13 +2363,15 @@ static void rd_pick_partition(VP10_COMP *cpi, ThreadData *td,
   (void)best_rd;
   *rd_cost = best_rdc;
 
+#if CONFIG_PVQ
+  // if partitioning rdo is done, rollback to pre rdo state.
+  if (output_enabled)
+    od_encode_rollback(&daala_enc, &pvq_rollback_buf);
+#endif
+
   if (best_rdc.rate < INT_MAX && best_rdc.dist < INT64_MAX &&
       pc_tree->index != 3) {
     int output_enabled = (bsize == BLOCK_64X64);
-#if CONFIG_PVQ
-    if (output_enabled)
-      od_encode_rollback(&daala_enc, &buf);
-#endif
     encode_sb(cpi, td, tile_info, tp, mi_row, mi_col, output_enabled, bsize,
               pc_tree);
   }
@@ -2426,7 +2445,6 @@ static void encode_rd_sb_row(VP10_COMP *cpi, ThreadData *td,
     x->source_variance = UINT_MAX;
 #if CONFIG_PVQ
     x->rdo = 1;
-    od_encode_checkpoint(&daala_enc, &buf);
 #endif
     if (sf->partition_search_type == FIXED_PARTITION || seg_skip) {
       const BLOCK_SIZE bsize =

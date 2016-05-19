@@ -412,11 +412,13 @@ static void set_rt_speed_feature(VP10_COMP *cpi, SPEED_FEATURES *sf, int speed,
     sf->mv.subpel_force_stop = 2;
     sf->lpf_pick = LPF_PICK_MINIMAL_LPF;
   }
+#if 0
   // for DEBUG
   //sf->tx_size_search_method =USE_LARGESTALL;
   sf->partition_search_type = FIXED_PARTITION;
   sf->always_this_block_size = BLOCK_8X8;
   sf->tx_size_search_method = USE_LARGESTALL;
+#endif
 }
 
 void vp10_set_speed_features_framesize_dependent(VP10_COMP *cpi) {
