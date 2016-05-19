@@ -1486,6 +1486,10 @@ static void rd_use_partition(VP10_COMP *cpi, ThreadData *td,
   PICK_MODE_CONTEXT *ctx = &pc_tree->none;
 #if CONFIG_PVQ
   od_rollback_buffer pre_rdo_buf;
+  uint32_t pre_rdo_offset;
+
+  if (bsize == BLOCK_64X64)
+    pre_rdo_offset = daala_enc.ec.offs;
 #endif
 
   if (mi_row >= cm->mi_rows || mi_col >= cm->mi_cols) return;
@@ -1729,6 +1733,11 @@ static void rd_use_partition(VP10_COMP *cpi, ThreadData *td,
 #endif
   if (do_recon) {
     int output_enabled = (bsize == BLOCK_64X64);
+#if CONFIG_PVQ
+    (void) pre_rdo_offset;
+    if (output_enabled)
+      assert(pre_rdo_offset == daala_enc.ec.offs);
+#endif
     encode_sb(cpi, td, tile_info, tp, mi_row, mi_col, output_enabled, bsize,
               pc_tree);
   }
@@ -2016,6 +2025,10 @@ static void rd_pick_partition(VP10_COMP *cpi, ThreadData *td,
 
 #if CONFIG_PVQ
   od_rollback_buffer pre_rdo_buf;
+  uint32_t pre_rdo_offset;
+
+  if (bsize == BLOCK_64X64)
+    pre_rdo_offset = daala_enc.ec.offs;
 #endif
 
   (void)*tp_orig;
@@ -2385,6 +2398,11 @@ static void rd_pick_partition(VP10_COMP *cpi, ThreadData *td,
   if (best_rdc.rate < INT_MAX && best_rdc.dist < INT64_MAX &&
       pc_tree->index != 3) {
     int output_enabled = (bsize == BLOCK_64X64);
+#if CONFIG_PVQ
+    (void) pre_rdo_offset;
+    if (output_enabled)
+      assert(pre_rdo_offset == daala_enc.ec.offs);
+#endif
     encode_sb(cpi, td, tile_info, tp, mi_row, mi_col, output_enabled, bsize,
               pc_tree);
   }
