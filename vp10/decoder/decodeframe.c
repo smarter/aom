@@ -428,7 +428,7 @@ static int pvq_decode_helper(
   //for (j = 0; j < blk_size * blk_size; j++)
   //  if (dqcoeff[j]) eob = j + 1;
 
-  eob = blk_size * blk_size - 1;
+  eob = blk_size * blk_size;
 
   return eob;
 }

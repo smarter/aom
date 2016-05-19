@@ -1711,7 +1711,7 @@ int pvq_encode_helper(tran_low_t *const coeff, tran_low_t *ref_coeff,
   //for (j = 0; j < tx_blk_size * tx_blk_size; j++)
   //  if (dqcoeff[j]) *eob = j + 1;
 
-  *eob = tx_blk_size * tx_blk_size - 1;
+  *eob = tx_blk_size * tx_blk_size;
 
   pvq_info->eob = *eob;
 
