@@ -606,14 +606,15 @@ static void choose_largest_tx_size(VP10_COMP *cpi, MACROBLOCK *x, int *rate,
   od_rollback_buffer buf;
 #endif
 
+#if CONFIG_PVQ
+  od_encode_checkpoint(&daala_enc, &buf);
+#endif
+
   mbmi->tx_size = VPXMIN(max_tx_size, largest_tx_size);
   if (mbmi->tx_size < TX_32X32 && !xd->lossless[mbmi->segment_id]) {
     //for (tx_type = 0; tx_type < TX_TYPES; ++tx_type) {
     for (tx_type = 0; tx_type < 1; ++tx_type) {
       mbmi->tx_type = tx_type;
-#if CONFIG_PVQ
-      od_encode_checkpoint(&daala_enc, &buf);
-#endif
       txfm_rd_in_plane(x, &r, &d, &s, &psse, ref_best_rd, 0, bs, mbmi->tx_size,
                        cpi->sf.use_fast_coef_costing);
 #if CONFIG_PVQ
@@ -712,6 +713,10 @@ static void choose_tx_size_from_rd(VP10_COMP *cpi, MACROBLOCK *x, int *rate,
   *skip = 0;
   *psse = INT64_MAX;
 
+#if CONFIG_PVQ
+      od_encode_checkpoint(&daala_enc, &buf);
+#endif
+
   //for (tx_type = DCT_DCT; tx_type < TX_TYPES; ++tx_type) {
   for (tx_type = DCT_DCT; tx_type < DCT_DCT + 1; ++tx_type) {
     last_rd = INT64_MAX;
@@ -728,9 +733,7 @@ static void choose_tx_size_from_rd(VP10_COMP *cpi, MACROBLOCK *x, int *rate,
         continue;
       }
       mbmi->tx_type = tx_type;
-#if CONFIG_PVQ
-      od_encode_checkpoint(&daala_enc, &buf);
-#endif
+
       txfm_rd_in_plane(x, &r, &d, &s, &sse, ref_best_rd, 0, bs, n,
                        cpi->sf.use_fast_coef_costing);
 #if CONFIG_PVQ
@@ -854,6 +857,10 @@ static int64_t rd_pick_intra4x4block(VP10_COMP *cpi, MACROBLOCK *x, int row,
   uint16_t best_dst16[8 * 8];
 #endif
 
+#if CONFIG_PVQ
+  od_rollback_buffer buf;
+#endif
+
   memcpy(ta, a, sizeof(ta));
   memcpy(tl, l, sizeof(tl));
   xd->mi[0]->mbmi.tx_size = TX_4X4;
@@ -954,6 +961,10 @@ static int64_t rd_pick_intra4x4block(VP10_COMP *cpi, MACROBLOCK *x, int row,
     return best_rd;
   }
 #endif  // CONFIG_VPX_HIGHBITDEPTH
+
+#if CONFIG_PVQ
+    od_encode_checkpoint(&daala_enc, &buf);
+#endif
 
   for (mode = DC_PRED; mode <= TM_PRED; ++mode) {
     int64_t this_rd;
@@ -1088,6 +1099,9 @@ static int64_t rd_pick_intra4x4block(VP10_COMP *cpi, MACROBLOCK *x, int row,
                num_4x4_blocks_wide * 4);
     }
   next : {}
+#if CONFIG_PVQ
+    od_encode_rollback(&daala_enc, &buf);
+#endif
   }//for (mode =
 
   if (best_rd >= rd_thresh) return best_rd;
@@ -3028,6 +3042,10 @@ void vp10_rd_pick_inter_mode_sb(VP10_COMP *cpi, TileDataEnc *tile_data,
   int64_t mask_filter = 0;
   int64_t filter_cache[SWITCHABLE_FILTER_CONTEXTS];
 
+#if CONFIG_PVQ
+  od_rollback_buffer pre_rdo_buf;
+#endif
+
   vp10_zero(best_mbmode);
 
   for (i = 0; i < SWITCHABLE_FILTER_CONTEXTS; ++i) filter_cache[i] = INT64_MAX;
@@ -3149,6 +3167,10 @@ void vp10_rd_pick_inter_mode_sb(VP10_COMP *cpi, TileDataEnc *tile_data,
     }
     midx = end_pos;
   }
+
+#if CONFIG_PVQ
+    od_encode_checkpoint(&daala_enc, &pre_rdo_buf);
+#endif
 
   for (midx = 0; midx < MAX_MODES; ++midx) {
     int mode_index = mode_map[midx];
@@ -3572,6 +3594,10 @@ void vp10_rd_pick_inter_mode_sb(VP10_COMP *cpi, TileDataEnc *tile_data,
 
   store_coding_context(x, ctx, best_mode_index, best_pred_diff,
                        best_filter_diff, best_mode_skippable);
+
+#if CONFIG_PVQ
+  od_encode_rollback(&daala_enc, &pre_rdo_buf);
+#endif
 }
 
 void vp10_rd_pick_inter_mode_sb_seg_skip(VP10_COMP *cpi, TileDataEnc *tile_data,
@@ -3710,6 +3736,10 @@ void vp10_rd_pick_inter_mode_sub8x8(VP10_COMP *cpi, TileDataEnc *tile_data,
   int internal_active_edge =
       vp10_active_edge_sb(cpi, mi_row, mi_col) && vp10_internal_image_edge(cpi);
 
+#if CONFIG_PVQ
+  od_rollback_buffer pre_rdo_buf;
+#endif
+
   memset(x->zcoeff_blk[TX_4X4], 0, 4);
   vp10_zero(best_mbmode);
 
@@ -3741,6 +3771,10 @@ void vp10_rd_pick_inter_mode_sub8x8(VP10_COMP *cpi, TileDataEnc *tile_data,
     frame_mv[NEWMV][ref_frame].as_int = INVALID_MV;
     frame_mv[ZEROMV][ref_frame].as_int = 0;
   }
+
+#if CONFIG_PVQ
+    od_encode_checkpoint(&daala_enc, &pre_rdo_buf);
+#endif
 
   for (ref_index = 0; ref_index < MAX_REFS; ++ref_index) {
     int mode_excluded = 0;
@@ -4236,4 +4270,8 @@ void vp10_rd_pick_inter_mode_sub8x8(VP10_COMP *cpi, TileDataEnc *tile_data,
 
   store_coding_context(x, ctx, best_ref_index, best_pred_diff, best_filter_diff,
                        0);
+
+#if CONFIG_PVQ
+    od_encode_rollback(&daala_enc, &pre_rdo_buf);
+#endif
 }

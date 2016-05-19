@@ -1069,6 +1069,9 @@ static void rd_pick_sb_modes(VP10_COMP *cpi, TileDataEnc *tile_data,
   struct macroblockd_plane *const pd = xd->plane;
   const AQ_MODE aq_mode = cpi->oxcf.aq_mode;
   int i, orig_rdmult;
+#if CONFIG_PVQ
+  uint32_t pre_rdo_offset = daala_enc.ec.offs;
+#endif
 
   vpx_clear_system_state();
 
@@ -1155,6 +1158,11 @@ static void rd_pick_sb_modes(VP10_COMP *cpi, TileDataEnc *tile_data,
                                      bsize, ctx, best_rd);
     }
   }
+
+#if CONFIG_PVQ
+  (void) pre_rdo_offset;
+  assert(pre_rdo_offset == daala_enc.ec.offs);
+#endif
 
   // Examine the resulting rate and for AQ mode 2 make a segment choice.
   if ((rd_cost->rate != INT_MAX) && (aq_mode == COMPLEXITY_AQ) &&
@@ -1477,19 +1485,13 @@ static void rd_use_partition(VP10_COMP *cpi, ThreadData *td,
   int do_partition_search = 1;
   PICK_MODE_CONTEXT *ctx = &pc_tree->none;
 #if CONFIG_PVQ
-  od_rollback_buffer pvq_rollback_buf;
-  int output_enabled = (bsize == BLOCK_64X64);
+  od_rollback_buffer pre_rdo_buf;
 #endif
 
   if (mi_row >= cm->mi_rows || mi_col >= cm->mi_cols) return;
 
   assert(num_4x4_blocks_wide_lookup[bsize] ==
          num_4x4_blocks_high_lookup[bsize]);
-
-#if CONFIG_PVQ
-  if (output_enabled)
-    od_encode_checkpoint(&daala_enc, &pvq_rollback_buf);
-#endif
 
   vp10_rd_cost_reset(&last_part_rdc);
   vp10_rd_cost_reset(&none_rdc);
@@ -1506,6 +1508,9 @@ static void rd_use_partition(VP10_COMP *cpi, ThreadData *td,
     x->mb_energy = vp10_block_energy(cpi, x, bsize);
   }
 
+#if CONFIG_PVQ
+    od_encode_checkpoint(&daala_enc, &pre_rdo_buf);
+#endif
   if (do_partition_search &&
       cpi->sf.partition_search_type == SEARCH_PARTITION &&
       cpi->sf.adjust_partitioning_from_last_frame) {
@@ -1544,6 +1549,10 @@ static void rd_use_partition(VP10_COMP *cpi, ThreadData *td,
       pc_tree->partitioning = partition;
     }
   }
+
+#if CONFIG_PVQ
+  od_encode_rollback(&daala_enc, &pre_rdo_buf);
+#endif
 
   switch (partition) {
     case PARTITION_NONE:
@@ -1602,14 +1611,7 @@ static void rd_use_partition(VP10_COMP *cpi, ThreadData *td,
       last_part_rdc.rate = 0;
       last_part_rdc.dist = 0;
       last_part_rdc.rdcost = 0;
-      {
-#if CONFIG_PVQ
-      od_rollback_buffer split_buf;
-      int output_enabled = (bsize == BLOCK_64X64);
 
-      if (!output_enabled)
-        od_encode_checkpoint(&daala_enc, &split_buf);
-#endif
       for (i = 0; i < 4; i++) {
         int x_idx = (i & 1) * (mi_step >> 1);
         int y_idx = (i >> 1) * (mi_step >> 1);
@@ -1630,14 +1632,14 @@ static void rd_use_partition(VP10_COMP *cpi, ThreadData *td,
         last_part_rdc.rate += tmp_rdc.rate;
         last_part_rdc.dist += tmp_rdc.dist;
       }
-#if CONFIG_PVQ
-      if (!output_enabled)
-        od_encode_rollback(&daala_enc, &split_buf);
-#endif
-      }
       break;
     default: assert(0); break;
   }
+
+#if CONFIG_PVQ
+  od_encode_rollback(&daala_enc, &pre_rdo_buf);
+#endif
+
   pl = partition_plane_context(xd, mi_row, mi_col, bsize);
   if (last_part_rdc.rate < INT_MAX) {
     last_part_rdc.rate += cpi->partition_cost[pl][partition];
@@ -1723,8 +1725,7 @@ static void rd_use_partition(VP10_COMP *cpi, ThreadData *td,
 
 #if CONFIG_PVQ
   // if partitioning rdo is done, rollback to pre rdo state.
-  if (output_enabled)
-    od_encode_rollback(&daala_enc, &pvq_rollback_buf);
+  od_encode_rollback(&daala_enc, &pre_rdo_buf);
 #endif
   if (do_recon) {
     int output_enabled = (bsize == BLOCK_64X64);
@@ -2007,19 +2008,16 @@ static void rd_pick_partition(VP10_COMP *cpi, ThreadData *td,
   int none_complexity = 0;
 #endif
 
-#if CONFIG_PVQ
-  od_rollback_buffer pvq_rollback_buf;
-  int output_enabled = (bsize == BLOCK_64X64);
-
-  if (output_enabled)
-    od_encode_checkpoint(&daala_enc, &pvq_rollback_buf);
-#endif
-
   int partition_none_allowed = !force_horz_split && !force_vert_split;
   int partition_horz_allowed =
       !force_vert_split && yss <= xss && bsize >= BLOCK_8X8;
   int partition_vert_allowed =
       !force_horz_split && xss <= yss && bsize >= BLOCK_8X8;
+
+#if CONFIG_PVQ
+  od_rollback_buffer pre_rdo_buf;
+#endif
+
   (void)*tp_orig;
 
   assert(num_8x8_blocks_wide_lookup[bsize] ==
@@ -2061,6 +2059,10 @@ static void rd_pick_partition(VP10_COMP *cpi, ThreadData *td,
   }
 
   save_context(x, mi_row, mi_col, a, l, sa, sl, bsize);
+
+#if CONFIG_PVQ
+  od_encode_checkpoint(&daala_enc, &pre_rdo_buf);
+#endif
 
 #if CONFIG_FP_MB_STATS
   if (cpi->use_fp_mb_stats) {
@@ -2206,6 +2208,10 @@ static void rd_pick_partition(VP10_COMP *cpi, ThreadData *td,
       }
     }
     restore_context(x, mi_row, mi_col, a, l, sa, sl, bsize);
+
+#if CONFIG_PVQ
+    od_encode_rollback(&daala_enc, &pre_rdo_buf);
+#endif
   }
 
   // store estimated motion vector
@@ -2265,6 +2271,10 @@ static void rd_pick_partition(VP10_COMP *cpi, ThreadData *td,
       if (cpi->sf.less_rectangular_check) do_rect &= !partition_none_allowed;
     }
     restore_context(x, mi_row, mi_col, a, l, sa, sl, bsize);
+
+#if CONFIG_PVQ
+    od_encode_rollback(&daala_enc, &pre_rdo_buf);
+#endif
   }
 
   // PARTITION_HORZ
@@ -2310,7 +2320,12 @@ static void rd_pick_partition(VP10_COMP *cpi, ThreadData *td,
       }
     }
     restore_context(x, mi_row, mi_col, a, l, sa, sl, bsize);
+
+#if CONFIG_PVQ
+    od_encode_rollback(&daala_enc, &pre_rdo_buf);
+#endif
   }
+
   // PARTITION_VERT
   if (partition_vert_allowed &&
       (do_rect || vp10_active_v_edge(cpi, mi_col, mi_step))) {
@@ -2364,9 +2379,7 @@ static void rd_pick_partition(VP10_COMP *cpi, ThreadData *td,
   *rd_cost = best_rdc;
 
 #if CONFIG_PVQ
-  // if partitioning rdo is done, rollback to pre rdo state.
-  if (output_enabled)
-    od_encode_rollback(&daala_enc, &pvq_rollback_buf);
+    od_encode_rollback(&daala_enc, &pre_rdo_buf);
 #endif
 
   if (best_rdc.rate < INT_MAX && best_rdc.dist < INT64_MAX &&

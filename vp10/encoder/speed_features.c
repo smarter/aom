@@ -412,7 +412,7 @@ static void set_rt_speed_feature(VP10_COMP *cpi, SPEED_FEATURES *sf, int speed,
     sf->mv.subpel_force_stop = 2;
     sf->lpf_pick = LPF_PICK_MINIMAL_LPF;
   }
-#if 1
+#if 0
   // Enforce 1) 8x8 fixed partitioning for all --rt --cpu-used=x
   // and use 8x8 (largest) transform
   sf->partition_search_type = FIXED_PARTITION;
