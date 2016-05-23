@@ -1046,6 +1046,13 @@ static int64_t rd_pick_intra4x4block(VP10_COMP *cpi, MACROBLOCK *x, int row,
 #endif
           if (RDCOST(x->rdmult, x->rddiv, ratey, distortion) >= best_rd)
             goto next;
+#if CONFIG_PVQ
+          if (!skip) {
+            for (j=0; j < tx_blk_size; j++)
+              for (i = 0; i < tx_blk_size; i++)
+                dst[j * dst_stride + i] -= dst[j * dst_stride + i];
+          }
+#endif
           vp10_inv_txfm_add_4x4(BLOCK_OFFSET(pd->dqcoeff, block), dst,
                                 dst_stride, p->eobs[block], DCT_DCT, 1);
         } else {
@@ -1070,16 +1077,16 @@ static int64_t rd_pick_intra4x4block(VP10_COMP *cpi, MACROBLOCK *x, int row,
                                &unused) >> 2;
           if (RDCOST(x->rdmult, x->rddiv, ratey, distortion) >= best_rd)
             goto next;
+#if CONFIG_PVQ
+          if (!skip) {
+            for (j=0; j < tx_blk_size; j++)
+              for (i = 0; i < tx_blk_size; i++)
+                dst[j * dst_stride + i] -= dst[j * dst_stride + i];
+          }
+#endif
           vp10_inv_txfm_add_4x4(BLOCK_OFFSET(pd->dqcoeff, block), dst,
                                 dst_stride, p->eobs[block], tx_type, 0);
         }
-#if CONFIG_PVQ
-        if (!skip) {
-          for (j=0; j < tx_blk_size; j++)
-            for (i = 0; i < tx_blk_size; i++)
-              dst[j * dst_stride + i] -= dst[j * dst_stride + i];
-        }
-#endif
       }
     }//for (idy =
 
@@ -1105,6 +1112,78 @@ static int64_t rd_pick_intra4x4block(VP10_COMP *cpi, MACROBLOCK *x, int row,
   }//for (mode =
 
   if (best_rd >= rd_thresh) return best_rd;
+
+#if CONFIG_PVQ
+  // Run the 4x4 intra for the chosen direction to update pvq properly
+  for (idy = 0; idy < num_4x4_blocks_high; ++idy) {
+    for (idx = 0; idx < num_4x4_blocks_wide; ++idx) {
+      const int block = (row + idy) * 2 + (col + idx);
+      const uint8_t *const src = &src_init[idx * 4 + idy * 4 * src_stride];
+      uint8_t *const dst = &dst_init[idx * 4 + idy * 4 * dst_stride];
+      tran_low_t *const coeff = BLOCK_OFFSET(x->plane[0].coeff, block);
+      const int diff_stride = 8;
+      tran_low_t *const dqcoeff = BLOCK_OFFSET(pd->dqcoeff, block);
+      tran_low_t *ref_coeff = BLOCK_OFFSET(pd->pvq_ref_coeff, block);
+      int16_t *pred = &pd->pred[4 * (row * diff_stride + col)];
+      int16_t *src_int16 = &p->src_int16[4 * (row * diff_stride + col)];
+      int i, j, tx_blk_size;
+      TX_TYPE tx_type = get_tx_type(PLANE_TYPE_Y, xd, block);
+      int rate_pvq;
+      int skip;
+      int pvq_blk_offset = (row + idy) * 16 + (col + idx);
+      PVQ_INFO *pvq_info = *(x->pvq + pvq_blk_offset) + 0;//plane 0
+
+      vp10_predict_intra_block(xd, 1, 1, TX_4X4, *best_mode, dst, dst_stride, dst,
+                               dst_stride, col + idx, row + idy, 0);
+
+      if (xd->lossless[xd->mi[0]->mbmi.segment_id])
+        tx_type = DCT_DCT;
+      // transform block size in pixels
+      tx_blk_size = 4;
+
+      // copy uint8 orig and predicted block to int16 buffer
+      // in order to use existing VP10 transform functions
+      for (j = 0; j < tx_blk_size; j++)
+        for (i = 0; i < tx_blk_size; i++) {
+          src_int16[diff_stride * j + i] = src[src_stride * j + i];
+          pred[diff_stride * j + i] = dst[dst_stride * j + i];
+        }
+
+      vp10_fwd_txfm_4x4(src_int16, coeff, diff_stride, tx_type, 0);
+      vp10_fwd_txfm_4x4(pred, ref_coeff, diff_stride, tx_type, 0);
+
+      if (xd->lossless[xd->mi[0]->mbmi.segment_id]) {
+        // TODO: Properly use skip info (for 4x4 block here) from pvq
+        skip = pvq_encode_helper(coeff, ref_coeff, dqcoeff,
+            &p->eobs[block], pd->dequant,
+            0, TX_4X4, &rate_pvq, pvq_info);
+
+        if (!skip) {
+          for (j=0; j < tx_blk_size; j++)
+            for (i = 0; i < tx_blk_size; i++)
+              dst[j * dst_stride + i] -= dst[j * dst_stride + i];
+        }
+
+        vp10_inv_txfm_add_4x4(BLOCK_OFFSET(pd->dqcoeff, block), dst,
+                              dst_stride, p->eobs[block], DCT_DCT, 1);
+      } else {
+        // TODO: Properly use skip info (for 4x4 block here) from pvq
+        skip = pvq_encode_helper(coeff, ref_coeff, dqcoeff,
+            &p->eobs[block], pd->dequant,
+            0, TX_4X4, &rate_pvq, pvq_info);
+
+        if (!skip) {
+          for (j=0; j < tx_blk_size; j++)
+            for (i = 0; i < tx_blk_size; i++)
+              dst[j * dst_stride + i] -= dst[j * dst_stride + i];
+        }
+
+        vp10_inv_txfm_add_4x4(BLOCK_OFFSET(pd->dqcoeff, block), dst,
+                              dst_stride, p->eobs[block], tx_type, 0);
+      }
+    }
+  }//for (idy =
+#endif
 
   for (idy = 0; idy < num_4x4_blocks_high * 4; ++idy)
     memcpy(dst_init + idy * dst_stride, best_dst + idy * 8,
@@ -1198,6 +1277,8 @@ static int64_t rd_pick_intra_sby_mode(VP10_COMP *cpi, MACROBLOCK *x, int *rate,
   const PREDICTION_MODE L = vp10_left_block_mode(mic, left_mi, 0);
 #if CONFIG_PVQ
   od_rollback_buffer buf;
+
+  od_encode_checkpoint(&daala_enc, &buf);
 #endif
   bmode_costs = cpi->y_mode_costs[A][L];
 
@@ -1206,9 +1287,7 @@ static int64_t rd_pick_intra_sby_mode(VP10_COMP *cpi, MACROBLOCK *x, int *rate,
   /* Y Search for intra prediction mode */
   for (mode = DC_PRED; mode <= TM_PRED; mode++) {
     mic->mbmi.mode = mode;
-#if CONFIG_PVQ
-    od_encode_checkpoint(&daala_enc, &buf);
-#endif
+
     super_block_yrd(cpi, x, &this_rate_tokenonly, &this_distortion, &s, NULL,
                     bsize, best_rd);
 #if CONFIG_PVQ
@@ -1304,13 +1383,15 @@ static int64_t rd_pick_intra_sbuv_mode(VP10_COMP *cpi, MACROBLOCK *x,
 #endif
 
   memset(x->skip_txfm, SKIP_TXFM_NONE, sizeof(x->skip_txfm));
+
+#if CONFIG_PVQ
+    od_encode_checkpoint(&daala_enc, &buf);
+#endif
   for (mode = DC_PRED; mode <= TM_PRED; ++mode) {
     if (!(cpi->sf.intra_uv_mode_mask[max_tx_size] & (1 << mode))) continue;
 
     xd->mi[0]->mbmi.uv_mode = mode;
-#if CONFIG_PVQ
-    od_encode_checkpoint(&daala_enc, &buf);
-#endif
+
     if (!super_block_uvrd(cpi, x, &this_rate_tokenonly, &this_distortion, &s,
                           &this_sse, bsize, best_rd)) {
 #if CONFIG_PVQ
@@ -2825,6 +2906,7 @@ void vp10_rd_pick_intra_mode_sb(VP10_COMP *cpi, MACROBLOCK *x, RD_COST *rd_cost,
   int y_skip = 0, uv_skip = 0;
   int64_t dist_y = 0, dist_uv = 0;
   TX_SIZE max_uv_tx_size;
+
   ctx->skip = 0;
   xd->mi[0]->mbmi.ref_frame[0] = INTRA_FRAME;
   xd->mi[0]->mbmi.ref_frame[1] = NONE;

@@ -1071,6 +1071,7 @@ static void rd_pick_sb_modes(VP10_COMP *cpi, TileDataEnc *tile_data,
   int i, orig_rdmult;
 #if CONFIG_PVQ
   uint32_t pre_rdo_offset = daala_enc.ec.offs;
+  od_rollback_buffer pre_rdo_buf;
 #endif
 
   vpx_clear_system_state();
@@ -1141,6 +1142,10 @@ static void rd_pick_sb_modes(VP10_COMP *cpi, TileDataEnc *tile_data,
       x->rdmult = vp10_cyclic_refresh_get_rdmult(cpi->cyclic_refresh);
   }
 
+#if CONFIG_PVQ
+  od_encode_checkpoint(&daala_enc, &pre_rdo_buf);
+#endif
+
   // Find best coding mode & reconstruct the MB so it is available
   // as a predictor for MBs that follow in the SB
   if (frame_is_intra_only(cm)) {
@@ -1158,6 +1163,10 @@ static void rd_pick_sb_modes(VP10_COMP *cpi, TileDataEnc *tile_data,
                                      bsize, ctx, best_rd);
     }
   }
+
+#if CONFIG_PVQ
+  od_encode_rollback(&daala_enc, &pre_rdo_buf);
+#endif
 
 #if CONFIG_PVQ
   (void) pre_rdo_offset;
