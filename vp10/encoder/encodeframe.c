@@ -1677,11 +1677,16 @@ static void rd_use_partition(VP10_COMP *cpi, ThreadData *td,
       RD_COST tmp_rdc;
       ENTROPY_CONTEXT l[16 * MAX_MB_PLANE], a[16 * MAX_MB_PLANE];
       PARTITION_CONTEXT sl[8], sa[8];
-
+#if CONFIG_PVQ
+  od_rollback_buffer buf;
+#endif
       if ((mi_row + y_idx >= cm->mi_rows) || (mi_col + x_idx >= cm->mi_cols))
         continue;
 
       save_context(x, mi_row, mi_col, a, l, sa, sl, bsize);
+#if CONFIG_PVQ
+      od_encode_checkpoint(&daala_enc, &buf);
+#endif
       pc_tree->split[i]->partitioning = PARTITION_NONE;
       rd_pick_sb_modes(cpi, tile_data, x, mi_row + y_idx, mi_col + x_idx,
                        &tmp_rdc, split_subsize, &pc_tree->split[i]->none,
@@ -1689,7 +1694,7 @@ static void rd_use_partition(VP10_COMP *cpi, ThreadData *td,
 
       restore_context(x, mi_row, mi_col, a, l, sa, sl, bsize);
 #if CONFIG_PVQ
-      od_encode_rollback(&daala_enc, &pre_rdo_buf);
+      od_encode_rollback(&daala_enc, &buf);
 #endif
       if (tmp_rdc.rate == INT_MAX || tmp_rdc.dist == INT64_MAX) {
         vp10_rd_cost_reset(&chosen_rdc);
