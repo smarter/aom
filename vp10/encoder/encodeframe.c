@@ -1678,7 +1678,7 @@ static void rd_use_partition(VP10_COMP *cpi, ThreadData *td,
       ENTROPY_CONTEXT l[16 * MAX_MB_PLANE], a[16 * MAX_MB_PLANE];
       PARTITION_CONTEXT sl[8], sa[8];
 #if CONFIG_PVQ
-  od_rollback_buffer buf;
+      od_rollback_buffer buf;
 #endif
       if ((mi_row + y_idx >= cm->mi_rows) || (mi_col + x_idx >= cm->mi_cols))
         continue;
