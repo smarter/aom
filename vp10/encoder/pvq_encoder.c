@@ -856,11 +856,11 @@ int od_pvq_encode(daala_enc_ctx *enc,
     double skip_rate;
     if (out[0] != 0) {
       skip_rate = -OD_LOG2((skip_cdf[1] - skip_cdf[0])/
-     (double)skip_cdf[3 + (pli == 0 && bs > 0)]);
+     (double)skip_cdf[3]);
     }
     else {
       skip_rate = -OD_LOG2(skip_cdf[0]/
-     (double)skip_cdf[3 + (pli == 0 && bs > 0)]);
+     (double)skip_cdf[3]);
     }
     tell -= (int)floor(.5+8*skip_rate);
   }
