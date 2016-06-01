@@ -1024,9 +1024,9 @@ void vp10_xform_quant(MACROBLOCK *x, int plane, int block, int blk_row,
   switch (tx_size) {
     case TX_32X32:
       //forward transform of predicted image.
-      fwd_txfm_32x32(x->use_lp32x32fdct, pred, ref_coeff, diff_stride, tx_type);
+      fwd_txfm_32x32(0, pred, ref_coeff, diff_stride, tx_type);
       //forward transform of original image.
-      fwd_txfm_32x32(x->use_lp32x32fdct, src_int16, coeff, diff_stride, tx_type);
+      fwd_txfm_32x32(0, src_int16, coeff, diff_stride, tx_type);
       break;
     case TX_16X16:
       fwd_txfm_16x16(pred, ref_coeff, diff_stride, tx_type);
@@ -1523,10 +1523,10 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
     switch (tx_size) {
       case TX_32X32:
         //forward transform of predicted image.
-        fwd_txfm_32x32(x->use_lp32x32fdct, pred, ref_coeff, diff_stride,
+        fwd_txfm_32x32(0, pred, ref_coeff, diff_stride,
                        tx_type);
         //forward transform of original image.
-        fwd_txfm_32x32(x->use_lp32x32fdct, src_int16, coeff, diff_stride,
+        fwd_txfm_32x32(0, src_int16, coeff, diff_stride,
                        tx_type);
         break;
       case TX_16X16:

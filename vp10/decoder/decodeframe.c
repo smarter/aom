@@ -485,7 +485,7 @@ static void predict_and_reconstruct_intra_block(MACROBLOCKD *const xd,
     switch (tx_size) {
       case TX_32X32:
         //forward transform of predicted image.
-        fwd_txfm_32x32(0, pred, pvq_ref_coeff, diff_stride, tx_type);
+        fwd_txfm_32x32(0 , pred, pvq_ref_coeff, diff_stride, tx_type);
         break;
       case TX_16X16:
         fwd_txfm_16x16(pred, pvq_ref_coeff, diff_stride, tx_type);
