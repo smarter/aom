@@ -342,6 +342,7 @@ static void inverse_transform_block_intra(MACROBLOCKD *xd, int plane,
     }
 #endif  // CONFIG_VPX_HIGHBITDEPTH
 
+#if !CONFIG_PVQ
     if (eob == 1) {
       dqcoeff[0] = 0;
     } else {
@@ -352,6 +353,7 @@ static void inverse_transform_block_intra(MACROBLOCKD *xd, int plane,
       else
         memset(dqcoeff, 0, (16 << (tx_size << 1)) * sizeof(dqcoeff[0]));
     }
+#endif
   }
 }
 
@@ -384,7 +386,7 @@ static int pvq_decode_helper(
   od_coeff out_int32[64*64];
 
   /*Safely initialize d since some coeffs are skipped by PVQ.*/
-  od_init_skipped_coeffs(dqcoeff_pvq, ref_coeff, 0, 0, blk_size, blk_size);
+  od_init_skipped_coeffs(dqcoeff, ref_coeff, 0, 0, blk_size, blk_size);
   od_raster_to_coding_order(ref_coeff_pvq, blk_size, ref_coeff, blk_size);
 
   if (lossless) pvq_dc_quant = 1;
