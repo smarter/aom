@@ -445,14 +445,6 @@ static void predict_and_reconstruct_intra_block(MACROBLOCKD *const xd,
   uint8_t *dst;
   int block_idx = (row << 1) + col;
 #if CONFIG_PVQ
-  // transform block size in pixels
-  int tx_blk_size = 1 << (tx_size + 2);
-  int i, j;
-  tran_low_t *pvq_ref_coeff = pd->pvq_ref_coeff;
-  const int diff_stride = tx_blk_size;
-  int16_t *pred = pd->pred;
-  tran_low_t *const dqcoeff = pd->dqcoeff;
-
   (void) r;
 #endif
   dst = &pd->dst.buf[4 * row * pd->dst.stride + 4 * col];
@@ -471,36 +463,15 @@ static void predict_and_reconstruct_intra_block(MACROBLOCKD *const xd,
     const int eob = vp10_decode_block_tokens(xd, plane, sc, col, row, tx_size,
                                              r, mbmi->segment_id);
 #else
-    int eob = 0;
-    int ac_dc_coded; // bit0: DC coded, bit1 : AC coded
-    int xdec = pd->subsampling_x;
-    int seg_id = mbmi->segment_id;
-    int16_t *quant;
-
-    for (j=0; j < tx_blk_size; j++)
-      for (i=0; i < tx_blk_size; i++) {
-        pred[diff_stride * j + i] = dst[pd->dst.stride * j + i];
-      }
-
-    switch (tx_size) {
-      case TX_32X32:
-        //forward transform of predicted image.
-        fwd_txfm_32x32(0 , pred, pvq_ref_coeff, diff_stride, tx_type);
-        break;
-      case TX_16X16:
-        fwd_txfm_16x16(pred, pvq_ref_coeff, diff_stride, tx_type);
-        break;
-      case TX_8X8:
-        fwd_txfm_8x8(pred, pvq_ref_coeff, diff_stride, tx_type);
-        break;
-      case TX_4X4:
-        vp10_fwd_txfm_4x4(pred, pvq_ref_coeff, diff_stride, tx_type,
-                          xd->lossless[seg_id]);
-        break;
-      default: assert(0); break;
-    }
-
     // pvq_decode() for intra block runs here.
+    // transform block size in pixels
+    int tx_blk_size = 1 << (tx_size + 2);
+    int i, j;
+    tran_low_t *pvq_ref_coeff = pd->pvq_ref_coeff;
+    const int diff_stride = tx_blk_size;
+    int16_t *pred = pd->pred;
+    tran_low_t *const dqcoeff = pd->dqcoeff;
+    int ac_dc_coded; // bit0: DC coded, bit1 : AC coded
 
     // decode ac/dc coded flag. bit0: DC coded, bit1 : AC coded
     // NOTE : we don't use 5 symbols for luma here in aom codebase,
@@ -513,28 +484,56 @@ static void predict_and_reconstruct_intra_block(MACROBLOCKD *const xd,
     printf("row,col = %d, %d : ac_dc_coded %d, ",  row, col, ac_dc_coded);
 #endif
     if (ac_dc_coded) {
-    quant = &pd->seg_dequant[seg_id][0]; //vpx's quantizer
+      int eob = 0;
+      int xdec = pd->subsampling_x;
+      int seg_id = mbmi->segment_id;
+      int16_t *quant;
 
-    eob = pvq_decode_helper(&daala_dec,
-      pvq_ref_coeff,
-      dqcoeff,
-      quant,
-      plane,
-      tx_size,
-      xdec,
-      ac_dc_coded);
+      for (j=0; j < tx_blk_size; j++)
+        for (i=0; i < tx_blk_size; i++) {
+          pred[diff_stride * j + i] = dst[pd->dst.stride * j + i];
+        }
 
-    assert(eob > 0);
+      switch (tx_size) {
+        case TX_32X32:
+          //forward transform of predicted image.
+          fwd_txfm_32x32(0, pred, pvq_ref_coeff, diff_stride, tx_type);
+          break;
+        case TX_16X16:
+          fwd_txfm_16x16(pred, pvq_ref_coeff, diff_stride, tx_type);
+          break;
+        case TX_8X8:
+          fwd_txfm_8x8(pred, pvq_ref_coeff, diff_stride, tx_type);
+          break;
+        case TX_4X4:
+          vp10_fwd_txfm_4x4(pred, pvq_ref_coeff, diff_stride, tx_type,
+                            xd->lossless[seg_id]);
+          break;
+        default: assert(0); break;
+      }
 
-    // Since vp10 does not have separate inverse transform
-    // but also contains adding to predicted image,
-    // pass blank dummy image to vp10_inv_txfm_add_*x*(), i.e. set dst as zeros
-    if (eob > 0)
-    for (j=0; j < tx_blk_size; j++)
-      memset(dst + j * pd->dst.stride, 0, tx_blk_size);
+      quant = &pd->seg_dequant[seg_id][0]; //vpx's quantizer
+
+      eob = pvq_decode_helper(&daala_dec,
+        pvq_ref_coeff,
+        dqcoeff,
+        quant,
+        plane,
+        tx_size,
+        xdec,
+        ac_dc_coded);
+
+      assert(eob > 0);
+
+      // Since vp10 does not have separate inverse transform
+      // but also contains adding to predicted image,
+      // pass blank dummy image to vp10_inv_txfm_add_*x*(), i.e. set dst as zeros
+      for (j=0; j < tx_blk_size; j++)
+        for (i = 0; i < tx_blk_size; i++)
+          dst[j * pd->dst.stride + i] -= dst[j * pd->dst.stride + i];
 #endif
-    inverse_transform_block_intra(xd, plane, tx_type, tx_size, dst,
-                                  pd->dst.stride, eob);
+      inverse_transform_block_intra(xd, plane, tx_type, tx_size, dst,
+                                    pd->dst.stride, eob);
 #if CONFIG_PVQ
     }
 #if CONFIG_PVQ && DEBUG_PVQ
@@ -556,45 +555,10 @@ static int reconstruct_inter_block(MACROBLOCKD *const xd, vpx_reader *r,
   const int eob = vp10_decode_block_tokens(xd, plane, sc, col, row, tx_size, r,
                                            mbmi->segment_id);
 #else
-  // transform block size in pixels
-  int tx_blk_size = 1 << (tx_size + 2);
-  int i, j;
-  tran_low_t *pvq_ref_coeff = pd->pvq_ref_coeff;
-  const int diff_stride = tx_blk_size;
-  int16_t *pred = pd->pred;
-  uint8_t *dst;
-  int eob = 0;
-  tran_low_t *const dqcoeff = pd->dqcoeff;
-  int ac_dc_coded;
-  int xdec = pd->subsampling_x;
-  int seg_id = mbmi->segment_id;
-  int16_t *quant;
-
   (void) r;
-  dst = &pd->dst.buf[4 * row * pd->dst.stride + 4 * col];
 
-  for (j=0; j < tx_blk_size; j++)
-    for (i=0; i < tx_blk_size; i++) {
-      pred[diff_stride * j + i] = dst[pd->dst.stride * j + i];
-    }
-
-  switch (tx_size) {
-    case TX_32X32:
-      //forward transform of predicted image.
-      fwd_txfm_32x32(0, pred, pvq_ref_coeff, diff_stride, tx_type);
-      break;
-    case TX_16X16:
-      fwd_txfm_16x16(pred, pvq_ref_coeff, diff_stride, tx_type);
-      break;
-    case TX_8X8:
-      fwd_txfm_8x8(pred, pvq_ref_coeff, diff_stride, tx_type);
-      break;
-    case TX_4X4:
-      vp10_fwd_txfm_4x4(pred, pvq_ref_coeff, diff_stride, tx_type,
-                        xd->lossless[seg_id]);
-      break;
-    default: assert(0); break;
-  }
+  int ac_dc_coded;
+  int eob = 0;
 
   // pvq_decode() for inter block runs here.
 
@@ -611,30 +575,67 @@ static int reconstruct_inter_block(MACROBLOCKD *const xd, vpx_reader *r,
 #endif
 
   if (ac_dc_coded) {
-  quant = &pd->seg_dequant[seg_id][0]; //vpx's DC quantizer
+    // transform block size in pixels
+    int tx_blk_size = 1 << (tx_size + 2);
+    int i, j;
+    tran_low_t *pvq_ref_coeff = pd->pvq_ref_coeff;
+    const int diff_stride = tx_blk_size;
+    int16_t *pred = pd->pred;
+    uint8_t *dst;
+    tran_low_t *const dqcoeff = pd->dqcoeff;
+    int xdec = pd->subsampling_x;
+    int seg_id = mbmi->segment_id;
+    int16_t *quant;
 
-  eob = pvq_decode_helper(&daala_dec,
-    pvq_ref_coeff,
-    dqcoeff,
-    quant,
-    plane,
-    tx_size,
-    xdec,
-    ac_dc_coded);
+    dst = &pd->dst.buf[4 * row * pd->dst.stride + 4 * col];
 
-  assert(eob > 0);
+    for (j=0; j < tx_blk_size; j++)
+      for (i=0; i < tx_blk_size; i++) {
+        pred[diff_stride * j + i] = dst[pd->dst.stride * j + i];
+      }
 
-  // Since vp10 does not have separate inverse transform
-  // but also contains adding to predicted image,
-  // pass blank dummy image to vp10_inv_txfm_add_*x*(), i.e. set dst as zeros
-  if (eob > 0)
-  for (j=0; j < tx_blk_size; j++)
-    memset(dst + j * pd->dst.stride, 0, tx_blk_size);
+    switch (tx_size) {
+      case TX_32X32:
+        //forward transform of predicted image.
+        fwd_txfm_32x32(0, pred, pvq_ref_coeff, diff_stride, tx_type);
+        break;
+      case TX_16X16:
+        fwd_txfm_16x16(pred, pvq_ref_coeff, diff_stride, tx_type);
+        break;
+      case TX_8X8:
+        fwd_txfm_8x8(pred, pvq_ref_coeff, diff_stride, tx_type);
+        break;
+      case TX_4X4:
+        vp10_fwd_txfm_4x4(pred, pvq_ref_coeff, diff_stride, tx_type,
+                          xd->lossless[seg_id]);
+        break;
+      default: assert(0); break;
+    }
+
+    quant = &pd->seg_dequant[seg_id][0]; //vpx's DC quantizer
+
+    eob = pvq_decode_helper(&daala_dec,
+      pvq_ref_coeff,
+      dqcoeff,
+      quant,
+      plane,
+      tx_size,
+      xdec,
+      ac_dc_coded);
+
+    assert(eob > 0);
+
+    // Since vp10 does not have separate inverse transform
+    // but also contains adding to predicted image,
+    // pass blank dummy image to vp10_inv_txfm_add_*x*(), i.e. set dst as zeros
+    for (j=0; j < tx_blk_size; j++)
+      for (i = 0; i < tx_blk_size; i++)
+        dst[j * pd->dst.stride + i] -= dst[j * pd->dst.stride + i];
 #endif
 
-  inverse_transform_block_inter(
-      xd, plane, tx_size, &pd->dst.buf[4 * row * pd->dst.stride + 4 * col],
-      pd->dst.stride, eob, block_idx);
+    inverse_transform_block_inter(
+        xd, plane, tx_size, &pd->dst.buf[4 * row * pd->dst.stride + 4 * col],
+        pd->dst.stride, eob, block_idx);
 #if CONFIG_PVQ
   }
 #if CONFIG_PVQ && DEBUG_PVQ
