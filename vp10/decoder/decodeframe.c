@@ -557,10 +557,10 @@ static int reconstruct_inter_block(MACROBLOCKD *const xd, vpx_reader *r,
   const int eob = vp10_decode_block_tokens(xd, plane, sc, col, row, tx_size, r,
                                            mbmi->segment_id);
 #else
-  (void) r;
-
   int ac_dc_coded;
   int eob = 0;
+
+  (void) r;
 
   // pvq_decode() for inter block runs here.
 
