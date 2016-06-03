@@ -989,6 +989,7 @@ static int64_t rd_pick_intra4x4block(VP10_COMP *cpi, MACROBLOCK *x, int row,
         const uint8_t *const src = &src_init[idx * 4 + idy * 4 * src_stride];
         uint8_t *const dst = &dst_init[idx * 4 + idy * 4 * dst_stride];
         tran_low_t *const coeff = BLOCK_OFFSET(x->plane[0].coeff, block);
+        int lossless = xd->lossless[xd->mi[0]->mbmi.segment_id];
 #if !CONFIG_PVQ
         int16_t *const src_diff =
             vp10_raster_block_offset_int16(BLOCK_8X8, block, p->src_diff);
@@ -1023,12 +1024,11 @@ static int64_t rd_pick_intra4x4block(VP10_COMP *cpi, MACROBLOCK *x, int row,
             src_int16[diff_stride * j + i] = src[src_stride * j + i];
             pred[diff_stride * j + i] = dst[dst_stride * j + i];
           }
-
-        vp10_fwd_txfm_4x4(src_int16, coeff, diff_stride, tx_type, 0);
-        vp10_fwd_txfm_4x4(pred, ref_coeff, diff_stride, tx_type, 0);
+        vp10_fwd_txfm_4x4(src_int16, coeff, diff_stride, tx_type, lossless);
+        vp10_fwd_txfm_4x4(pred, ref_coeff, diff_stride, tx_type, lossless);
 #endif
 
-        if (xd->lossless[xd->mi[0]->mbmi.segment_id]) {
+        if (lossless) {
 #if !CONFIG_PVQ
           TX_TYPE tx_type = get_tx_type(PLANE_TYPE_Y, xd, block);
           const scan_order *so = get_scan(TX_4X4, tx_type);
@@ -1038,7 +1038,6 @@ static int64_t rd_pick_intra4x4block(VP10_COMP *cpi, MACROBLOCK *x, int row,
                                so->scan, so->neighbors,
                                cpi->sf.use_fast_coef_costing);
 #else
-          // TODO: Properly use skip info (for 4x4 block here) from pvq
           skip = pvq_encode_helper(coeff, ref_coeff, dqcoeff,
               &p->eobs[block], pd->dequant,
               0, TX_4X4, &rate_pvq, pvq_info);
@@ -1051,10 +1050,12 @@ static int64_t rd_pick_intra4x4block(VP10_COMP *cpi, MACROBLOCK *x, int row,
             for (j=0; j < tx_blk_size; j++)
               for (i = 0; i < tx_blk_size; i++)
                 dst[j * dst_stride + i] -= dst[j * dst_stride + i];
-          }
 #endif
           vp10_inv_txfm_add_4x4(BLOCK_OFFSET(pd->dqcoeff, block), dst,
                                 dst_stride, p->eobs[block], DCT_DCT, 1);
+#if CONFIG_PVQ
+          }
+#endif
         } else {
           int64_t unused;
 #if !CONFIG_PVQ
@@ -1066,7 +1067,6 @@ static int64_t rd_pick_intra4x4block(VP10_COMP *cpi, MACROBLOCK *x, int row,
                                so->scan, so->neighbors,
                                cpi->sf.use_fast_coef_costing);
 #else
-          // TODO: Properly use skip info (for 4x4 block here) from pvq
           skip = pvq_encode_helper(coeff, ref_coeff, dqcoeff,
               &p->eobs[block], pd->dequant,
               0, TX_4X4, &rate_pvq, pvq_info);
@@ -1082,10 +1082,12 @@ static int64_t rd_pick_intra4x4block(VP10_COMP *cpi, MACROBLOCK *x, int row,
             for (j=0; j < tx_blk_size; j++)
               for (i = 0; i < tx_blk_size; i++)
                 dst[j * dst_stride + i] -= dst[j * dst_stride + i];
-          }
 #endif
           vp10_inv_txfm_add_4x4(BLOCK_OFFSET(pd->dqcoeff, block), dst,
                                 dst_stride, p->eobs[block], tx_type, 0);
+#if CONFIG_PVQ
+          }
+#endif
         }
       }
     }//for (idy =
@@ -1132,6 +1134,7 @@ static int64_t rd_pick_intra4x4block(VP10_COMP *cpi, MACROBLOCK *x, int row,
       int skip;
       int pvq_blk_offset = (row + idy) * 16 + (col + idx);
       PVQ_INFO *pvq_info = *(x->pvq + pvq_blk_offset) + 0;//plane 0
+      int lossless = xd->lossless[xd->mi[0]->mbmi.segment_id];
 
       vp10_predict_intra_block(xd, 1, 1, TX_4X4, *best_mode, dst, dst_stride, dst,
                                dst_stride, col + idx, row + idy, 0);
@@ -1149,37 +1152,31 @@ static int64_t rd_pick_intra4x4block(VP10_COMP *cpi, MACROBLOCK *x, int row,
           pred[diff_stride * j + i] = dst[dst_stride * j + i];
         }
 
-      vp10_fwd_txfm_4x4(src_int16, coeff, diff_stride, tx_type, 0);
-      vp10_fwd_txfm_4x4(pred, ref_coeff, diff_stride, tx_type, 0);
+      vp10_fwd_txfm_4x4(src_int16, coeff, diff_stride, tx_type, lossless);
+      vp10_fwd_txfm_4x4(pred, ref_coeff, diff_stride, tx_type, lossless);
 
-      if (xd->lossless[xd->mi[0]->mbmi.segment_id]) {
-        // TODO: Properly use skip info (for 4x4 block here) from pvq
-        skip = pvq_encode_helper(coeff, ref_coeff, dqcoeff,
-            &p->eobs[block], pd->dequant,
-            0, TX_4X4, &rate_pvq, pvq_info);
+      skip = pvq_encode_helper(coeff, ref_coeff, dqcoeff,
+          &p->eobs[block], pd->dequant,
+          0, TX_4X4, &rate_pvq, pvq_info);
 
+      if (lossless) {
         if (!skip) {
           for (j=0; j < tx_blk_size; j++)
             for (i = 0; i < tx_blk_size; i++)
               dst[j * dst_stride + i] -= dst[j * dst_stride + i];
-        }
 
-        vp10_inv_txfm_add_4x4(BLOCK_OFFSET(pd->dqcoeff, block), dst,
-                              dst_stride, p->eobs[block], DCT_DCT, 1);
+          vp10_inv_txfm_add_4x4(BLOCK_OFFSET(pd->dqcoeff, block), dst,
+                                dst_stride, p->eobs[block], DCT_DCT, 1);
+        }
       } else {
-        // TODO: Properly use skip info (for 4x4 block here) from pvq
-        skip = pvq_encode_helper(coeff, ref_coeff, dqcoeff,
-            &p->eobs[block], pd->dequant,
-            0, TX_4X4, &rate_pvq, pvq_info);
-
         if (!skip) {
           for (j=0; j < tx_blk_size; j++)
             for (i = 0; i < tx_blk_size; i++)
               dst[j * dst_stride + i] -= dst[j * dst_stride + i];
-        }
 
         vp10_inv_txfm_add_4x4(BLOCK_OFFSET(pd->dqcoeff, block), dst,
                               dst_stride, p->eobs[block], tx_type, 0);
+        }
       }
     }
   }//for (idy =
