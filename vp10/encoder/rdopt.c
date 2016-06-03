@@ -1165,7 +1165,7 @@ static int64_t rd_pick_intra4x4block(VP10_COMP *cpi, MACROBLOCK *x, int row,
             for (i = 0; i < tx_blk_size; i++)
               dst[j * dst_stride + i] -= dst[j * dst_stride + i];
 
-          vp10_inv_txfm_add_4x4(BLOCK_OFFSET(pd->dqcoeff, block), dst,
+        vp10_inv_txfm_add_4x4(BLOCK_OFFSET(pd->dqcoeff, block), dst,
                                 dst_stride, p->eobs[block], DCT_DCT, 1);
         }
       } else {

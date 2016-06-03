@@ -259,9 +259,6 @@ static void setup_frame(VP10_COMP *cpi) {
   od_adapt_ctx *adapt = &daala_enc.state.adapt;
   od_ec_enc_reset(&daala_enc.ec);
   od_adapt_ctx_reset(adapt, 0);
-  od_adapt_pvq_ctx_reset(&adapt->pvq, 0);
-  adapt->skip_increment = 128;
-  OD_CDFS_INIT(adapt->skip_cdf, adapt->skip_increment >> 2);
   }
 #endif
 }

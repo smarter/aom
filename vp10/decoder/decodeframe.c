@@ -525,18 +525,18 @@ static void predict_and_reconstruct_intra_block(MACROBLOCKD *const xd,
         xdec,
         ac_dc_coded);
 
-      assert(eob > 0);
-
       // Since vp10 does not have separate inverse transform
       // but also contains adding to predicted image,
       // pass blank dummy image to vp10_inv_txfm_add_*x*(), i.e. set dst as zeros
-      for (j=0; j < tx_blk_size; j++)
-        for (i = 0; i < tx_blk_size; i++)
-          dst[j * pd->dst.stride + i] -= dst[j * pd->dst.stride + i];
+			if (eob > 0) {
+        for (j=0; j < tx_blk_size; j++)
+          for (i = 0; i < tx_blk_size; i++)
+            dst[j * pd->dst.stride + i] -= dst[j * pd->dst.stride + i];
 #endif
-      inverse_transform_block_intra(xd, plane, tx_type, tx_size, dst,
+        inverse_transform_block_intra(xd, plane, tx_type, tx_size, dst,
                                     pd->dst.stride, eob);
 #if CONFIG_PVQ
+			}
     }
 #if CONFIG_PVQ && DEBUG_PVQ
     printf("\n");
@@ -625,20 +625,19 @@ static int reconstruct_inter_block(MACROBLOCKD *const xd, vpx_reader *r,
       xdec,
       ac_dc_coded);
 
-    assert(eob > 0);
-
     // Since vp10 does not have separate inverse transform
     // but also contains adding to predicted image,
     // pass blank dummy image to vp10_inv_txfm_add_*x*(), i.e. set dst as zeros
-    for (j=0; j < tx_blk_size; j++)
-      for (i = 0; i < tx_blk_size; i++)
-        dst[j * pd->dst.stride + i] -= dst[j * pd->dst.stride + i];
+		if (eob > 0) {
+      for (j=0; j < tx_blk_size; j++)
+        for (i = 0; i < tx_blk_size; i++)
+          dst[j * pd->dst.stride + i] -= dst[j * pd->dst.stride + i];
 #endif
-
-    inverse_transform_block_inter(
+      inverse_transform_block_inter(
         xd, plane, tx_size, &pd->dst.buf[4 * row * pd->dst.stride + 4 * col],
         pd->dst.stride, eob, block_idx);
 #if CONFIG_PVQ
+		}
   }
 #if CONFIG_PVQ && DEBUG_PVQ
   printf("\n");

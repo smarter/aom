@@ -1574,6 +1574,7 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
     for (j=0; j < tx_blk_size; j++)
       for (i = 0; i < tx_blk_size; i++)
         dst[j * dst_stride + i] -= dst[j * dst_stride + i];
+
     switch (tx_size) {
       case TX_32X32:
        vp10_inv_txfm_add_32x32(dqcoeff, dst, dst_stride, *eob, tx_type);
