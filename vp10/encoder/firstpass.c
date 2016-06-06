@@ -522,6 +522,9 @@ void vp10_first_pass(VP10_COMP *cpi, const struct lookahead_entry *source) {
     p[i].coeff = ctx->coeff_pbuf[i][1];
     p[i].qcoeff = ctx->qcoeff_pbuf[i][1];
     pd[i].dqcoeff = ctx->dqcoeff_pbuf[i][1];
+#if CONFIG_PVQ
+    pd[i].pvq_ref_coeff = ctx->pvq_ref_coeff_pbuf[i][1];
+#endif
     p[i].eobs = ctx->eobs_pbuf[i][1];
   }
   x->skip_recode = 0;

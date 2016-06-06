@@ -143,16 +143,25 @@ static void swap_block_ptr(MACROBLOCK *x, PICK_MODE_CONTEXT *ctx, int m, int n,
     p->coeff = ctx->coeff_pbuf[i][m];
     p->qcoeff = ctx->qcoeff_pbuf[i][m];
     pd->dqcoeff = ctx->dqcoeff_pbuf[i][m];
+#if CONFIG_PVQ
+    pd->pvq_ref_coeff = ctx->pvq_ref_coeff_pbuf[i][m];
+#endif
     p->eobs = ctx->eobs_pbuf[i][m];
 
     ctx->coeff_pbuf[i][m] = ctx->coeff_pbuf[i][n];
     ctx->qcoeff_pbuf[i][m] = ctx->qcoeff_pbuf[i][n];
     ctx->dqcoeff_pbuf[i][m] = ctx->dqcoeff_pbuf[i][n];
+#if CONFIG_PVQ
+    ctx->pvq_ref_coeff_pbuf[i][m] = ctx->pvq_ref_coeff_pbuf[i][n];
+#endif
     ctx->eobs_pbuf[i][m] = ctx->eobs_pbuf[i][n];
 
     ctx->coeff_pbuf[i][n] = p->coeff;
     ctx->qcoeff_pbuf[i][n] = p->qcoeff;
     ctx->dqcoeff_pbuf[i][n] = pd->dqcoeff;
+#if CONFIG_PVQ
+    ctx->pvq_ref_coeff_pbuf[i][m] = pd->pvq_ref_coeff;
+#endif
     ctx->eobs_pbuf[i][n] = p->eobs;
   }
 }
