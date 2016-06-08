@@ -500,7 +500,7 @@ int vp10_has_high_freq_in_plane(MACROBLOCK *x, BLOCK_SIZE bsize, int plane) {
 #if CONFIG_PVQ
 void add_pvq_block(MACROBLOCK *const x, PVQ_INFO *pvq) {
 
-  PVQ_QUEUE *q = x->pvq_q;
+  PVQ_QUEUE *q = &x->pvq_q;
   if (q->curr_pos >= q->buf_len) {
     int new_size = q->buf_len + 1;
     q->buf = vpx_realloc(q->buf, new_size * sizeof(PVQ_INFO));

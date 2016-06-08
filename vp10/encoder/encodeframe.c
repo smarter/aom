@@ -2443,9 +2443,6 @@ static void encode_rd_sb_row(VP10_COMP *cpi, ThreadData *td,
   memset(&xd->left_context, 0, sizeof(xd->left_context));
   memset(xd->left_seg_context, 0, sizeof(xd->left_seg_context));
 
-#if CONFIG_PVQ
-  x->pvq_q = &tile_data->pvq_q;
-#endif
   // Code each SB in the row
   for (mi_col = tile_info->mi_col_start; mi_col < tile_info->mi_col_end;
        mi_col += MI_BLOCK_SIZE) {
@@ -2606,14 +2603,6 @@ void vp10_init_tile_data(VP10_COMP *cpi) {
             tile_data->mode_map[i][j] = j;
           }
         }
-#if CONFIG_PVQ
-        // This will be dynamically increased as more pvq block is encoded.
-        if (tile_data->pvq_q.buf)
-          vpx_free(tile_data->pvq_q.buf);
-        tile_data->pvq_q.buf = vpx_calloc(1, sizeof(PVQ_INFO));
-        tile_data->pvq_q.buf_len = 1;
-        tile_data->pvq_q.curr_pos = 0;
-#endif
       }
   }
 
@@ -2626,9 +2615,6 @@ void vp10_init_tile_data(VP10_COMP *cpi) {
       cpi->tile_tok[tile_row][tile_col] = pre_tok + tile_tok;
       pre_tok = cpi->tile_tok[tile_row][tile_col];
       tile_tok = allocated_tokens(*tile_info);
-#if CONFIG_PVQ
-      cpi->tile_data[tile_row * tile_cols + tile_col].pvq_q.curr_pos = 0;
-#endif
     }
   }
 }
@@ -2647,7 +2633,12 @@ void vp10_encode_tile(VP10_COMP *cpi, ThreadData *td, int tile_row,
   td->mb.m_search_count_ptr = &td->rd_counts.m_search_count;
   td->mb.ex_search_count_ptr = &td->rd_counts.ex_search_count;
 
-  #if CONFIG_PVQ
+#if CONFIG_PVQ
+  td->mb.pvq_q.buf = vpx_calloc(1, sizeof(PVQ_INFO));
+  td->mb.pvq_q.buf_len = 1;
+  td->mb.pvq_q.curr_pos = 0;
+  td->mb.pvq_q.last_pos = 0;
+
   td->mb.daala_enc.state.qm =
       (int16_t *)vpx_calloc(OD_QM_BUFFER_SIZE, sizeof(td->mb.daala_enc.state.qm[0]));
   td->mb.daala_enc.state.qm_inv =
@@ -2661,7 +2652,7 @@ void vp10_encode_tile(VP10_COMP *cpi, ThreadData *td, int tile_row,
   adapt = &td->mb.daala_enc.state.adapt;
   od_ec_enc_reset(&td->mb.daala_enc.ec);
   od_adapt_ctx_reset(adapt, 0);
-  #endif
+#endif
 
   for (mi_row = tile_info->mi_row_start; mi_row < tile_info->mi_row_end;
        mi_row += MI_BLOCK_SIZE) {
@@ -2672,14 +2663,15 @@ void vp10_encode_tile(VP10_COMP *cpi, ThreadData *td, int tile_row,
   assert(tok - cpi->tile_tok[tile_row][tile_col] <=
          allocated_tokens(*tile_info));
 #if CONFIG_PVQ
+  vpx_free(td->mb.pvq_q.buf);
   vpx_free(td->mb.daala_enc.state.qm);
   vpx_free(td->mb.daala_enc.state.qm_inv);
   od_ec_enc_clear(&td->mb.daala_enc.ec);
   
-  td->mb.pvq_q->last_pos = td->mb.pvq_q->curr_pos;
+  td->mb.pvq_q.last_pos = td->mb.pvq_q.curr_pos;
   // rewind current position so that bitstream can be written
   // from the 1st pvq block
-  td->mb.pvq_q->curr_pos = 0;
+  td->mb.pvq_q.curr_pos = 0;
 #endif
 }
 

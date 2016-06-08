@@ -619,7 +619,7 @@ static void write_modes_b(VP10_COMP *cpi, const TileInfo *const tile,
           int *ext = xd->adapt.pvq.pvq_ext + tx_size*PVQ_MAX_PARTITIONS;
           generic_encoder *model = xd->adapt.pvq.pvq_param_model;
 
-          pvq = get_pvq_block(cpi->td.mb.pvq_q);
+          pvq = get_pvq_block(&cpi->td.mb.pvq_q);
 
           assert(pvq->bs <= tx_size);
 
@@ -786,7 +786,7 @@ static void write_modes(VP10_COMP *cpi, const TileInfo *const tile,
 #if CONFIG_PVQ
   // check # of pvq blocks that are encoded and written to bitstream
   // are the same
-  assert(cpi->td.mb.pvq_q->curr_pos == cpi->td.mb.pvq_q->last_pos);
+  assert(cpi->td.mb.pvq_q.curr_pos == cpi->td.mb.pvq_q.last_pos);
 #endif
 }
 
