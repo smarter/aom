@@ -29,8 +29,6 @@
 #if CONFIG_PVQ
 #include "vp10/encoder/encint.h"
 #include "vp10/encoder/pvq_encoder.h"
-
-extern daala_enc_ctx daala_enc;
 #endif
 
 struct optimize_ctx {
@@ -712,15 +710,16 @@ void vp10_xform_quant_fp(MACROBLOCK *x, int plane, int block, int blk_row,
 
   // PVQ for inter mode block
   if (!x->skip_block)
-  skip = pvq_encode_helper(coeff,          // target original vector
-                            ref_coeff,      // reference vector
-                            dqcoeff,        // de-quantized vector
-                            eob,             // End of Block marker
-                            pd->dequant,    // vpx's quantizers
-                            plane,          // image plane
-                            tx_size,        // block size in log_2 - 2
-                            &x->rate,       // rate measured
-                            pvq_info); // PVQ info for a block
+    skip = pvq_encode_helper(&x->daala_enc,
+                             coeff,          // target original vector
+                             ref_coeff,      // reference vector
+                             dqcoeff,        // de-quantized vector
+                             eob,            // End of Block marker
+                             pd->dequant,    // vpx's quantizers
+                             plane,          // image plane
+                             tx_size,        // block size in log_2 - 2
+                             &x->rate,       // rate measured
+                             pvq_info);      // PVQ info for a block
 
   if (!skip)
     mbmi->skip = 0;
@@ -1047,15 +1046,16 @@ void vp10_xform_quant(MACROBLOCK *x, int plane, int block, int blk_row,
 
   // PVQ for inter mode block
   if (!x->skip_block)
-  skip = pvq_encode_helper(coeff,          // target original vector
-                            ref_coeff,      // reference vector
-                            dqcoeff,        // de-quantized vector
-                            eob,            // End of Block marker
-                            pd->dequant,    // vpx's quantizers
-                            plane,          // image plane
-                            tx_size,        // block size in log_2 - 2
-                            &x->rate,       // rate measured
-                            pvq_info); // PVQ info for a block
+    skip = pvq_encode_helper(&x->daala_enc,
+                             coeff,          // target original vector
+                             ref_coeff,      // reference vector
+                             dqcoeff,        // de-quantized vector
+                             eob,            // End of Block marker
+                             pd->dequant,    // vpx's quantizers
+                             plane,          // image plane
+                             tx_size,        // block size in log_2 - 2
+                             &x->rate,       // rate measured
+                             pvq_info);      // PVQ info for a block
 
   if (!skip)
     mbmi->skip = 0;
@@ -1548,15 +1548,16 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
 
     // PVQ for intra mode block
     if (!x->skip_block)
-    skip = pvq_encode_helper(coeff,          // target original vector
-                              ref_coeff,      // reference vector
-                              dqcoeff,        // de-quantized vector
-                              eob,            // End of Block marker
-                              pd->dequant,    // vpx's quantizers
-                              plane,          // image plane
-                              tx_size,        // block size in log_2 - 2
-                              &x->rate,       // rate measured
-                              pvq_info);      // PVQ info for a block
+      skip = pvq_encode_helper(&x->daala_enc,
+                               coeff,          // target original vector
+                               ref_coeff,      // reference vector
+                               dqcoeff,        // de-quantized vector
+                               eob,            // End of Block marker
+                               pd->dequant,    // vpx's quantizers
+                               plane,          // image plane
+                               tx_size,        // block size in log_2 - 2
+                               &x->rate,       // rate measured
+                               pvq_info);       // PVQ info for a block
   }//if (!x->skip_recode) {
   else {
     skip = !pvq_info->ac_dc_coded;
@@ -1613,7 +1614,8 @@ void vp10_encode_intra_block_plane(MACROBLOCK *x, BLOCK_SIZE bsize, int plane) {
 }
 
 #if CONFIG_PVQ
-int pvq_encode_helper(tran_low_t *const coeff, tran_low_t *ref_coeff,
+int pvq_encode_helper(daala_enc_ctx *daala_enc,
+    tran_low_t *const coeff, tran_low_t *ref_coeff,
     tran_low_t *const dqcoeff,
     uint16_t *eob, const int16_t *quant,
     int plane, int tx_size, int *rate, PVQ_INFO *pvq_info) {
@@ -1621,7 +1623,7 @@ int pvq_encode_helper(tran_low_t *const coeff, tran_low_t *ref_coeff,
   int skip;
   // TODO: Enable this later, if pvq_qm_q4 is available in AOM.
   //int pvq_dc_quant = OD_MAXI(1,
-  //  quant * daala_enc.state.pvq_qm_q4[plane][od_qm_get_index(tx_size, 0)] >> 4);
+  //  quant * daala_enc->state.pvq_qm_q4[plane][od_qm_get_index(tx_size, 0)] >> 4);
   int pvq_dc_quant = OD_MAXI(1, quant[0]);
   int tell;
   int has_dc_skip = 1;
@@ -1638,7 +1640,7 @@ int pvq_encode_helper(tran_low_t *const coeff, tran_low_t *ref_coeff,
 
   *eob = 0;
 
-  tell = od_ec_enc_tell(&daala_enc.ec);
+  tell = od_ec_enc_tell(&daala_enc->ec);
 
   /*{// for debugging, to match with decoder side ref vector.
   int i;
@@ -1663,7 +1665,7 @@ int pvq_encode_helper(tran_low_t *const coeff, tran_low_t *ref_coeff,
     out_int32[0] = OD_DIV_R0(in_int32[0] - ref_int32[0], pvq_dc_quant);
   }
 
-  skip = od_pvq_encode(&daala_enc, ref_int32, in_int32, out_int32,
+  skip = od_pvq_encode(daala_enc, ref_int32, in_int32, out_int32,
           (int)quant[0],//scale/quantizer
           (int)quant[1],//scale/quantizer
           plane, tx_size,
@@ -1671,7 +1673,7 @@ int pvq_encode_helper(tran_low_t *const coeff, tran_low_t *ref_coeff,
           1,//OD_ROBUST_STREAM
           0, //is_keyframe,
           0, 0, 0, //q_scaling, bx, by,
-          daala_enc.state.qm + off, daala_enc.state.qm_inv + off, pvq_info);
+          daala_enc->state.qm + off, daala_enc->state.qm_inv + off, pvq_info);
 
   if (skip)
     assert(pvq_info->ac_dc_coded == 0);
@@ -1681,12 +1683,12 @@ int pvq_encode_helper(tran_low_t *const coeff, tran_low_t *ref_coeff,
 
   // Encode residue of DC coeff, if required.
   if (!has_dc_skip || out_int32[0]) {
-    generic_encode(&daala_enc.ec, &daala_enc.state.adapt.model_dc[plane],
+    generic_encode(&daala_enc->ec, &daala_enc->state.adapt.model_dc[plane],
      abs(out_int32[0]) - has_dc_skip, -1,
-     &daala_enc.state.adapt.ex_dc[plane][tx_size][0], 2);
+     &daala_enc->state.adapt.ex_dc[plane][tx_size][0], 2);
   }
   if (out_int32[0]) {
-    od_ec_enc_bits(&daala_enc.ec, out_int32[0] < 0, 1);
+    od_ec_enc_bits(&daala_enc->ec, out_int32[0] < 0, 1);
     skip = 0;
   }
 
@@ -1716,7 +1718,7 @@ int pvq_encode_helper(tran_low_t *const coeff, tran_low_t *ref_coeff,
 
   pvq_info->eob = *eob;
 
-  *rate = (od_ec_enc_tell(&daala_enc.ec) - tell) << VP9_PROB_COST_SHIFT;
+  *rate = (od_ec_enc_tell(&daala_enc->ec) - tell) << VP9_PROB_COST_SHIFT;
   assert(*rate >= 0);
 
   return skip;

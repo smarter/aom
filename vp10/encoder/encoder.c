@@ -90,11 +90,6 @@ FILE *kf_list;
 FILE *keyfile;
 #endif
 
-#if CONFIG_PVQ
-#include "vp10/encoder/encint.h"
-daala_enc_ctx daala_enc;
-#endif
-
 static INLINE void Scale2Ratio(VPX_SCALING mode, int *hr, int *hs) {
   switch (mode) {
     case NORMAL:
@@ -253,14 +248,6 @@ static void setup_frame(VP10_COMP *cpi) {
     *cm->fc = cm->frame_contexts[cm->frame_context_idx];
     vp10_zero(cpi->interp_filter_selected[0]);
   }
-#if CONFIG_PVQ
-  {
-
-  od_adapt_ctx *adapt = &daala_enc.state.adapt;
-  od_ec_enc_reset(&daala_enc.ec);
-  od_adapt_ctx_reset(adapt, 0);
-  }
-#endif
 }
 
 static void vp10_enc_setup_mi(VP10_COMMON *cm) {
@@ -1652,16 +1639,6 @@ VP10_COMP *vp10_create_compressor(VP10EncoderConfig *oxcf,
 
   vp10_loop_filter_init(cm);
 
-#if CONFIG_PVQ
-  daala_enc.state.qm = (int16_t *)vpx_calloc(OD_QM_BUFFER_SIZE, sizeof(daala_enc.state.qm[0]));
-  daala_enc.state.qm_inv = (int16_t *)vpx_calloc(OD_QM_BUFFER_SIZE, sizeof(daala_enc.state.qm_inv[0]));
-  daala_enc.qm = OD_FLAT_QM;  // Hard coded. Enc/dec required to sync.
-
-  od_init_qm(daala_enc.state.qm, daala_enc.state.qm_inv,
-      daala_enc.qm == OD_HVS_QM ? OD_QM8_Q4_HVS : OD_QM8_Q4_FLAT);
-  od_ec_enc_init(&daala_enc.ec, 65025);
-#endif
-
   cm->error.setjmp = 0;
 
   return cpi;
@@ -1805,15 +1782,6 @@ void vp10_remove_compressor(VP10_COMP *cpi) {
 #endif
 #ifdef OUTPUT_YUV_REC
   fclose(yuv_rec_file);
-#endif
-
-#if CONFIG_PVQ
-  {
-  extern daala_enc_ctx daala_enc;
-  vpx_free(daala_enc.state.qm);
-  vpx_free(daala_enc.state.qm_inv);
-  od_ec_enc_clear(&daala_enc.ec);
-  }
 #endif
 
 #if 0

@@ -44,7 +44,6 @@
 
 #if CONFIG_PVQ
 #include "vp10/encoder/pvq_encoder.h"
-extern daala_enc_ctx daala_enc;
 #endif
 
 #define LAST_FRAME_MODE_MASK \
@@ -616,7 +615,7 @@ static void choose_largest_tx_size(VP10_COMP *cpi, MACROBLOCK *x, int *rate,
 #endif
 
 #if CONFIG_PVQ
-  od_encode_checkpoint(&daala_enc, &buf);
+  od_encode_checkpoint(&x->daala_enc, &buf);
 #endif
 
   mbmi->tx_size = VPXMIN(max_tx_size, largest_tx_size);
@@ -627,7 +626,7 @@ static void choose_largest_tx_size(VP10_COMP *cpi, MACROBLOCK *x, int *rate,
       txfm_rd_in_plane(x, &r, &d, &s, &psse, ref_best_rd, 0, bs, mbmi->tx_size,
                        cpi->sf.use_fast_coef_costing);
 #if CONFIG_PVQ
-      od_encode_rollback(&daala_enc, &buf);
+      od_encode_rollback(&x->daala_enc, &buf);
 #endif
       if (r == INT_MAX) continue;
       if (is_inter)
@@ -723,7 +722,7 @@ static void choose_tx_size_from_rd(VP10_COMP *cpi, MACROBLOCK *x, int *rate,
   *psse = INT64_MAX;
 
 #if CONFIG_PVQ
-      od_encode_checkpoint(&daala_enc, &buf);
+      od_encode_checkpoint(&x->daala_enc, &buf);
 #endif
 
   //for (tx_type = DCT_DCT; tx_type < TX_TYPES; ++tx_type) {
@@ -746,7 +745,7 @@ static void choose_tx_size_from_rd(VP10_COMP *cpi, MACROBLOCK *x, int *rate,
       txfm_rd_in_plane(x, &r, &d, &s, &sse, ref_best_rd, 0, bs, n,
                        cpi->sf.use_fast_coef_costing);
 #if CONFIG_PVQ
-      od_encode_rollback(&daala_enc, &buf);
+      od_encode_rollback(&x->daala_enc, &buf);
 #endif
       if (n < TX_32X32 && !xd->lossless[xd->mi[0]->mbmi.segment_id] &&
           r != INT_MAX) {
@@ -972,7 +971,7 @@ static int64_t rd_pick_intra4x4block(VP10_COMP *cpi, MACROBLOCK *x, int row,
 #endif  // CONFIG_VPX_HIGHBITDEPTH
 
 #if CONFIG_PVQ
-    od_encode_checkpoint(&daala_enc, &buf);
+    od_encode_checkpoint(&x->daala_enc, &buf);
 #endif
 
   for (mode = DC_PRED; mode <= TM_PRED; ++mode) {
@@ -1047,7 +1046,7 @@ static int64_t rd_pick_intra4x4block(VP10_COMP *cpi, MACROBLOCK *x, int row,
                                so->scan, so->neighbors,
                                cpi->sf.use_fast_coef_costing);
 #else
-          skip = pvq_encode_helper(coeff, ref_coeff, dqcoeff,
+          skip = pvq_encode_helper(&x->daala_enc, coeff, ref_coeff, dqcoeff,
               &p->eobs[block], pd->dequant,
               0, TX_4X4, &rate_pvq, pvq_info);
           ratey += rate_pvq;
@@ -1076,7 +1075,7 @@ static int64_t rd_pick_intra4x4block(VP10_COMP *cpi, MACROBLOCK *x, int row,
                                so->scan, so->neighbors,
                                cpi->sf.use_fast_coef_costing);
 #else
-          skip = pvq_encode_helper(coeff, ref_coeff, dqcoeff,
+          skip = pvq_encode_helper(&x->daala_enc, coeff, ref_coeff, dqcoeff,
               &p->eobs[block], pd->dequant,
               0, TX_4X4, &rate_pvq, pvq_info);
           ratey += rate_pvq;
@@ -1118,7 +1117,7 @@ static int64_t rd_pick_intra4x4block(VP10_COMP *cpi, MACROBLOCK *x, int row,
     }
   next : {}
 #if CONFIG_PVQ
-    od_encode_rollback(&daala_enc, &buf);
+    od_encode_rollback(&x->daala_enc, &buf);
 #endif
   }//for (mode =
 
@@ -1164,7 +1163,7 @@ static int64_t rd_pick_intra4x4block(VP10_COMP *cpi, MACROBLOCK *x, int row,
       vp10_fwd_txfm_4x4(src_int16, coeff, diff_stride, tx_type, lossless);
       vp10_fwd_txfm_4x4(pred, ref_coeff, diff_stride, tx_type, lossless);
 
-      skip = pvq_encode_helper(coeff, ref_coeff, dqcoeff,
+      skip = pvq_encode_helper(&x->daala_enc, coeff, ref_coeff, dqcoeff,
           &p->eobs[block], pd->dequant,
           0, TX_4X4, &rate_pvq, pvq_info);
 
@@ -1284,7 +1283,7 @@ static int64_t rd_pick_intra_sby_mode(VP10_COMP *cpi, MACROBLOCK *x, int *rate,
 #if CONFIG_PVQ
   od_rollback_buffer buf;
 
-  od_encode_checkpoint(&daala_enc, &buf);
+  od_encode_checkpoint(&x->daala_enc, &buf);
 #endif
   bmode_costs = cpi->y_mode_costs[A][L];
 
@@ -1297,7 +1296,7 @@ static int64_t rd_pick_intra_sby_mode(VP10_COMP *cpi, MACROBLOCK *x, int *rate,
     super_block_yrd(cpi, x, &this_rate_tokenonly, &this_distortion, &s, NULL,
                     bsize, best_rd);
 #if CONFIG_PVQ
-    od_encode_rollback(&daala_enc, &buf);
+    od_encode_rollback(&x->daala_enc, &buf);
 #endif
     if (this_rate_tokenonly == INT_MAX) continue;
 
@@ -1391,7 +1390,7 @@ static int64_t rd_pick_intra_sbuv_mode(VP10_COMP *cpi, MACROBLOCK *x,
   memset(x->skip_txfm, SKIP_TXFM_NONE, sizeof(x->skip_txfm));
 
 #if CONFIG_PVQ
-    od_encode_checkpoint(&daala_enc, &buf);
+    od_encode_checkpoint(&x->daala_enc, &buf);
 #endif
   for (mode = DC_PRED; mode <= TM_PRED; ++mode) {
     if (!(cpi->sf.intra_uv_mode_mask[max_tx_size] & (1 << mode))) continue;
@@ -1401,12 +1400,12 @@ static int64_t rd_pick_intra_sbuv_mode(VP10_COMP *cpi, MACROBLOCK *x,
     if (!super_block_uvrd(cpi, x, &this_rate_tokenonly, &this_distortion, &s,
                           &this_sse, bsize, best_rd)) {
 #if CONFIG_PVQ
-      od_encode_rollback(&daala_enc, &buf);
+      od_encode_rollback(&x->daala_enc, &buf);
 #endif
       continue;
     }
 #if CONFIG_PVQ
-    od_encode_rollback(&daala_enc, &buf);
+    od_encode_rollback(&x->daala_enc, &buf);
 #endif
 
     this_rate = this_rate_tokenonly +
@@ -1628,7 +1627,7 @@ static int64_t encode_inter_mb_segment(VP10_COMP *cpi, MACROBLOCK *x,
       fwd_txm4x4(src_int16, coeff, diff_stride);
       fwd_txm4x4(pred, ref_coeff, diff_stride);
 
-      pvq_encode_helper(coeff, ref_coeff, dqcoeff,
+      pvq_encode_helper(&x->daala_enc, coeff, ref_coeff, dqcoeff,
           &p->eobs[k], pd->dequant,
           0, TX_4X4, &rate_pvq, pvq_info);
 #endif
@@ -3257,7 +3256,7 @@ void vp10_rd_pick_inter_mode_sb(VP10_COMP *cpi, TileDataEnc *tile_data,
   }
 
 #if CONFIG_PVQ
-    od_encode_checkpoint(&daala_enc, &pre_rdo_buf);
+    od_encode_checkpoint(&x->daala_enc, &pre_rdo_buf);
 #endif
 
   for (midx = 0; midx < MAX_MODES; ++midx) {
@@ -3684,7 +3683,7 @@ void vp10_rd_pick_inter_mode_sb(VP10_COMP *cpi, TileDataEnc *tile_data,
                        best_filter_diff, best_mode_skippable);
 
 #if CONFIG_PVQ
-  od_encode_rollback(&daala_enc, &pre_rdo_buf);
+  od_encode_rollback(&x->daala_enc, &pre_rdo_buf);
 #endif
 }
 
@@ -3861,7 +3860,7 @@ void vp10_rd_pick_inter_mode_sub8x8(VP10_COMP *cpi, TileDataEnc *tile_data,
   }
 
 #if CONFIG_PVQ
-    od_encode_checkpoint(&daala_enc, &pre_rdo_buf);
+    od_encode_checkpoint(&x->daala_enc, &pre_rdo_buf);
 #endif
 
   for (ref_index = 0; ref_index < MAX_REFS; ++ref_index) {
@@ -4360,6 +4359,6 @@ void vp10_rd_pick_inter_mode_sub8x8(VP10_COMP *cpi, TileDataEnc *tile_data,
                        0);
 
 #if CONFIG_PVQ
-    od_encode_rollback(&daala_enc, &pre_rdo_buf);
+    od_encode_rollback(&x->daala_enc, &pre_rdo_buf);
 #endif
 }

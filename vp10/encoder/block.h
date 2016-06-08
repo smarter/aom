@@ -13,6 +13,9 @@
 
 #include "vp10/common/entropymv.h"
 #include "vp10/common/entropy.h"
+#if CONFIG_PVQ
+#include "vp10/encoder/encint.h"
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -148,6 +151,7 @@ struct macroblock {
   int64_t dist;
   PVQ_QUEUE *pvq_q;
   PVQ_INFO pvq[256][3]; // 16x16 of 4x4 blocks, YUV
+  daala_enc_ctx daala_enc;
 #endif
 };
 

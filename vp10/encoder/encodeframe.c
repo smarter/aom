@@ -48,7 +48,6 @@
 
 #if CONFIG_PVQ
 #include "vp10/encoder/pvq_encoder.h"
-extern daala_enc_ctx daala_enc;
 #endif
 
 static void encode_superblock(VP10_COMP *cpi, ThreadData *td, TOKENEXTRA **t,
@@ -1070,7 +1069,7 @@ static void rd_pick_sb_modes(VP10_COMP *cpi, TileDataEnc *tile_data,
   const AQ_MODE aq_mode = cpi->oxcf.aq_mode;
   int i, orig_rdmult;
 #if CONFIG_PVQ
-  uint32_t pre_rdo_offset = daala_enc.ec.offs;
+  uint32_t pre_rdo_offset = x->daala_enc.ec.offs;
   od_rollback_buffer pre_rdo_buf;
 #endif
 
@@ -1143,7 +1142,7 @@ static void rd_pick_sb_modes(VP10_COMP *cpi, TileDataEnc *tile_data,
   }
 
 #if CONFIG_PVQ
-  od_encode_checkpoint(&daala_enc, &pre_rdo_buf);
+  od_encode_checkpoint(&x->daala_enc, &pre_rdo_buf);
 #endif
 
   // Find best coding mode & reconstruct the MB so it is available
@@ -1165,12 +1164,12 @@ static void rd_pick_sb_modes(VP10_COMP *cpi, TileDataEnc *tile_data,
   }
 
 #if CONFIG_PVQ
-  od_encode_rollback(&daala_enc, &pre_rdo_buf);
+  od_encode_rollback(&x->daala_enc, &pre_rdo_buf);
 #endif
 
 #if CONFIG_PVQ
   (void) pre_rdo_offset;
-  assert(pre_rdo_offset == daala_enc.ec.offs);
+  assert(pre_rdo_offset == x->daala_enc.ec.offs);
 #endif
 
   // Examine the resulting rate and for AQ mode 2 make a segment choice.
@@ -1498,7 +1497,7 @@ static void rd_use_partition(VP10_COMP *cpi, ThreadData *td,
   uint32_t pre_rdo_offset;
 
   if (bsize == BLOCK_64X64)
-    pre_rdo_offset = daala_enc.ec.offs;
+    pre_rdo_offset = x->daala_enc.ec.offs;
 #endif
 
   if (mi_row >= cm->mi_rows || mi_col >= cm->mi_cols) return;
@@ -1516,7 +1515,7 @@ static void rd_use_partition(VP10_COMP *cpi, ThreadData *td,
   pc_tree->partitioning = partition;
   save_context(x, mi_row, mi_col, a, l, sa, sl, bsize);
 #if CONFIG_PVQ
-  od_encode_checkpoint(&daala_enc, &pre_rdo_buf);
+  od_encode_checkpoint(&x->daala_enc, &pre_rdo_buf);
 #endif
   if (bsize == BLOCK_16X16 && cpi->oxcf.aq_mode) {
     set_offsets(cpi, tile_info, x, mi_row, mi_col, bsize);
@@ -1558,7 +1557,7 @@ static void rd_use_partition(VP10_COMP *cpi, ThreadData *td,
 
       restore_context(x, mi_row, mi_col, a, l, sa, sl, bsize);
 #if CONFIG_PVQ
-      od_encode_rollback(&daala_enc, &pre_rdo_buf);
+      od_encode_rollback(&x->daala_enc, &pre_rdo_buf);
 #endif
       mi_8x8[0]->mbmi.sb_type = bs_type;
       pc_tree->partitioning = partition;
@@ -1666,7 +1665,7 @@ static void rd_use_partition(VP10_COMP *cpi, ThreadData *td,
     chosen_rdc.dist = 0;
     restore_context(x, mi_row, mi_col, a, l, sa, sl, bsize);
 #if CONFIG_PVQ
-    od_encode_rollback(&daala_enc, &pre_rdo_buf);
+    od_encode_rollback(&x->daala_enc, &pre_rdo_buf);
 #endif
     pc_tree->partitioning = PARTITION_SPLIT;
 
@@ -1685,7 +1684,7 @@ static void rd_use_partition(VP10_COMP *cpi, ThreadData *td,
 
       save_context(x, mi_row, mi_col, a, l, sa, sl, bsize);
 #if CONFIG_PVQ
-      od_encode_checkpoint(&daala_enc, &buf);
+      od_encode_checkpoint(&x->daala_enc, &buf);
 #endif
       pc_tree->split[i]->partitioning = PARTITION_NONE;
       rd_pick_sb_modes(cpi, tile_data, x, mi_row + y_idx, mi_col + x_idx,
@@ -1694,7 +1693,7 @@ static void rd_use_partition(VP10_COMP *cpi, ThreadData *td,
 
       restore_context(x, mi_row, mi_col, a, l, sa, sl, bsize);
 #if CONFIG_PVQ
-      od_encode_rollback(&daala_enc, &buf);
+      od_encode_rollback(&x->daala_enc, &buf);
 #endif
       if (tmp_rdc.rate == INT_MAX || tmp_rdc.dist == INT64_MAX) {
         vp10_rd_cost_reset(&chosen_rdc);
@@ -1736,7 +1735,7 @@ static void rd_use_partition(VP10_COMP *cpi, ThreadData *td,
   restore_context(x, mi_row, mi_col, a, l, sa, sl, bsize);
 #if CONFIG_PVQ
   // if partitioning rdo is done, rollback to pre rdo state.
-  od_encode_rollback(&daala_enc, &pre_rdo_buf);
+  od_encode_rollback(&x->daala_enc, &pre_rdo_buf);
 #endif
 
   // We must have chosen a partitioning and encoding or we'll fail later on.
@@ -1749,7 +1748,7 @@ static void rd_use_partition(VP10_COMP *cpi, ThreadData *td,
 #if CONFIG_PVQ
     (void) pre_rdo_offset;
     if (output_enabled)
-      assert(pre_rdo_offset == daala_enc.ec.offs);
+      assert(pre_rdo_offset == x->daala_enc.ec.offs);
 #endif
     encode_sb(cpi, td, tile_info, tp, mi_row, mi_col, output_enabled, bsize,
               pc_tree);
@@ -2041,7 +2040,7 @@ static void rd_pick_partition(VP10_COMP *cpi, ThreadData *td,
   uint32_t pre_rdo_offset;
 
   if (bsize == BLOCK_64X64)
-    pre_rdo_offset = daala_enc.ec.offs;
+    pre_rdo_offset = x->daala_enc.ec.offs;
 #endif
 
   (void)*tp_orig;
@@ -2086,7 +2085,7 @@ static void rd_pick_partition(VP10_COMP *cpi, ThreadData *td,
 
   save_context(x, mi_row, mi_col, a, l, sa, sl, bsize);
 #if CONFIG_PVQ
-  od_encode_checkpoint(&daala_enc, &pre_rdo_buf);
+  od_encode_checkpoint(&x->daala_enc, &pre_rdo_buf);
 #endif
 
 #if CONFIG_FP_MB_STATS
@@ -2234,7 +2233,7 @@ static void rd_pick_partition(VP10_COMP *cpi, ThreadData *td,
     }
     restore_context(x, mi_row, mi_col, a, l, sa, sl, bsize);
 #if CONFIG_PVQ
-    od_encode_rollback(&daala_enc, &pre_rdo_buf);
+    od_encode_rollback(&x->daala_enc, &pre_rdo_buf);
 #endif
   }
 
@@ -2296,7 +2295,7 @@ static void rd_pick_partition(VP10_COMP *cpi, ThreadData *td,
     }
     restore_context(x, mi_row, mi_col, a, l, sa, sl, bsize);
 #if CONFIG_PVQ
-    od_encode_rollback(&daala_enc, &pre_rdo_buf);
+    od_encode_rollback(&x->daala_enc, &pre_rdo_buf);
 #endif
   }
 
@@ -2344,7 +2343,7 @@ static void rd_pick_partition(VP10_COMP *cpi, ThreadData *td,
     }
     restore_context(x, mi_row, mi_col, a, l, sa, sl, bsize);
 #if CONFIG_PVQ
-    od_encode_rollback(&daala_enc, &pre_rdo_buf);
+    od_encode_rollback(&x->daala_enc, &pre_rdo_buf);
 #endif
   }
 
@@ -2392,7 +2391,7 @@ static void rd_pick_partition(VP10_COMP *cpi, ThreadData *td,
     }
     restore_context(x, mi_row, mi_col, a, l, sa, sl, bsize);
 #if CONFIG_PVQ
-    od_encode_rollback(&daala_enc, &pre_rdo_buf);
+    od_encode_rollback(&x->daala_enc, &pre_rdo_buf);
 #endif
   }
 
@@ -2409,7 +2408,7 @@ static void rd_pick_partition(VP10_COMP *cpi, ThreadData *td,
 #if CONFIG_PVQ
     (void) pre_rdo_offset;
     if (output_enabled)
-      assert(pre_rdo_offset == daala_enc.ec.offs);
+      assert(pre_rdo_offset == x->daala_enc.ec.offs);
 #endif
     encode_sb(cpi, td, tile_info, tp, mi_row, mi_col, output_enabled, bsize,
               pc_tree);
@@ -2642,10 +2641,27 @@ void vp10_encode_tile(VP10_COMP *cpi, ThreadData *td, int tile_row,
   const TileInfo *const tile_info = &this_tile->tile_info;
   TOKENEXTRA *tok = cpi->tile_tok[tile_row][tile_col];
   int mi_row;
+  od_adapt_ctx *adapt;
 
   // Set up pointers to per thread motion search counters.
   td->mb.m_search_count_ptr = &td->rd_counts.m_search_count;
   td->mb.ex_search_count_ptr = &td->rd_counts.ex_search_count;
+
+  #if CONFIG_PVQ
+  td->mb.daala_enc.state.qm =
+      (int16_t *)vpx_calloc(OD_QM_BUFFER_SIZE, sizeof(td->mb.daala_enc.state.qm[0]));
+  td->mb.daala_enc.state.qm_inv =
+      (int16_t *)vpx_calloc(OD_QM_BUFFER_SIZE, sizeof(td->mb.daala_enc.state.qm_inv[0]));
+  td->mb.daala_enc.qm = OD_FLAT_QM;  // Hard coded. Enc/dec required to sync.
+  
+  od_init_qm(td->mb.daala_enc.state.qm, td->mb.daala_enc.state.qm_inv,
+      td->mb.daala_enc.qm == OD_HVS_QM ? OD_QM8_Q4_HVS : OD_QM8_Q4_FLAT);
+  od_ec_enc_init(&td->mb.daala_enc.ec, 65025);
+
+  adapt = &td->mb.daala_enc.state.adapt;
+  od_ec_enc_reset(&td->mb.daala_enc.ec);
+  od_adapt_ctx_reset(adapt, 0);
+  #endif
 
   for (mi_row = tile_info->mi_row_start; mi_row < tile_info->mi_row_end;
        mi_row += MI_BLOCK_SIZE) {
@@ -2656,6 +2672,10 @@ void vp10_encode_tile(VP10_COMP *cpi, ThreadData *td, int tile_row,
   assert(tok - cpi->tile_tok[tile_row][tile_col] <=
          allocated_tokens(*tile_info));
 #if CONFIG_PVQ
+  vpx_free(td->mb.daala_enc.state.qm);
+  vpx_free(td->mb.daala_enc.state.qm_inv);
+  od_ec_enc_clear(&td->mb.daala_enc.ec);
+  
   td->mb.pvq_q->last_pos = td->mb.pvq_q->curr_pos;
   // rewind current position so that bitstream can be written
   // from the 1st pvq block
