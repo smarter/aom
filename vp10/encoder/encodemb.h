@@ -53,7 +53,8 @@ void fwd_txfm_16x16(const int16_t *src_diff, tran_low_t *coeff,
 void fwd_txfm_32x32(int rd_transform, const int16_t *src_diff,
                     tran_low_t *coeff, int diff_stride, TX_TYPE tx_type);
 #if CONFIG_PVQ
-int pvq_encode_helper(tran_low_t *const coeff, tran_low_t *ref_coeff,
+int pvq_encode_helper(daala_enc_ctx *daala_enc,
+    tran_low_t *const coeff, tran_low_t *ref_coeff,
     tran_low_t *const dqcoeff,
     uint16_t *eob, const int16_t *quant,
     int plane, int tx_size, int *rate, PVQ_INFO *pvq_info);
