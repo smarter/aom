@@ -2608,8 +2608,9 @@ void vp10_init_tile_data(VP10_COMP *cpi) {
         }
 #if CONFIG_PVQ
         // This will be dynamically increased as more pvq block is encoded.
-        tile_data->pvq_q.buf = vpx_calloc(1, sizeof(PVQ_INFO));
-        tile_data->pvq_q.buf_len = 1;
+        tile_data->pvq_q.buf_len = 5000;
+        tile_data->pvq_q.buf =
+            vpx_calloc(tile_data->pvq_q.buf_len, sizeof(PVQ_INFO));
         tile_data->pvq_q.curr_pos = 0;
 #endif
       }
