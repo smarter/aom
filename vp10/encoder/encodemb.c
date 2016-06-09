@@ -1738,7 +1738,7 @@ void store_pvq_enc_info(PVQ_INFO *pvq_info,
                         int bs) {  // block size in log_2 -2
   int i;
 
-  for (i=0; i < PVQ_MAX_PARTITIONS; i++) {
+  for (i=0; i < nb_bands; i++) {
     pvq_info->qg[i] = qg[i];
     pvq_info->theta[i] = theta[i];
     pvq_info->max_theta[i] = max_theta[i];
