@@ -1363,7 +1363,11 @@ static vpx_codec_enc_cfg_map_t encoder_usage_cfg_map[] = {
 #define VERSION_STRING
 #endif
 CODEC_INTERFACE(vpx_codec_vp10_cx) = {
-  "WebM Project VP10 Encoder" VERSION_STRING,
+#if !CONFIG_PVQ
+  "AOM Encoder" VERSION_STRING,
+#else
+  "AOM Encoder with Daala's PVQ" VERSION_STRING,
+#endif
   VPX_CODEC_INTERNAL_ABI_VERSION,
 #if CONFIG_VPX_HIGHBITDEPTH
   VPX_CODEC_CAP_HIGHBITDEPTH |
