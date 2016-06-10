@@ -66,10 +66,10 @@ void laplace_encode_special(od_ec_enc *enc, int x, unsigned decay, int max) {
   xs = x >> shift;
   ms = max >> shift;
   cdf = EXP_CDF_TABLE[(decay + 1) >> 1];
-  /*OD_LOG((OD_LOG_PVQ, OD_LOG_DEBUG, "decay = %d", decay));*/
+  OD_LOG((OD_LOG_PVQ, OD_LOG_DEBUG, "decay = %d", decay));
   do {
     sym = OD_MINI(xs, 15);
-    /*{
+    {
       int i;
       OD_LOG((OD_LOG_PVQ, OD_LOG_DEBUG, "%d %d %d %d %d\n", x, xs, shift,
        sym, max));
@@ -77,7 +77,7 @@ void laplace_encode_special(od_ec_enc *enc, int x, unsigned decay, int max) {
         OD_LOG_PARTIAL((OD_LOG_PVQ, OD_LOG_DEBUG, "%d ", cdf[i]));
       }
       OD_LOG_PARTIAL((OD_LOG_PVQ, OD_LOG_DEBUG, "\n"));
-    }*/
+    }
     if (ms > 0 && ms < 15) {
       /* Simple way of truncating the pdf when we have a bound */
       od_ec_encode_cdf_unscaled(enc, sym, cdf, ms + 1);

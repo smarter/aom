@@ -118,7 +118,7 @@ int generic_decode_(od_ec_dec *dec, generic_encoder *model, int max,
   }
   x = (xs << shift) + lsb;
   generic_model_update(model, ex_q16, x, xs, id, integration);
-  /*OD_LOG((OD_LOG_ENTROPY_CODER, OD_LOG_DEBUG,
-   "dec: %d %d %d %d %d %x", *ex_q16, x, shift, id, xs, dec->rng));*/
+  OD_LOG((OD_LOG_ENTROPY_CODER, OD_LOG_DEBUG,
+   "dec: %d %d %d %d %d %x", *ex_q16, x, shift, id, xs, dec->rng));
   return x;
 }

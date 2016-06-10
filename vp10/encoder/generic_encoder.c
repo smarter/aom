@@ -80,8 +80,8 @@ void generic_encode(od_ec_enc *enc, generic_encoder *model, int x, int max,
   int ms;
   if (max == 0) return;
   lg_q1 = log_ex(*ex_q16);
-  /*OD_LOG((OD_LOG_ENTROPY_CODER, OD_LOG_DEBUG,
-   "%d %d", *ex_q16, lg_q1));*/
+  OD_LOG((OD_LOG_ENTROPY_CODER, OD_LOG_DEBUG,
+   "%d %d", *ex_q16, lg_q1));
   /* If expectation is too large, shift x to ensure that
      all we have past xs=15 is the exponentially decaying tail
      of the distribution */
@@ -120,8 +120,8 @@ void generic_encode(od_ec_enc *enc, generic_encoder *model, int x, int max,
     }
   }
   generic_model_update(model, ex_q16, x, xs, id, integration);
-  /*OD_LOG((OD_LOG_ENTROPY_CODER, OD_LOG_DEBUG,
-   "enc: %d %d %d %d %d %x", *ex_q16, x, shift, id, xs, enc->rng));*/
+  OD_LOG((OD_LOG_ENTROPY_CODER, OD_LOG_DEBUG,
+   "enc: %d %d %d %d %d %x", *ex_q16, x, shift, id, xs, enc->rng));
 }
 
 /** Estimates the cost of encoding a value with generic_encode().

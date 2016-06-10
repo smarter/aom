@@ -30,6 +30,9 @@
 # define OD_DISABLE_CFL (1)
 # define OD_DISABLE_FILTER (1)
 
+# define OD_LOG(a)
+# define OD_LOG_PARTIAL(a)
+
 # define OD_DIVU_DMAX (1024)
 
 typedef int od_coeff;
