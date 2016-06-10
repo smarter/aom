@@ -2443,9 +2443,6 @@ static void encode_rd_sb_row(VP10_COMP *cpi, ThreadData *td,
   memset(&xd->left_context, 0, sizeof(xd->left_context));
   memset(xd->left_seg_context, 0, sizeof(xd->left_seg_context));
 
-#if CONFIG_PVQ
-  x->pvq_q = &tile_data->pvq_q;
-#endif
   // Code each SB in the row
   for (mi_col = tile_info->mi_col_start; mi_col < tile_info->mi_col_end;
        mi_col += MI_BLOCK_SIZE) {
@@ -2647,6 +2644,8 @@ void vp10_encode_tile(VP10_COMP *cpi, ThreadData *td, int tile_row,
   td->mb.ex_search_count_ptr = &td->rd_counts.ex_search_count;
 
   #if CONFIG_PVQ
+  td->mb.pvq_q = &this_tile->pvq_q;
+
   td->mb.daala_enc.state.qm =
       (int16_t *)vpx_calloc(OD_QM_BUFFER_SIZE, sizeof(td->mb.daala_enc.state.qm[0]));
   td->mb.daala_enc.state.qm_inv =
@@ -2679,6 +2678,8 @@ void vp10_encode_tile(VP10_COMP *cpi, ThreadData *td, int tile_row,
   // rewind current position so that bitstream can be written
   // from the 1st pvq block
   td->mb.pvq_q->curr_pos = 0;
+
+  td->mb.pvq_q = NULL;
 #endif
 }
 

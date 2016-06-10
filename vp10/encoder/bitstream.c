@@ -1275,6 +1275,7 @@ static size_t encode_tiles(VP10_COMP *cpi, uint8_t *data_ptr,
   for (tile_row = 0; tile_row < tile_rows; tile_row++) {
     for (tile_col = 0; tile_col < tile_cols; tile_col++) {
       int tile_idx = tile_row * tile_cols + tile_col;
+      TileDataEnc *this_tile = &cpi->tile_data[tile_idx];
       TOKENEXTRA *tok = cpi->tile_tok[tile_row][tile_col];
 
       tok_end = cpi->tile_tok[tile_row][tile_col] +
@@ -1286,11 +1287,17 @@ static size_t encode_tiles(VP10_COMP *cpi, uint8_t *data_ptr,
         vpx_start_encode(&residual_bc, data_ptr + total_size);
 #if CONFIG_PVQ
       od_adapt_ctx_reset(&xd->adapt, 0);
+      cpi->td.mb.pvq_q = &this_tile->pvq_q;
 #endif
-      write_modes(cpi, &cpi->tile_data[tile_idx].tile_info, &residual_bc, &tok,
+      write_modes(cpi, &this_tile->tile_info, &residual_bc, &tok,
                   tok_end);
       assert(tok == tok_end);
       vpx_stop_encode(&residual_bc);
+
+#if CONFIG_PVQ
+      cpi->td.mb.pvq_q = NULL;
+#endif
+
       if (tile_col < tile_cols - 1 || tile_row < tile_rows - 1) {
         unsigned int tile_sz;
 
