@@ -45,16 +45,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
    dot-product of the 1st band of chroma with the luma ref doesn't overflow.*/
 #define OD_CFL_FLIP_SHIFT (OD_LIMIT_BSIZE_MAX + 0)
 
-void od_encode_checkpoint(const daala_enc_ctx *enc, od_rollback_buffer *rbuf) {
-  od_ec_enc_checkpoint(&rbuf->ec, &enc->ec);
-  OD_COPY(&rbuf->adapt, &enc->state.adapt, 1);
-}
-
-void od_encode_rollback(daala_enc_ctx *enc, const od_rollback_buffer *rbuf) {
-  od_ec_enc_rollback(&enc->ec, &rbuf->ec);
-  OD_COPY(&enc->state.adapt, &rbuf->adapt, 1);
-}
-
 static void od_encode_pvq_codeword(od_ec_enc *ec, od_pvq_codeword_ctx *adapt,
  const od_coeff *in, int n, int k, int noref, int bs) {
   if (k == 1 && n < 16) {

@@ -86,6 +86,7 @@ ifeq ($(CONFIG_PVQ),yes)
 VP10_CX_SRCS-yes += encoder/pvq_encoder.c
 VP10_CX_SRCS-yes += encoder/pvq_encoder.h
 VP10_CX_SRCS-yes += encoder/encint.h
+VP10_CX_SRCS-yes += encoder/daala_compat_enc.c
 VP10_CX_SRCS-yes += encoder/generic_encoder.c
 VP10_CX_SRCS-yes += encoder/laplace_encoder.c
 endif
