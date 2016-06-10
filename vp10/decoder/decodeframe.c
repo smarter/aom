@@ -1763,6 +1763,25 @@ static void get_tile_buffers(VP10Decoder *pbi, const uint8_t *data,
   }
 }
 
+#if CONFIG_PVQ
+static void daala_dec_init(daala_dec_ctx *daala_dec, od_ec_dec *ec) {
+  daala_dec->ec = ec;
+  od_adapt_ctx_reset(&daala_dec->state.adapt, 0);
+
+  daala_dec->state.qm = vpx_calloc(OD_QM_BUFFER_SIZE, sizeof(daala_dec->state.qm[0]));
+  daala_dec->state.qm_inv = vpx_calloc(OD_QM_BUFFER_SIZE, sizeof(daala_dec->state.qm_inv[0]));
+  daala_dec->qm = OD_FLAT_QM;
+
+  od_init_qm(daala_dec->state.qm, daala_dec->state.qm_inv,
+             daala_dec->qm == OD_HVS_QM ? OD_QM8_Q4_HVS : OD_QM8_Q4_FLAT);
+}
+
+static void daala_dec_free(daala_dec_ctx *daala_dec) {
+  vpx_free(daala_dec->state.qm);
+  vpx_free(daala_dec->state.qm_inv);
+}
+#endif
+
 static const uint8_t *decode_tiles(VP10Decoder *pbi, const uint8_t *data,
                                    const uint8_t *data_end) {
   VP10_COMMON *const cm = &pbi->common;
@@ -1819,15 +1838,9 @@ static const uint8_t *decode_tiles(VP10Decoder *pbi, const uint8_t *data,
   for (tile_row = 0; tile_row < tile_rows; ++tile_row) {
     for (tile_col = 0; tile_col < tile_cols; ++tile_col) {
       const TileBuffer *const buf = &tile_buffers[tile_row][tile_col];
-#if CONFIG_PVQ
-      daala_dec_ctx *daala_dec;
-#endif
       tile_data = pbi->tile_data + tile_cols * tile_row + tile_col;
       tile_data->cm = cm;
       tile_data->xd = pbi->mb;
-#if CONFIG_PVQ
-      daala_dec = &tile_data->xd.daala_dec;
-#endif
       tile_data->xd.corrupted = 0;
       tile_data->xd.counts =
           cm->refresh_frame_context == REFRESH_FRAME_CONTEXT_BACKWARD
@@ -1846,18 +1859,8 @@ static const uint8_t *decode_tiles(VP10Decoder *pbi, const uint8_t *data,
 #else
       vp10_init_macroblockd(cm, &tile_data->xd, tile_data->dqcoeff,
                             tile_data->pvq_ref_coeff);
-      daala_dec->state.qm = vpx_calloc(OD_QM_BUFFER_SIZE, sizeof(daala_dec->state.qm[0]));
-      daala_dec->state.qm_inv = vpx_calloc(OD_QM_BUFFER_SIZE, sizeof(daala_dec->state.qm_inv[0]));
-      daala_dec->qm = OD_FLAT_QM;
+      daala_dec_init(&tile_data->xd.daala_dec, &tile_data->bit_reader.ec);
 
-      od_init_qm(daala_dec->state.qm, daala_dec->state.qm_inv,
-        daala_dec->qm == OD_HVS_QM ? OD_QM8_Q4_HVS : OD_QM8_Q4_FLAT);
-
-      daala_dec->ec = &tile_data->bit_reader.ec;
-      {
-      od_adapt_ctx *adapt = &daala_dec->state.adapt;
-      od_adapt_ctx_reset(adapt, 0);
-      }
 #endif
       tile_data->xd.plane[0].color_index_map = tile_data->color_index_map[0];
       tile_data->xd.plane[1].color_index_map = tile_data->color_index_map[1];
@@ -1942,12 +1945,8 @@ static const uint8_t *decode_tiles(VP10Decoder *pbi, const uint8_t *data,
   // Deallocate tile-local data
   for (tile_row = 0; tile_row < tile_rows; ++tile_row) {
     for (tile_col = 0; tile_col < tile_cols; ++tile_col) {
-      daala_dec_ctx *daala_dec;
       tile_data = pbi->tile_data + tile_cols * tile_row + tile_col;
-      daala_dec = &tile_data->xd.daala_dec;
-
-      vpx_free(daala_dec->state.qm);
-      vpx_free(daala_dec->state.qm_inv);
+      daala_dec_free(&tile_data->xd.daala_dec);
     }
   }
 #endif
@@ -2111,6 +2110,7 @@ static const uint8_t *decode_tiles_mt(VP10Decoder *pbi, const uint8_t *data,
 #else
       vp10_init_macroblockd(cm, &tile_data->xd, tile_data->dqcoeff,
                             tile_data->pvq_ref_coeff);
+      daala_dec_init(&tile_data->xd.daala_dec, &tile_data->bit_reader.ec);
 #endif
       tile_data->xd.plane[0].color_index_map = tile_data->color_index_map[0];
       tile_data->xd.plane[1].color_index_map = tile_data->color_index_map[1];
@@ -2131,11 +2131,15 @@ static const uint8_t *decode_tiles_mt(VP10Decoder *pbi, const uint8_t *data,
 
     for (; i > 0; --i) {
       VPxWorker *const worker = &pbi->tile_workers[i - 1];
+      TileWorkerData *tile_data;
       // TODO(jzern): The tile may have specific error data associated with
       // its vpx_internal_error_info which could be propagated to the main info
       // in cm. Additionally once the threads have been synced and an error is
       // detected, there's no point in continuing to decode tiles.
       pbi->mb.corrupted |= !winterface->sync(worker);
+
+      tile_data = (TileWorkerData *)worker->data1;
+      daala_dec_free(&tile_data->xd.daala_dec);
     }
     if (final_worker > -1) {
       TileWorkerData *const tile_data =
