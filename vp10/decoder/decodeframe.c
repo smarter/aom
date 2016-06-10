@@ -1768,8 +1768,10 @@ static void daala_dec_init(daala_dec_ctx *daala_dec, od_ec_dec *ec) {
   daala_dec->ec = ec;
   od_adapt_ctx_reset(&daala_dec->state.adapt, 0);
 
-  daala_dec->state.qm = vpx_calloc(OD_QM_BUFFER_SIZE, sizeof(daala_dec->state.qm[0]));
-  daala_dec->state.qm_inv = vpx_calloc(OD_QM_BUFFER_SIZE, sizeof(daala_dec->state.qm_inv[0]));
+  daala_dec->state.qm = vpx_calloc(OD_QM_BUFFER_SIZE,
+      sizeof(daala_dec->state.qm[0]));
+  daala_dec->state.qm_inv = vpx_calloc(OD_QM_BUFFER_SIZE,
+      sizeof(daala_dec->state.qm_inv[0]));
   daala_dec->qm = OD_FLAT_QM;
 
   od_init_qm(daala_dec->state.qm, daala_dec->state.qm_inv,
@@ -1860,7 +1862,6 @@ static const uint8_t *decode_tiles(VP10Decoder *pbi, const uint8_t *data,
       vp10_init_macroblockd(cm, &tile_data->xd, tile_data->dqcoeff,
                             tile_data->pvq_ref_coeff);
       daala_dec_init(&tile_data->xd.daala_dec, &tile_data->bit_reader.ec);
-
 #endif
       tile_data->xd.plane[0].color_index_map = tile_data->color_index_map[0];
       tile_data->xd.plane[1].color_index_map = tile_data->color_index_map[1];
