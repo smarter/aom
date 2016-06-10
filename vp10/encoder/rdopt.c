@@ -467,8 +467,7 @@ static void block_rd_txfm(int plane, int block, int blk_row, int blk_col,
   int64_t sse;
 #if CONFIG_PVQ
   PVQ_INFO *pvq_info;
-  int pvq_blk_offset = blk_row * 16 + blk_col;
-  pvq_info = *(x->pvq + pvq_blk_offset) + plane;
+  pvq_info = &x->pvq[block][plane];
 #endif
 
   if (args->exit_early) return;
@@ -1011,8 +1010,7 @@ static int64_t rd_pick_intra4x4block(VP10_COMP *cpi, MACROBLOCK *x, int row,
         TX_TYPE tx_type = get_tx_type(PLANE_TYPE_Y, xd, block);
         int rate_pvq;
         int skip;
-        int pvq_blk_offset = (row + idy) * 16 + (col + idx);
-        PVQ_INFO *pvq_info = *(x->pvq + pvq_blk_offset) + 0;//plane 0
+        PVQ_INFO *pvq_info = &x->pvq[block][0];
 #endif
         xd->mi[0]->bmi[block].as_mode = mode;
         vp10_predict_intra_block(xd, 1, 1, TX_4X4, mode, dst, dst_stride, dst,
@@ -1140,8 +1138,7 @@ static int64_t rd_pick_intra4x4block(VP10_COMP *cpi, MACROBLOCK *x, int row,
       TX_TYPE tx_type = get_tx_type(PLANE_TYPE_Y, xd, block);
       int rate_pvq;
       int skip;
-      int pvq_blk_offset = (row + idy) * 16 + (col + idx);
-      PVQ_INFO *pvq_info = *(x->pvq + pvq_blk_offset) + 0;//plane 0
+      PVQ_INFO *pvq_info = &x->pvq[block][0];
       int lossless = xd->lossless[xd->mi[0]->mbmi.segment_id];
 
       vp10_predict_intra_block(xd, 1, 1, TX_4X4, *best_mode, dst, dst_stride, dst,

@@ -518,14 +518,14 @@ static void tokenize_pvq(int plane, int block, int blk_row, int blk_col,
   ThreadData *const td = args->td;
   MACROBLOCK *const x = &td->mb;
   PVQ_INFO *pvq_info;
-  int pvq_blk_offset = blk_row * 16 + blk_col;
 
   (void) block;
+  (void) blk_row;
+  (void) blk_col;
   (void) plane_bsize;
   (void) tx_size;
 
-  pvq_info = *(x->pvq + pvq_blk_offset) + plane;
-
+  pvq_info = &x->pvq[block][plane];
   add_pvq_block(x, pvq_info);
 }
 #endif
