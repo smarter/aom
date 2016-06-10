@@ -526,6 +526,7 @@ static void write_modes_b(VP10_COMP *cpi, const TileInfo *const tile,
 #if CONFIG_PVQ
   MB_MODE_INFO *mbmi;
   BLOCK_SIZE bsize;
+  od_adapt_ctx *adapt;
 #if CONFIG_PVQ && DEBUG_PVQ
   int tell = od_ec_enc_tell(&w->ec);
 #endif
@@ -543,6 +544,7 @@ static void write_modes_b(VP10_COMP *cpi, const TileInfo *const tile,
 #if CONFIG_PVQ
   mbmi = &m->mbmi;
   bsize = mbmi->sb_type;
+  adapt = &cpi->td.mb.daala_enc.state.adapt;
 #endif
 
 #if CONFIG_PVQ && DEBUG_PVQ
@@ -615,9 +617,9 @@ static void write_modes_b(VP10_COMP *cpi, const TileInfo *const tile,
           const int robust = 1;
           int i;
           const int has_dc_skip = 1;
-          int *exg = &xd->adapt.pvq.pvq_exg[plane][tx_size][0];
-          int *ext = xd->adapt.pvq.pvq_ext + tx_size*PVQ_MAX_PARTITIONS;
-          generic_encoder *model = xd->adapt.pvq.pvq_param_model;
+          int *exg = &adapt->pvq.pvq_exg[plane][tx_size][0];
+          int *ext = adapt->pvq.pvq_ext + tx_size*PVQ_MAX_PARTITIONS;
+          generic_encoder *model = adapt->pvq.pvq_param_model;
 
           pvq = get_pvq_block(cpi->td.mb.pvq_q);
 
@@ -625,8 +627,8 @@ static void write_modes_b(VP10_COMP *cpi, const TileInfo *const tile,
 
           // encode block skip info
           od_encode_cdf_adapt(&w->ec, pvq->ac_dc_coded,
-           xd->adapt.skip_cdf[2*tx_size + (plane != 0)], 4,
-           xd->adapt.skip_increment);
+           adapt->skip_cdf[2*tx_size + (plane != 0)], 4,
+           adapt->skip_increment);
 
           if (pvq->ac_dc_coded & 0x02)  // AC coeffs coded?
           for (i = 0; i < pvq->nb_bands; i++) {
@@ -634,7 +636,7 @@ static void write_modes_b(VP10_COMP *cpi, const TileInfo *const tile,
              !(pvq->skip_dir & (1 << ((i - 1)%3))))) {
               pvq_encode_partition(&w->ec, pvq->qg[i], pvq->theta[i],
                pvq->max_theta[i], pvq->y + pvq->off[i],
-               pvq->size[i], pvq->k[i], model, &xd->adapt,
+               pvq->size[i], pvq->k[i], model, adapt,
                exg + i, ext + i,
                robust || is_keyframe, (plane != 0)*OD_NBSIZES*PVQ_MAX_PARTITIONS
                + pvq->bs*PVQ_MAX_PARTITIONS + i, is_keyframe,
@@ -643,15 +645,15 @@ static void write_modes_b(VP10_COMP *cpi, const TileInfo *const tile,
             }
             if (i == 0 && !pvq->skip_rest && pvq->bs > 0) {
               od_encode_cdf_adapt(&w->ec, pvq->skip_dir,
-               &xd->adapt.pvq.pvq_skip_dir_cdf[(plane != 0) + 2*(pvq->bs - 1)][0], 7,
-               xd->adapt.pvq.pvq_skip_dir_increment);
+               &adapt->pvq.pvq_skip_dir_cdf[(plane != 0) + 2*(pvq->bs - 1)][0], 7,
+               adapt->pvq.pvq_skip_dir_increment);
             }
           }
           // Encode residue of DC coeff, if exist.
           if (!has_dc_skip || (pvq->ac_dc_coded & 1)) {  // DC coded?
-            generic_encode(&w->ec, &xd->adapt.model_dc[plane],
+            generic_encode(&w->ec, &adapt->model_dc[plane],
              abs(pvq->dq_dc_residue) - has_dc_skip, -1,
-             &xd->adapt.ex_dc[plane][pvq->bs][0], 2);
+             &adapt->ex_dc[plane][pvq->bs][0], 2);
           }
           if ((pvq->ac_dc_coded & 1)) {  // DC coded?
             od_ec_enc_bits(&w->ec, pvq->dq_dc_residue < 0, 1);
@@ -1267,7 +1269,6 @@ static size_t encode_tiles(VP10_COMP *cpi, uint8_t *data_ptr,
   const int tile_cols = 1 << cm->log2_tile_cols;
   const int tile_rows = 1 << cm->log2_tile_rows;
   unsigned int max_tile = 0;
-  MACROBLOCKD *const xd = &cpi->td.mb.e_mbd;
 
   memset(cm->above_seg_context, 0,
          sizeof(*cm->above_seg_context) * mi_cols_aligned_to_sb(cm->mi_cols));
@@ -1286,7 +1287,7 @@ static size_t encode_tiles(VP10_COMP *cpi, uint8_t *data_ptr,
       else
         vpx_start_encode(&residual_bc, data_ptr + total_size);
 #if CONFIG_PVQ
-      od_adapt_ctx_reset(&xd->adapt, 0);
+      od_adapt_ctx_reset(&cpi->td.mb.daala_enc.state.adapt, 0);
       cpi->td.mb.pvq_q = &this_tile->pvq_q;
 #endif
       write_modes(cpi, &this_tile->tile_info, &residual_bc, &tok,
