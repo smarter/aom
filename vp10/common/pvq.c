@@ -317,9 +317,7 @@ void od_init_qm(int16_t *x, int16_t *x_inv, const int *qm) {
       for (i = 0; i < 4 << bs; i++) {
         for (j = 0; j < 4 << bs; j++) {
           double mag;
-// NOTE: For use with AOM codebase, since AOM uses orthogonal transforms,
-//       not lapping.
-#if 1//OD_DEBLOCKING || OD_DISABLE_FILTER
+#if OD_DEBLOCKING || OD_DISABLE_FILTER
           mag = 1.0;
 #else
           mag = OD_BASIS_MAG[xydec][bs][i]*OD_BASIS_MAG[xydec][bs][j];

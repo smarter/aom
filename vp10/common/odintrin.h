@@ -28,6 +28,7 @@
 # define OD_LIMIT_BSIZE_MAX (OD_BLOCK_64X64)
 
 # define OD_DISABLE_CFL (1)
+# define OD_DISABLE_FILTER (1)
 
 # define OD_DIVU_DMAX (1024)
 
