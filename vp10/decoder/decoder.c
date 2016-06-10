@@ -36,7 +36,6 @@
 #include "vp10/decoder/detokenize.h"
 #else
 #include "vp10/decoder/decint.h"
-daala_dec_ctx daala_dec;
 #endif
 
 static void initialize_dec(void) {
@@ -119,16 +118,6 @@ VP10Decoder *vp10_decoder_create(BufferPool *const pool) {
   aom_qm_init(cm);
 #endif
 
-#if CONFIG_PVQ
-  {
-  daala_dec.state.qm = (int16_t *)vpx_calloc(OD_QM_BUFFER_SIZE, sizeof(daala_dec.state.qm[0]));
-  daala_dec.state.qm_inv = (int16_t *)vpx_calloc(OD_QM_BUFFER_SIZE, sizeof(daala_dec.state.qm_inv[0]));
-  daala_dec.qm = OD_FLAT_QM;
-
-  od_init_qm(daala_dec.state.qm, daala_dec.state.qm_inv,
-      daala_dec.qm == OD_HVS_QM ? OD_QM8_Q4_HVS : OD_QM8_Q4_FLAT);
-  }
-#endif
   cm->error.setjmp = 0;
 
   vpx_get_worker_interface()->init(&pbi->lf_worker);
@@ -155,13 +144,6 @@ void vp10_decoder_remove(VP10Decoder *pbi) {
   if (pbi->num_tile_workers > 0) {
     vp10_loop_filter_dealloc(&pbi->lf_row_sync);
   }
-
-#if CONFIG_PVQ
-  {
-  vpx_free(daala_dec.state.qm);
-  vpx_free(daala_dec.state.qm_inv);
-  }
-#endif
 
   vpx_free(pbi);
 }

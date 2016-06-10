@@ -60,7 +60,6 @@
 #include "vp10/decoder/decint.h"
 #include "vp10/common/partition.h"
 #include "vpx_dsp/entdec.h"
-od_dec_ctx daala_dec;
 #endif
 
 static int is_compound_reference_allowed(const VP10_COMMON *cm) {
@@ -479,9 +478,9 @@ static void predict_and_reconstruct_intra_block(MACROBLOCKD *const xd,
     // NOTE : we don't use 5 symbols for luma here in aom codebase,
     // since block partition is taken care of by aom.
     // So, only AC/DC skip info is coded
-    ac_dc_coded = od_decode_cdf_adapt(daala_dec.ec,
-     daala_dec.state.adapt.skip_cdf[2*tx_size + (plane != 0)], 4,
-     daala_dec.state.adapt.skip_increment, "skip");
+    ac_dc_coded = od_decode_cdf_adapt(xd->daala_dec.ec,
+     xd->daala_dec.state.adapt.skip_cdf[2*tx_size + (plane != 0)], 4,
+     xd->daala_dec.state.adapt.skip_increment, "skip");
 #if CONFIG_PVQ && DEBUG_PVQ
     printf("row,col = %d, %d : ac_dc_coded %d, ",  row, col, ac_dc_coded);
 #endif
@@ -516,7 +515,7 @@ static void predict_and_reconstruct_intra_block(MACROBLOCKD *const xd,
 
       quant = &pd->seg_dequant[seg_id][0]; //vpx's quantizer
 
-      eob = pvq_decode_helper(&daala_dec,
+      eob = pvq_decode_helper(&xd->daala_dec,
         pvq_ref_coeff,
         dqcoeff,
         quant,
@@ -568,9 +567,9 @@ static int reconstruct_inter_block(MACROBLOCKD *const xd, vpx_reader *r,
   // NOTE : we don't use 5 symbols for luma here in aom codebase,
   // since block partition is taken care of by aom.
   // So, only AC/DC skip info is coded
-  ac_dc_coded = od_decode_cdf_adapt(daala_dec.ec,
-   daala_dec.state.adapt.skip_cdf[2*tx_size + (plane != 0)], 4,
-   daala_dec.state.adapt.skip_increment, "skip");
+  ac_dc_coded = od_decode_cdf_adapt(xd->daala_dec.ec,
+   xd->daala_dec.state.adapt.skip_cdf[2*tx_size + (plane != 0)], 4,
+   xd->daala_dec.state.adapt.skip_increment, "skip");
 
 #if CONFIG_PVQ && DEBUG_PVQ
   printf("row,col = %d, %d, plane %d : ac_dc_coded %d, ",  row, col, plane, ac_dc_coded);
@@ -616,7 +615,7 @@ static int reconstruct_inter_block(MACROBLOCKD *const xd, vpx_reader *r,
 
     quant = &pd->seg_dequant[seg_id][0]; //vpx's DC quantizer
 
-    eob = pvq_decode_helper(&daala_dec,
+    eob = pvq_decode_helper(&xd->daala_dec,
       pvq_ref_coeff,
       dqcoeff,
       quant,
@@ -1820,9 +1819,15 @@ static const uint8_t *decode_tiles(VP10Decoder *pbi, const uint8_t *data,
   for (tile_row = 0; tile_row < tile_rows; ++tile_row) {
     for (tile_col = 0; tile_col < tile_cols; ++tile_col) {
       const TileBuffer *const buf = &tile_buffers[tile_row][tile_col];
+#if CONFIG_PVQ
+      daala_dec_ctx *daala_dec;
+#endif
       tile_data = pbi->tile_data + tile_cols * tile_row + tile_col;
       tile_data->cm = cm;
       tile_data->xd = pbi->mb;
+#if CONFIG_PVQ
+      daala_dec = &tile_data->xd.daala_dec;
+#endif
       tile_data->xd.corrupted = 0;
       tile_data->xd.counts =
           cm->refresh_frame_context == REFRESH_FRAME_CONTEXT_BACKWARD
@@ -1839,15 +1844,20 @@ static const uint8_t *decode_tiles(VP10Decoder *pbi, const uint8_t *data,
 #if !CONFIG_PVQ
       vp10_init_macroblockd(cm, &tile_data->xd, tile_data->dqcoeff);
 #else
-      // TODO: For muti tile (also threading), do this for each tile,
-      // which needs define daala_dec for each tile.
-      daala_dec.ec = &tile_data->bit_reader.ec;
-      {
-      od_adapt_ctx *adapt = &daala_dec.state.adapt;
-      od_adapt_ctx_reset(adapt, 0);
-      }
       vp10_init_macroblockd(cm, &tile_data->xd, tile_data->dqcoeff,
                             tile_data->pvq_ref_coeff);
+      daala_dec->state.qm = vpx_calloc(OD_QM_BUFFER_SIZE, sizeof(daala_dec->state.qm[0]));
+      daala_dec->state.qm_inv = vpx_calloc(OD_QM_BUFFER_SIZE, sizeof(daala_dec->state.qm_inv[0]));
+      daala_dec->qm = OD_FLAT_QM;
+
+      od_init_qm(daala_dec->state.qm, daala_dec->state.qm_inv,
+        daala_dec->qm == OD_HVS_QM ? OD_QM8_Q4_HVS : OD_QM8_Q4_FLAT);
+
+      daala_dec->ec = &tile_data->bit_reader.ec;
+      {
+      od_adapt_ctx *adapt = &daala_dec->state.adapt;
+      od_adapt_ctx_reset(adapt, 0);
+      }
 #endif
       tile_data->xd.plane[0].color_index_map = tile_data->color_index_map[0];
       tile_data->xd.plane[1].color_index_map = tile_data->color_index_map[1];
@@ -1927,6 +1937,20 @@ static const uint8_t *decode_tiles(VP10Decoder *pbi, const uint8_t *data,
 
   // Get last tile data.
   tile_data = pbi->tile_data + tile_cols * tile_rows - 1;
+
+#if CONFIG_PVQ
+  // Deallocate tile-local data
+  for (tile_row = 0; tile_row < tile_rows; ++tile_row) {
+    for (tile_col = 0; tile_col < tile_cols; ++tile_col) {
+      daala_dec_ctx *daala_dec;
+      tile_data = pbi->tile_data + tile_cols * tile_row + tile_col;
+      daala_dec = &tile_data->xd.daala_dec;
+
+      vpx_free(daala_dec->state.qm);
+      vpx_free(daala_dec->state.qm_inv);
+    }
+  }
+#endif
 
   if (cm->frame_parallel_decode)
     vp10_frameworker_broadcast(pbi->cur_buf, INT_MAX);

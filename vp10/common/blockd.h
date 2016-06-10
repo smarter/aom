@@ -30,6 +30,7 @@
 #if CONFIG_PVQ
 #include "vp10/common/pvq.h"
 #include "vp10/common/state.h"
+#include "vp10/decoder/decint.h"
 #endif
 
 #ifdef __cplusplus
@@ -237,6 +238,9 @@ typedef struct macroblockd {
   PARTITION_CONTEXT *above_seg_context;
   PARTITION_CONTEXT left_seg_context[8];
 
+#if CONFIG_PVQ
+  daala_dec_ctx daala_dec;
+#endif
 #if CONFIG_VPX_HIGHBITDEPTH
   /* Bit depth: 8, 10, 12 */
   int bd;
