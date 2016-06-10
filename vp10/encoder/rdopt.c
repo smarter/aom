@@ -537,6 +537,7 @@ static void block_rd_txfm(int plane, int block, int blk_row, int blk_col,
         !x->plane[plane].eobs[block] ||
 #else
         // FIXIME(yushin): This causes corrupted outputs from both enc and dec
+        // I don't know why....!
         !pvq_info->ac_dc_coded ||
 #endif
         (rd1 > rd2 && !xd->lossless[mbmi->segment_id]);
@@ -4068,7 +4069,13 @@ void vp10_rd_pick_inter_mode_sub8x8(VP10_COMP *cpi, TileDataEnc *tile_data,
               tmp_best_mbmode = *mbmi;
               for (i = 0; i < 4; i++) {
                 tmp_best_bmodes[i] = xd->mi[0]->bmi[i];
+#if 1//!CONFIG_PVQ
                 x->zcoeff_blk[TX_4X4][i] = !x->plane[0].eobs[i];
+#else
+                // FIXIME(yushin): This causes corrupted outputs from both enc and dec
+                // I don't know why....!
+                x->zcoeff_blk[TX_4X4][i] = !x->pvq[i][0].ac_dc_coded;
+#endif
               }
               pred_exists = 1;
               if (switchable_filter_index == 0 && sf->use_rd_breakout &&
