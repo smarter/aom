@@ -28,47 +28,21 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 
 #include <stdlib.h>
 #include <stdio.h>
-//#include "internal.h"
+#include "pvq_decoder.h"
 #include "vp10/common/state.h"
 #include "vp10/decoder/decint.h"
 #include "vpx_dsp/entdec.h"
 #include "vpx_dsp/entcode.h"
-#include "pvq_decoder.h"
 #include "vp10/common/partition.h"
 #include "vp10/common/odintrin.h"
 #include "./vpx_config.h"
 
 static void od_decode_pvq_codeword(od_ec_dec *ec, od_pvq_codeword_ctx *ctx,
- od_coeff *y, int n, int k, int noref, int bs) {
-  if (k == 1 && n < 16) {
-    int cdf_id;
-    int pos;
-    cdf_id = 2*(n == 15) + !noref;
-    OD_CLEAR(y, n);
-    pos = od_decode_cdf_adapt(ec, ctx->pvq_k1_cdf[cdf_id], n - !noref,
-     ctx->pvq_k1_increment, "pvq:k1");
-    y[pos] = 1;
-    if (od_ec_dec_bits(ec, 1, "pvq:k1")) y[pos] = -y[pos];
-  }
-  else {
-    int speed = 5;
-    int *pvq_adapt;
-    int adapt_curr[OD_NSB_ADAPT_CTXS] = { 0 };
-    pvq_adapt = ctx->pvq_adapt + 4*(2*bs + noref);
-    laplace_decode_vector(ec, y, n - !noref, k, adapt_curr,
-     pvq_adapt, "pvq:ktok");
-    if (adapt_curr[OD_ADAPT_K_Q8] > 0) {
-      pvq_adapt[OD_ADAPT_K_Q8] += (256*adapt_curr[OD_ADAPT_K_Q8]
-       - pvq_adapt[OD_ADAPT_K_Q8]) >> speed;
-      pvq_adapt[OD_ADAPT_SUM_EX_Q8] += (adapt_curr[OD_ADAPT_SUM_EX_Q8]
-       - pvq_adapt[OD_ADAPT_SUM_EX_Q8]) >> speed;
-    }
-    if (adapt_curr[OD_ADAPT_COUNT_Q8] > 0) {
-      pvq_adapt[OD_ADAPT_COUNT_Q8] += (adapt_curr[OD_ADAPT_COUNT_Q8]
-       - pvq_adapt[OD_ADAPT_COUNT_Q8]) >> speed;
-      pvq_adapt[OD_ADAPT_COUNT_EX_Q8] += (adapt_curr[OD_ADAPT_COUNT_EX_Q8]
-       - pvq_adapt[OD_ADAPT_COUNT_EX_Q8]) >> speed;
-    }
+ od_coeff *y, int n, int k) {
+  int i;
+  od_decode_band_pvq_splits(ec, ctx, y, n, k, 0);
+  for (i = 0; i < n; i++) {
+    if (y[i] && od_ec_dec_bits(ec, 1, "pvq:sign")) y[i] = -y[i];
   }
 }
 
@@ -103,8 +77,8 @@ static int neg_deinterleave(int x, int ref) {
  * @param [in]      qm      QM with magnitude compensation
  * @param [in]      qm_inv  Inverse of QM with magnitude compensation
  */
-static void pvq_synthesis(od_coeff *xcoeff, od_coeff *ypulse, int16_t *r16,
- int n, int32_t gr, int noref, int32_t g, int32_t theta, const int16_t *qm_inv,
+static void pvq_synthesis(od_coeff *xcoeff, od_coeff *ypulse, od_val16 *r16,
+ int n, od_val32 gr, int noref, od_val32 g, od_val32 theta, const int16_t *qm_inv,
  int shift) {
   int s;
   int m;
@@ -142,7 +116,6 @@ typedef struct {
  * @param [in]     cdf_ctx selects which cdf context to use
  * @param [in,out] skip_rest whether to skip further bands in each direction
  * @param [in]     band    index of the band being decoded
- * @param [in]     bs      log of the block size minus 2
  * @param [in]     band    index of the band being decoded
  * @param [out]    skip    skip flag with range [0,1]
  * @param [in]     qm      QM with magnitude compensation
@@ -167,24 +140,22 @@ static void pvq_decode_partition(od_ec_dec *ec,
                                  int has_skip,
                                  int *skip_rest,
                                  int band,
-                                 int bs,
                                  int *skip,
                                  const int16_t *qm,
                                  const int16_t *qm_inv) {
   int k;
-  int32_t qcg;
+  od_val32 qcg;
   int max_theta;
   int itheta;
-  int32_t theta;
-  int32_t gr;
-  int32_t gain_offset;
+  od_val32 theta;
+  od_val32 gr;
+  od_val32 gain_offset;
   od_coeff y[MAXN];
   int qg;
   int nodesync;
   int id;
   int i;
-  int16_t ref16[MAXN];
-  od_coeff rnd;
+  od_val16 ref16[MAXN];
   int rshift;
   theta = 0;
   gr = 0;
@@ -237,22 +208,33 @@ static void pvq_decode_partition(od_ec_dec *ec,
     OD_IIR_DIADIC(*exg, qg << 16, 2);
   }
   *skip = 0;
+#if defined(OD_FLOAT_PVQ)
+  rshift = 0;
+#else
   /* Shift needed to make the reference fit in 15 bits, so that the Householder
      vector can fit in 16 bits. */
   rshift = OD_MAXI(0, od_vector_log_mag(ref, n) - 14);
-  rnd = 1 << (OD_QM_SHIFT + rshift) >> 1;
+#endif
   for (i = 0; i < n; i++) {
-    ref16[i] = (ref[i]*qm[i] + rnd) >> (OD_QM_SHIFT + rshift);
+#if defined(OD_FLOAT_PVQ)
+    ref16[i] = ref[i]*qm[i]*OD_QM_SCALE_1;
+#else
+    ref16[i] = OD_SHR_ROUND(ref[i]*qm[i], OD_QM_SHIFT + rshift);
+#endif
   }
   if(!*noref){
     /* we have a reference; compute its gain */
-    int32_t cgr;
+    od_val32 cgr;
     int icgr;
     int cfl_enabled;
     cfl_enabled = pli != 0 && is_keyframe && !OD_DISABLE_CFL;
     cgr = od_pvq_compute_gain(ref16, n, q0, &gr, beta, rshift);
     if (cfl_enabled) cgr = OD_CGAIN_SCALE;
-    icgr = (cgr + OD_CGAIN_RND) >> OD_CGAIN_SHIFT;
+#if defined(OD_FLOAT_PVQ)
+    icgr = (int)floor(.5 + cgr);
+#else
+    icgr = OD_SHR_ROUND(cgr, OD_CGAIN_SHIFT);
+#endif
     /* quantized gain is interleave encoded when there's a reference;
        deinterleave it now */
     if (is_keyframe) qg = neg_deinterleave(qg, icgr);
@@ -261,8 +243,8 @@ static void pvq_decode_partition(od_ec_dec *ec,
       if (qg == 0) *skip = (icgr ? OD_PVQ_SKIP_ZERO : OD_PVQ_SKIP_COPY);
     }
     if (qg == icgr && itheta == 0 && !cfl_enabled) *skip = OD_PVQ_SKIP_COPY;
-    gain_offset = cgr - (icgr << OD_CGAIN_SHIFT);
-    qcg = (qg << OD_CGAIN_SHIFT) + gain_offset;
+    gain_offset = cgr - OD_SHL(icgr, OD_CGAIN_SHIFT);
+    qcg = OD_SHL(qg, OD_CGAIN_SHIFT) + gain_offset;
     /* read and decode first-stage PVQ error theta */
     max_theta = od_pvq_compute_max_theta(qcg, beta);
     if (itheta > 1 && (nodesync || max_theta > 3)) {
@@ -277,18 +259,17 @@ static void pvq_decode_partition(od_ec_dec *ec,
   else{
     itheta = 0;
     if (!is_keyframe) qg++;
-    qcg = qg << OD_CGAIN_SHIFT;
+    qcg = OD_SHL(qg, OD_CGAIN_SHIFT);
     if (qg == 0) *skip = OD_PVQ_SKIP_ZERO;
   }
 
   k = od_pvq_compute_k(qcg, itheta, theta, *noref, n, beta, nodesync);
-#if CONFIG_PVQ && DEBUG_PVQ
-  printf("[%d, %d] ", k, *noref);
-#endif
   if (k != 0) {
     /* when noref==0, y is actually size n-1 */
-    od_decode_pvq_codeword(ec, &adapt->pvq.pvq_codeword_ctx, y, n, k, *noref, bs);
-  } else {
+    od_decode_pvq_codeword(ec, &adapt->pvq.pvq_codeword_ctx, y, n - !*noref,
+     k);
+  }
+  else {
     OD_CLEAR(y, n);
   }
   if (*skip) {
@@ -296,7 +277,7 @@ static void pvq_decode_partition(od_ec_dec *ec,
     else OD_CLEAR(out, n);
   }
   else {
-    int32_t g;
+    od_val32 g;
     g = od_gain_expand(qcg, q0, beta);
     pvq_synthesis(out, y, ref16, n, gr, *noref, g, theta, qm_inv, rshift);
   }
@@ -344,14 +325,14 @@ void od_pvq_decode(daala_dec_ctx *dec,
   generic_encoder *model;
   int skip_rest[3] = {0};
   cfl_ctx cfl;
-  //const unsigned char *pvq_qm;
+  /* const unsigned char *pvq_qm; */
   /*Default to skip=1 and noref=0 for all bands.*/
   for (i = 0; i < PVQ_MAX_PARTITIONS; i++) {
     noref[i] = 0;
     skip[i] = 1;
   }
-  // TODO: Enable this later, if pvq_qm_q4 is available in AOM.
-  //pvq_qm = &dec->state.pvq_qm_q4[pli][0];
+  /*TODO: Enable this later, if pvq_qm_q4 is available in AOM.*/
+  /*pvq_qm = &dec->state.pvq_qm_q4[pli][0];*/
   exg = &dec->state.adapt.pvq.pvq_exg[pli][bs][0];
   ext = dec->state.adapt.pvq.pvq_ext + bs*PVQ_MAX_PARTITIONS;
   model = dec->state.adapt.pvq.pvq_param_model;
@@ -370,14 +351,14 @@ void od_pvq_decode(daala_dec_ctx *dec,
     cfl.allow_flip = pli != 0 && is_keyframe;
     for (i = 0; i < nb_bands; i++) {
       int q;
-      // TODO: Enable this later, if pvq_qm_q4 is available in AOM.
-      //q = OD_MAXI(1, q0*pvq_qm[od_qm_get_index(bs, i + 1)] >> 4);
+      /*TODO: Enable this later, if pvq_qm_q4 is available in AOM.*/
+      /*q = OD_MAXI(1, q0*pvq_qm[od_qm_get_index(bs, i + 1)] >> 4);*/
       q = OD_MAXI(1, q0);
       pvq_decode_partition(dec->ec, q, size[i],
        model, &dec->state.adapt, exg + i, ext + i, ref + off[i], out + off[i],
        &noref[i], beta[i], robust, is_keyframe, pli,
        (pli != 0)*OD_NBSIZES*PVQ_MAX_PARTITIONS + bs*PVQ_MAX_PARTITIONS + i,
-       &cfl, i == 0 && (i < nb_bands - 1), skip_rest, i, bs, &skip[i],
+       &cfl, i == 0 && (i < nb_bands - 1), skip_rest, i, &skip[i],
        qm + off[i], qm_inv + off[i]);
       if (i == 0 && !skip_rest[0] && bs > 0) {
         int skip_dir;

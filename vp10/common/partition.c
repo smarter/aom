@@ -26,9 +26,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 # include "config.h"
 #endif
 
-#include "vp10/common/odintrin.h"
-#include "vp10/common/partition.h"
-#include "vp10/common/zigzag.h"
+#include "odintrin.h"
+#include "partition.h"
+#include "zigzag.h"
 
 /* The tables below specify how coefficient blocks are translated to
    and from PVQ partition coding scan order for 4x4, 8x8 and 16x16 */
@@ -40,7 +40,7 @@ const band_layout OD_LAYOUT64 = {
   OD_LAYOUT64_OFFSETS
 };
 
-static const int OD_LAYOUT32_OFFSETS[4] =  { 0, 128, 256, 768};
+static const int OD_LAYOUT32_OFFSETS[4] = { 0, 128, 256, 768 };
 const band_layout OD_LAYOUT32 = {
   OD_ZIGZAG32,
   32,
@@ -81,6 +81,7 @@ static const int OD_BAND_OFFSETS32[] = {10, 1, 16, 24, 32, 64, 96, 128, 256,
  384, 512, 1024};
 static const int OD_BAND_OFFSETS64[] = {13, 1, 16, 24, 32, 64, 96, 128, 256,
  384, 512, 1024, 1536, 2048, 4096};
+
 const int *const OD_BAND_OFFSETS[OD_NBSIZES + 1] = {
   OD_BAND_OFFSETS4,
   OD_BAND_OFFSETS8,

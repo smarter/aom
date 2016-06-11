@@ -28,13 +28,55 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 
 #include <stdio.h>
 
-#include "vp10/encoder/pvq_encoder.h"
+#include "pvq_encoder.h"
 #include "vp10/common/pvq.h"
 #include "vpx_dsp/entenc.h"
 #include "vpx_dsp/entdec.h"
-//#include "logging.h"
-//#include "odintrin.h"
 #include "vp10/common/odintrin.h"
+
+static void od_encode_pvq_split(od_ec_enc *ec, od_pvq_codeword_ctx *adapt,
+ int count, int sum, int ctx) {
+  int shift;
+  int rest;
+  int fctx;
+  if (sum == 0) return;
+  shift = OD_MAXI(0, OD_ILOG(sum) - 3);
+  if (shift) {
+    rest = count & ((1 << shift) - 1);
+    count >>= shift;
+    sum >>= shift;
+  }
+  fctx = 7*ctx + sum - 1;
+  od_encode_cdf_adapt(ec, count, adapt->pvq_split_cdf[fctx],
+   sum + 1, adapt->pvq_split_increment);
+  if (shift) od_ec_enc_bits(ec, rest, shift);
+}
+
+void od_encode_band_pvq_splits(od_ec_enc *ec, od_pvq_codeword_ctx *adapt,
+ const int *y, int n, int k, int level) {
+  int mid;
+  int i;
+  int count_right;
+  if (n <= 1 || k == 0) return;
+  if (k == 1 && n <= 16) {
+    int cdf_id;
+    int pos;
+    cdf_id = od_pvq_k1_ctx(n, level == 0);
+    for (pos = 0; !y[pos]; pos++);
+    OD_ASSERT(pos < n);
+    od_encode_cdf_adapt(ec, pos, adapt->pvq_k1_cdf[cdf_id], n,
+     adapt->pvq_k1_increment);
+  }
+  else {
+    mid = n >> 1;
+    count_right = k;
+    for (i = 0; i < mid; i++) count_right -= abs(y[i]);
+    od_encode_pvq_split(ec, adapt, count_right, k, od_pvq_size_ctx(n));
+    od_encode_band_pvq_splits(ec, adapt, y, mid, k - count_right, level + 1);
+    od_encode_band_pvq_splits(ec, adapt, y + mid, n - mid, count_right,
+     level + 1);
+  }
+}
 
 /** Encodes the tail of a Laplace-distributed variable, i.e. it doesn't
  * do anything special for the zero case.

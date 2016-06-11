@@ -38,6 +38,9 @@ struct daala_enc_ctx{
   od_ec_enc ec;
   int use_activity_masking;
   int qm;
+  /*Normalized PVQ lambda for use where we've already performed
+     quantization.*/
+  double pvq_norm_lambda;
 };
 
 // from daalaenc.h

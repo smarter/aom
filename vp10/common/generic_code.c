@@ -38,6 +38,52 @@ void od_cdf_init(uint16_t *cdf, int ncdfs, int nsyms, int val, int first) {
   }
 }
 
+/** Adapts a Q15 cdf after encoding/decoding a symbol. */
+void od_cdf_adapt_q15(int val, uint16_t *cdf, int n, int *count, int rate) {
+  int i;
+  *count = OD_MINI(*count + 1, 1 << rate);
+  OD_ASSERT(cdf[n - 1] == 32768);
+  if (*count >= 1 << rate) {
+    /* Steady-state adaptation based on a simple IIR with dyadic rate. */
+    for (i = 0; i < n; i++) {
+      int tmp;
+      /* When (i < val), we want the adjustment ((cdf[i] - tmp) >> rate) to be
+         positive so long as (cdf[i] > i + 1), and 0 when (cdf[i] == i + 1),
+         to ensure we don't drive any probabilities to 0. Replacing cdf[i] with
+         (i + 2) and solving ((i + 2 - tmp) >> rate == 1) for tmp produces
+         tmp == i + 2 - (1 << rate). Using this value of tmp with
+         cdf[i] == i + 1 instead gives an adjustment of 0 as desired.
+
+         When (i >= val), we want ((cdf[i] - tmp) >> rate) to be negative so
+         long as cdf[i] < 32768 - (n - 1 - i), and 0 when
+         cdf[i] == 32768 - (n - 1 - i), again to ensure we don't drive any
+         probabilities to 0. Since right-shifting any negative value is still
+         negative, we can solve (32768 - (n - 1 - i) - tmp == 0) for tmp,
+         producing tmp = 32769 - n + i. Using this value of tmp with smaller
+         values of cdf[i] instead gives negative adjustments, as desired.
+
+         Combining the two cases gives the expression below. These could be
+         stored in a lookup table indexed by n and rate to avoid the
+         arithmetic. */
+      tmp = 2 - (1<<rate) + i + (32767 + (1<<rate) - n)*(i >= val);
+      cdf[i] -= (cdf[i] - tmp) >> rate;
+    }
+  }
+  else {
+    int alpha;
+    /* Initial adaptation for the first symbols. The adaptation rate is
+       computed to be equivalent to what od_{en,de}code_cdf_adapt() does
+       when the initial cdf is set to increment/4. */
+    alpha = 4*32768/(n + 4**count);
+    for (i = 0; i < n; i++) {
+      int tmp;
+      tmp = (32768 - n)*(i >= val) + i + 1;
+      cdf[i] -= ((cdf[i] - tmp)*alpha) >> 15;
+    }
+  }
+  OD_ASSERT(cdf[n - 1] == 32768);
+}
+
 /** Initializes the cdfs and freq counts for a model.
  *
  * @param [out] model model being initialized

@@ -641,7 +641,7 @@ static void write_modes_b(VP10_COMP *cpi, const TileInfo *const tile,
                robust || is_keyframe, (plane != 0)*OD_NBSIZES*PVQ_MAX_PARTITIONS
                + pvq->bs*PVQ_MAX_PARTITIONS + i, is_keyframe,
                i == 0 && (i < pvq->nb_bands - 1),
-               pvq->skip_rest, pvq->bs, encode_flip, flip);
+               pvq->skip_rest, encode_flip, flip);
             }
             if (i == 0 && !pvq->skip_rest && pvq->bs > 0) {
               od_encode_cdf_adapt(&w->ec, pvq->skip_dir,

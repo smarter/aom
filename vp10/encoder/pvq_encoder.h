@@ -24,12 +24,13 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 
 #if !defined(_pvq_encoder_H)
 # define _pvq_encoder_H (1)
-//# include "internal.h"
-//# include "filter.h"
 # include "vp10/common/pvq.h"
 # include "vpx_dsp/entenc.h"
 # include "vp10/encoder/encint.h"
 # include "vp10/common/blockd.h"
+
+void od_encode_band_pvq_splits(od_ec_enc *ec, od_pvq_codeword_ctx *adapt,
+ const int *y, int n, int k, int level);
 
 void laplace_encode_special(od_ec_enc *enc, int x, unsigned decay, int max);
 void laplace_encode(od_ec_enc *enc, int x, int ex_q8, int k);
