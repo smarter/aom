@@ -2132,15 +2132,18 @@ static const uint8_t *decode_tiles_mt(VP10Decoder *pbi, const uint8_t *data,
 
     for (; i > 0; --i) {
       VPxWorker *const worker = &pbi->tile_workers[i - 1];
-      TileWorkerData *tile_data;
       // TODO(jzern): The tile may have specific error data associated with
       // its vpx_internal_error_info which could be propagated to the main info
       // in cm. Additionally once the threads have been synced and an error is
       // detected, there's no point in continuing to decode tiles.
       pbi->mb.corrupted |= !winterface->sync(worker);
 
-      tile_data = (TileWorkerData *)worker->data1;
-      daala_dec_free(&tile_data->xd.daala_dec);
+#if CONFIG_PVQ
+      {
+        TileWorkerData *tile_data = (TileWorkerData *)worker->data1;
+        daala_dec_free(&tile_data->xd.daala_dec);
+      }
+#endif
     }
     if (final_worker > -1) {
       TileWorkerData *const tile_data =
