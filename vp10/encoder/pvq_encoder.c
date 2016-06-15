@@ -90,7 +90,7 @@ static void od_fill_dynamic_rqrt_table(double *table, const int table_size,
  * @return                  cosine distance between x and y (between 0 and 1)
  */
 static double pvq_search_rdo_double(const od_val16 *xcoeff, int n, int k,
- od_coeff *ypulse, double g2, double pvq_norm_lambda) {
+ od_coeff *ypulse, double g2, double pvq_norm_lambda, int speed) {
   int i, j;
   double xy;
   double yy;
@@ -121,7 +121,7 @@ static double pvq_search_rdo_double(const od_val16 *xcoeff, int n, int k,
       double tmp;
       tmp = k*x[j]*l1_inv;
       /* If possible[j]=0, we're very unlikely to have a pulse there. */
-      possible[j] = tmp >= .25;
+      possible[j] = speed ? tmp >= .25 : 1;
       ypulse[j] = OD_MAXI(0, (int)floor(tmp));
       xy += x[j]*ypulse[j];
       yy += ypulse[j]*ypulse[j];
@@ -443,7 +443,7 @@ static int pvq_theta(od_coeff *out, const od_coeff *x0, const od_coeff *r0,
            that's the factor by which cos_dist is multiplied to get the
            distortion metric. */
         cos_dist = pvq_search_rdo_double(xr, n - 1, k, y_tmp,
-         qcg*(double)cg*sin_prod*OD_CGAIN_SCALE_2, pvq_norm_lambda);
+         qcg*(double)cg*sin_prod*OD_CGAIN_SCALE_2, pvq_norm_lambda, speed);
         /* See Jmspeex' Journal of Dubious Theoretical Results. */
         dist_theta = 2 - 2.*od_pvq_cos(theta - qtheta)*OD_TRIG_SCALE_1
          + sin_prod*(2 - 2*cos_dist);
@@ -482,7 +482,7 @@ static int pvq_theta(od_coeff *out, const od_coeff *x0, const od_coeff *r0,
       qcg = OD_SHL(i, OD_CGAIN_SHIFT);
       k = od_pvq_compute_k(qcg, -1, -1, 1, n, beta, robust || is_keyframe);
       cos_dist = pvq_search_rdo_double(x16, n, k, y_tmp,
-       qcg*(double)cg*OD_CGAIN_SCALE_2, pvq_norm_lambda);
+       qcg*(double)cg*OD_CGAIN_SCALE_2, pvq_norm_lambda, speed);
       /* See Jmspeex' Journal of Dubious Theoretical Results. */
       dist = gain_weight*(qcg - cg)*(qcg - cg)
        + qcg*(double)cg*(2 - 2*cos_dist);
