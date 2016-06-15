@@ -411,27 +411,30 @@ static int pvq_theta(od_coeff *out, const od_coeff *x0, const od_coeff *r0,
   if (n <= OD_MAX_PVQ_SIZE && !od_vector_is_null(r0, n) && corr > 0) {
     od_val16 xr[MAXN];
     int gain_bound;
-    int upgain;
     gain_bound = OD_SHR(cg - gain_offset, OD_CGAIN_SHIFT);
-    upgain = OD_SHR(cg - gain_offset + (1<<OD_CGAIN_SHIFT>>1), OD_CGAIN_SHIFT);
     /* Perform theta search only if prediction is useful. */
     theta = OD_ROUND32(OD_THETA_SCALE*acos(corr));
     m = od_compute_householder(r16, n, gr, &s, rshift);
     od_apply_householder(xr, x16, r16, n);
     for (i = m; i < n - 1; i++) xr[i] = xr[i + 1];
     /* Search for the best gain within a reasonable range. */
-    for (i = OD_MAXI(1, gain_bound - 1 + speed); i <= upgain; i++) {
+    for (i = OD_MAXI(1, gain_bound - 1 + speed); i <= gain_bound + 1 - speed;
+     i++) {
       int j;
       od_val32 qcg;
       int ts;
+      int theta_lower;
+      int theta_upper;
       /* Quantized companded gain */
       qcg = OD_SHL(i, OD_CGAIN_SHIFT) + gain_offset;
       /* Set angular resolution (in ra) to match the encoded gain */
       ts = od_pvq_compute_max_theta(qcg, beta);
+      theta_lower = OD_MAXI(0, (int)floor(.5 +
+       theta*OD_THETA_SCALE_1*2/M_PI*ts) - 2 + 2*speed);
+      theta_upper = OD_MINI(ts - 1, (int)ceil(theta*OD_THETA_SCALE_1*2/M_PI*ts
+       - .5*speed));
       /* Search for the best angle within a reasonable range. */
-      for (j = OD_MAXI(0, (int)floor(.5 + theta*OD_THETA_SCALE_1*2/M_PI*ts)
-       - 2 + 2*speed); j <= OD_MINI(ts - 1,
-       (int)ceil(theta*OD_THETA_SCALE_1*2/M_PI*ts - .5)); j++) {
+      for (j = theta_lower; j <= theta_upper; j++) {
         double cos_dist;
         double cost;
         double dist_theta;
