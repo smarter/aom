@@ -1047,7 +1047,7 @@ static int64_t rd_pick_intra4x4block(VP10_COMP *cpi, MACROBLOCK *x, int row,
 #else
           skip = pvq_encode_helper(&x->daala_enc, coeff, ref_coeff, dqcoeff,
               &p->eobs[block], pd->dequant,
-              0, TX_4X4, &rate_pvq, pvq_info);
+              0, TX_4X4, &rate_pvq, 1, pvq_info);
           ratey += rate_pvq;
 #endif
           if (RDCOST(x->rdmult, x->rddiv, ratey, distortion) >= best_rd)
@@ -1076,7 +1076,7 @@ static int64_t rd_pick_intra4x4block(VP10_COMP *cpi, MACROBLOCK *x, int row,
 #else
           skip = pvq_encode_helper(&x->daala_enc, coeff, ref_coeff, dqcoeff,
               &p->eobs[block], pd->dequant,
-              0, TX_4X4, &rate_pvq, pvq_info);
+              0, TX_4X4, &rate_pvq, 1, pvq_info);
           ratey += rate_pvq;
 #endif
           distortion +=
@@ -1163,7 +1163,7 @@ static int64_t rd_pick_intra4x4block(VP10_COMP *cpi, MACROBLOCK *x, int row,
 
       skip = pvq_encode_helper(&x->daala_enc, coeff, ref_coeff, dqcoeff,
           &p->eobs[block], pd->dequant,
-          0, TX_4X4, &rate_pvq, pvq_info);
+          0, TX_4X4, &rate_pvq, 1, pvq_info);
 
       if (lossless) {
         if (!skip) {
@@ -1627,7 +1627,7 @@ static int64_t encode_inter_mb_segment(VP10_COMP *cpi, MACROBLOCK *x,
 
       pvq_encode_helper(&x->daala_enc, coeff, ref_coeff, dqcoeff,
           &p->eobs[k], pd->dequant,
-          0, TX_4X4, &rate_pvq, pvq_info);
+          0, TX_4X4, &rate_pvq, 1, pvq_info);
 #endif
 
 #if CONFIG_VPX_HIGHBITDEPTH

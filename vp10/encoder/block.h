@@ -68,6 +68,8 @@ struct macroblock {
   int skip_optimize;
   int q_index;
 
+  int is_coded;
+
   // The equivalent error at the current rdmult of one whole bit (not one
   // bitcost unit).
   int errorperbit;

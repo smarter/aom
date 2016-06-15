@@ -718,6 +718,7 @@ void vp10_xform_quant_fp(MACROBLOCK *x, int plane, int block, int blk_row,
                              plane,          // image plane
                              tx_size,        // block size in log_2 - 2
                              &x->rate,       // rate measured
+                             x->is_coded ? 0 : 1, // speed setting
                              pvq_info);      // PVQ info for a block
 
   if (!skip)
@@ -1053,6 +1054,7 @@ void vp10_xform_quant(MACROBLOCK *x, int plane, int block, int blk_row,
                              plane,          // image plane
                              tx_size,        // block size in log_2 - 2
                              &x->rate,       // rate measured
+                             x->is_coded ? 0 : 1, // speed setting
                              pvq_info);      // PVQ info for a block
 
   if (!skip)
@@ -1553,6 +1555,7 @@ void vp10_encode_block_intra(int plane, int block, int blk_row, int blk_col,
                                plane,          // image plane
                                tx_size,        // block size in log_2 - 2
                                &x->rate,       // rate measured
+                               x->is_coded ? 0 : 1, // speed setting
                                pvq_info);       // PVQ info for a block
   }//if (!x->skip_recode) {
   else {
@@ -1614,7 +1617,7 @@ int pvq_encode_helper(daala_enc_ctx *daala_enc,
     tran_low_t *const coeff, tran_low_t *ref_coeff,
     tran_low_t *const dqcoeff,
     uint16_t *eob, const int16_t *quant,
-    int plane, int tx_size, int *rate, PVQ_INFO *pvq_info) {
+    int plane, int tx_size, int *rate, int speed, PVQ_INFO *pvq_info) {
   const int tx_blk_size = 1 << (tx_size + 2);
   int skip;
   // TODO: Enable this later, if pvq_qm_q4 is available in AOM.
@@ -1669,7 +1672,8 @@ int pvq_encode_helper(daala_enc_ctx *daala_enc,
           1,//OD_ROBUST_STREAM
           0, //is_keyframe,
           0, 0, 0, //q_scaling, bx, by,
-          daala_enc->state.qm + off, daala_enc->state.qm_inv + off, pvq_info);
+          daala_enc->state.qm + off, daala_enc->state.qm_inv + off, speed,
+          pvq_info);
 
   if (skip)
     assert(pvq_info->ac_dc_coded == 0);
