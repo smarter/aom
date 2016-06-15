@@ -413,7 +413,7 @@ static int pvq_theta(od_coeff *out, const od_coeff *x0, const od_coeff *r0,
     int gain_bound;
     int upgain;
     gain_bound = OD_SHR(cg - gain_offset, OD_CGAIN_SHIFT);
-    upgain = OD_SHR(cg - gain_offset + (OD_CGAIN_SHIFT<<1>>1), OD_CGAIN_SHIFT);
+    upgain = OD_SHR(cg - gain_offset + (1<<OD_CGAIN_SHIFT>>1), OD_CGAIN_SHIFT);
     /* Perform theta search only if prediction is useful. */
     theta = OD_ROUND32(OD_THETA_SCALE*acos(corr));
     m = od_compute_householder(r16, n, gr, &s, rshift);
