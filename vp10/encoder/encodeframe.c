@@ -2637,7 +2637,9 @@ void vp10_encode_tile(VP10_COMP *cpi, ThreadData *td, int tile_row,
   const TileInfo *const tile_info = &this_tile->tile_info;
   TOKENEXTRA *tok = cpi->tile_tok[tile_row][tile_col];
   int mi_row;
+#if CONFIG_PVQ
   od_adapt_ctx *adapt;
+#endif
 
   // Set up pointers to per thread motion search counters.
   td->mb.m_search_count_ptr = &td->rd_counts.m_search_count;
