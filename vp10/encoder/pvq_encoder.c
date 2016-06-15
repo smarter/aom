@@ -102,6 +102,7 @@ static double pvq_search_rdo_double(const od_val16 *xcoeff, int n, int k,
   double norm_1;
   int rdo_pulses;
   double delta_rate;
+  int possible[MAXN];
   xx = xy = yy = 0;
   for (j = 0; j < n; j++) {
     x[j] = fabs((float)xcoeff[j]);
@@ -117,7 +118,11 @@ static double pvq_search_rdo_double(const od_val16 *xcoeff, int n, int k,
     for (j = 0; j < n; j++) l1_norm += x[j];
     l1_inv = 1./OD_MAXF(l1_norm, 1e-100);
     for (j = 0; j < n; j++) {
-      ypulse[j] = OD_MAXI(0, (int)floor(k*x[j]*l1_inv));
+      double tmp;
+      tmp = k*x[j]*l1_inv;
+      /* If possible[j]=0, we're very unlikely to have a pulse there. */
+      possible[j] = tmp >= .25;
+      ypulse[j] = OD_MAXI(0, (int)floor(tmp));
       xy += x[j]*ypulse[j];
       yy += ypulse[j]*ypulse[j];
       i += ypulse[j];
@@ -144,6 +149,7 @@ static double pvq_search_rdo_double(const od_val16 *xcoeff, int n, int k,
     for (j = 0; j < n; j++) {
       double tmp_xy;
       double tmp_yy;
+      if (!possible[j]) continue;
       tmp_xy = xy + x[j];
       tmp_yy = yy + 2*ypulse[j] + 1;
       tmp_xy *= tmp_xy;
