@@ -430,7 +430,7 @@ static int pvq_theta(od_coeff *out, const od_coeff *x0, const od_coeff *r0,
       ts = od_pvq_compute_max_theta(qcg, beta);
       /* Search for the best angle within a reasonable range. */
       for (j = OD_MAXI(0, (int)floor(.5 + theta*OD_THETA_SCALE_1*2/M_PI*ts)
-       - 2 + speed); j <= OD_MINI(ts - 1,
+       - 2 + 2*speed); j <= OD_MINI(ts - 1,
        (int)ceil(theta*OD_THETA_SCALE_1*2/M_PI*ts - .5)); j++) {
         double cos_dist;
         double cost;
