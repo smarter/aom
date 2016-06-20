@@ -2036,7 +2036,7 @@ static void rd_pick_partition(VP10_COMP *cpi, ThreadData *td,
       !force_horz_split && xss <= yss && bsize >= BLOCK_8X8;
 
 #if CONFIG_PVQ
-  od_rollback_buffer pre_rdo_buf;
+  od_rollback_buffer pre_rdo_buf, best_rdo_buf;
   uint32_t pre_rdo_offset;
 
   if (bsize == BLOCK_64X64)
@@ -2164,6 +2164,10 @@ static void rd_pick_partition(VP10_COMP *cpi, ThreadData *td,
         int rate_breakout_thr = cpi->sf.partition_search_breakout_rate_thr;
 
         best_rdc = this_rdc;
+#if CONFIG_PVQ
+        od_encode_checkpoint(&x->daala_enc, &best_rdo_buf);
+#endif
+
         if (bsize >= BLOCK_8X8) pc_tree->partitioning = PARTITION_NONE;
 
         // Adjust dist breakout threshold according to the partition size.
@@ -2286,6 +2290,9 @@ static void rd_pick_partition(VP10_COMP *cpi, ThreadData *td,
 
       if (sum_rdc.rdcost < best_rdc.rdcost) {
         best_rdc = sum_rdc;
+#if CONFIG_PVQ
+        od_encode_checkpoint(&x->daala_enc, &best_rdo_buf);
+#endif
         pc_tree->partitioning = PARTITION_SPLIT;
       }
     } else {
@@ -2338,6 +2345,9 @@ static void rd_pick_partition(VP10_COMP *cpi, ThreadData *td,
       sum_rdc.rdcost = RDCOST(x->rdmult, x->rddiv, sum_rdc.rate, sum_rdc.dist);
       if (sum_rdc.rdcost < best_rdc.rdcost) {
         best_rdc = sum_rdc;
+#if CONFIG_PVQ
+        od_encode_checkpoint(&x->daala_enc, &best_rdo_buf);
+#endif
         pc_tree->partitioning = PARTITION_HORZ;
       }
     }
@@ -2386,6 +2396,9 @@ static void rd_pick_partition(VP10_COMP *cpi, ThreadData *td,
       sum_rdc.rdcost = RDCOST(x->rdmult, x->rddiv, sum_rdc.rate, sum_rdc.dist);
       if (sum_rdc.rdcost < best_rdc.rdcost) {
         best_rdc = sum_rdc;
+#if CONFIG_PVQ
+        od_encode_checkpoint(&x->daala_enc, &best_rdo_buf);
+#endif
         pc_tree->partitioning = PARTITION_VERT;
       }
     }
@@ -2410,8 +2423,20 @@ static void rd_pick_partition(VP10_COMP *cpi, ThreadData *td,
     if (output_enabled)
       assert(pre_rdo_offset == x->daala_enc.ec.offs);
 #endif
+#if CONFIG_PVQ
+    if (output_enabled) {
+#endif
     encode_sb(cpi, td, tile_info, tp, mi_row, mi_col, output_enabled, bsize,
               pc_tree);
+#if CONFIG_PVQ
+    } else {
+      /* This rollback call leaves the entropy coder in an inconsistent state
+         because the bytes in the buffer are not being copied back. This is
+         not a problem here because we are only tracking the rate and we will
+         rollback everything at the end of the RDO stage anyway. */
+      od_encode_rollback(&x->daala_enc, &best_rdo_buf);
+    }
+#endif
   }
 
   if (bsize == BLOCK_64X64) {
