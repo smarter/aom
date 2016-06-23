@@ -1626,7 +1626,7 @@ int pvq_encode_helper(daala_enc_ctx *daala_enc,
 
   pvq_info->eob = *eob;
 
-  *rate = (od_ec_enc_tell(&daala_enc->ec) - tell) << VP9_PROB_COST_SHIFT;
+  *rate = (od_ec_enc_tell(&daala_enc->ec) - tell) << AV1_PROB_COST_SHIFT;
   assert(*rate >= 0);
 
   return skip;
