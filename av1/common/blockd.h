@@ -29,9 +29,9 @@
 #include "av1/common/seg_common.h"
 #include "av1/common/tile_common.h"
 #if CONFIG_PVQ
-#include "vp10/common/pvq.h"
-#include "vp10/common/state.h"
-#include "vp10/decoder/decint.h"
+#include "av1/common/pvq.h"
+#include "av1/common/state.h"
+#include "av1/decoder/decint.h"
 #endif
 
 #ifdef __cplusplus
@@ -105,7 +105,7 @@ typedef struct PVQ_INFO {
   int skip_rest;
   int skip_dir;
   int bs;         // log of the block size minus two,
-                  // i.e. equivalent to vpx's TX_SIZE
+                  // i.e. equivalent to aom's TX_SIZE
   int ac_dc_coded;// block skip info, indicating whether DC/AC is coded.
                   // bit0: DC coded, bit1 : AC coded (1 means coded)
   tran_low_t dq_dc_residue;

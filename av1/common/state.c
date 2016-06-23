@@ -1,5 +1,5 @@
-#include "vp10/common/odintrin.h"
-#include "vp10/common/state.h"
+#include "av1/common/odintrin.h"
+#include "av1/common/state.h"
 
 void od_adapt_ctx_reset(od_adapt_ctx *adapt, int is_keyframe) {
   int i;

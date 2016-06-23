@@ -48,7 +48,7 @@
 #include "av1/encoder/tokenize.h"
 
 #if CONFIG_PVQ
-#include "vp10/encoder/pvq_encoder.h"
+#include "av1/encoder/pvq_encoder.h"
 #endif
 
 static void encode_superblock(AV1_COMP *cpi, ThreadData *td, TOKENEXTRA **t,
@@ -2538,7 +2538,7 @@ static void rd_pick_partition(AV1_COMP *cpi, ThreadData *td,
   if (bsize == BLOCK_64X64) {
 #if !CONFIG_PVQ
     // TODO: Can enable this later, if pvq actually generates tokens
-    // in vpx format, otherwise pvq don't really need to use vpx's token format
+    // in aom format, otherwise pvq don't really need to use aom's token format
     // but directly writes to bitstream in packing and keep below assert
     // disabled.
     assert(tp_orig < *tp || (tp_orig == *tp && xd->mi[0]->mbmi.skip));
@@ -2732,7 +2732,7 @@ void av1_init_tile_data(AV1_COMP *cpi) {
         // This will be dynamically increased as more pvq block is encoded.
         tile_data->pvq_q.buf_len = 5000;
         tile_data->pvq_q.buf =
-            vpx_calloc(tile_data->pvq_q.buf_len, sizeof(PVQ_INFO));
+            aom_calloc(tile_data->pvq_q.buf_len, sizeof(PVQ_INFO));
         tile_data->pvq_q.curr_pos = 0;
 #endif
       }
@@ -2774,9 +2774,9 @@ void av1_encode_tile(AV1_COMP *cpi, ThreadData *td, int tile_row,
   td->mb.pvq_q = &this_tile->pvq_q;
 
   td->mb.daala_enc.state.qm =
-      (int16_t *)vpx_calloc(OD_QM_BUFFER_SIZE, sizeof(td->mb.daala_enc.state.qm[0]));
+      (int16_t *)aom_calloc(OD_QM_BUFFER_SIZE, sizeof(td->mb.daala_enc.state.qm[0]));
   td->mb.daala_enc.state.qm_inv =
-      (int16_t *)vpx_calloc(OD_QM_BUFFER_SIZE, sizeof(td->mb.daala_enc.state.qm_inv[0]));
+      (int16_t *)aom_calloc(OD_QM_BUFFER_SIZE, sizeof(td->mb.daala_enc.state.qm_inv[0]));
   td->mb.daala_enc.qm = OD_FLAT_QM;  // Hard coded. Enc/dec required to sync.
   td->mb.daala_enc.pvq_norm_lambda = OD_PVQ_LAMBDA;
 
@@ -2798,8 +2798,8 @@ void av1_encode_tile(AV1_COMP *cpi, ThreadData *td, int tile_row,
   assert(tok - cpi->tile_tok[tile_row][tile_col] <=
          allocated_tokens(*tile_info));
 #if CONFIG_PVQ
-  vpx_free(td->mb.daala_enc.state.qm);
-  vpx_free(td->mb.daala_enc.state.qm_inv);
+  aom_free(td->mb.daala_enc.state.qm);
+  aom_free(td->mb.daala_enc.state.qm_inv);
   od_ec_enc_clear(&td->mb.daala_enc.ec);
 
   td->mb.pvq_q->last_pos = td->mb.pvq_q->curr_pos;

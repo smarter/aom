@@ -24,9 +24,9 @@
 #include "av1/decoder/dthread.h"
 
 #if CONFIG_PVQ
-#include "vp10/encoder/encodemb.h"
-#include "vp10/decoder/decint.h"
-#include "vpx_dsp/entdec.h"
+#include "av1/encoder/encodemb.h"
+#include "av1/decoder/decint.h"
+#include "aom_dsp/entdec.h"
 #endif
 
 #ifdef __cplusplus

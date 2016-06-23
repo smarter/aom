@@ -504,7 +504,7 @@ void add_pvq_block(MACROBLOCK *const x, PVQ_INFO *pvq) {
   PVQ_QUEUE *q = x->pvq_q;
   if (q->curr_pos >= q->buf_len) {
     q->buf_len *= 2;
-    q->buf = vpx_realloc(q->buf, q->buf_len * sizeof(PVQ_INFO));
+    q->buf = aom_realloc(q->buf, q->buf_len * sizeof(PVQ_INFO));
   }
   memcpy(q->buf + q->curr_pos, pvq, sizeof(PVQ_INFO));
   ++q->curr_pos;
@@ -568,7 +568,7 @@ void av1_tokenize_sb(AV1_COMP *cpi, ThreadData *td, TOKENEXTRA **t, int dry_run,
     td->counts->skip[ctx][0] += skip_inc;
 
     for (plane = 0; plane < MAX_MB_PLANE; ++plane)
-      vp10_foreach_transformed_block_in_plane(xd, bsize, plane, tokenize_pvq,
+      av1_foreach_transformed_block_in_plane(xd, bsize, plane, tokenize_pvq,
                                               &arg);
   }
 #endif

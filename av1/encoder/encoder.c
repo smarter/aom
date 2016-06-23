@@ -363,7 +363,7 @@ static void dealloc_compressor_data(AV1_COMP *cpi) {
     for (tile_col = 0; tile_col < tile_cols; ++tile_col) {
       TileDataEnc *tile_data =
           &cpi->tile_data[tile_row * tile_cols + tile_col];
-      vpx_free(tile_data->pvq_q.buf);
+      aom_free(tile_data->pvq_q.buf);
     }
   }
 #endif
@@ -3481,7 +3481,7 @@ static void encode_frame_to_data_rate(AV1_COMP *cpi, size_t *size,
   cm->prev_frame = cm->cur_frame;
 
 #ifdef OUTPUT_YUV_REC
-  vp10_write_yuv_rec_frame(cm);
+  av1_write_yuv_rec_frame(cm);
 #endif
 }
 

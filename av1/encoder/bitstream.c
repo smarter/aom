@@ -42,7 +42,7 @@
 #include "av1/encoder/subexp.h"
 #include "av1/encoder/tokenize.h"
 #if CONFIG_PVQ
-#include "vp10/encoder/pvq_encoder.c"
+#include "av1/encoder/pvq_encoder.c"
 #endif
 
 static struct av1_token intra_mode_encodings[INTRA_MODES];

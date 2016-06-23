@@ -29,10 +29,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 #include <stdio.h>
 
 #include "pvq_encoder.h"
-#include "vp10/common/pvq.h"
-#include "vpx_dsp/entenc.h"
-#include "vpx_dsp/entdec.h"
-#include "vp10/common/odintrin.h"
+#include "av1/common/pvq.h"
+#include "aom_dsp/entenc.h"
+#include "aom_dsp/entdec.h"
+#include "av1/common/odintrin.h"
 
 static void od_encode_pvq_split(od_ec_enc *ec, od_pvq_codeword_ctx *adapt,
  int count, int sum, int ctx) {

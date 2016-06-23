@@ -24,9 +24,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 
 #if !defined(_pvq_decoder_H)
 # define _pvq_decoder_H (1)
-# include "vp10/common/pvq.h"
-# include "vp10/decoder/decint.h"
-# include "vpx_dsp/entdec.h"
+# include "av1/common/pvq.h"
+# include "av1/decoder/decint.h"
+# include "aom_dsp/entdec.h"
 
 void od_decode_band_pvq_splits(od_ec_dec *ec, od_pvq_codeword_ctx *adapt,
  od_coeff *y, int n, int k, int level);

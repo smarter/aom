@@ -24,7 +24,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 
 #if !defined(_decint_H)
 # define _decint_H (1)
-# include "vp10/common/state.h"
+# include "av1/common/state.h"
 
 typedef struct daala_dec_ctx daala_dec_ctx;
 

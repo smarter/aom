@@ -44,7 +44,7 @@
 #include "av1/encoder/rdopt.h"
 
 #if CONFIG_PVQ
-#include "vp10/encoder/pvq_encoder.h"
+#include "av1/encoder/pvq_encoder.h"
 #endif
 
 #define LAST_FRAME_MODE_MASK \
@@ -1035,8 +1035,8 @@ static int64_t rd_pick_intra4x4block(AV1_COMP *cpi, MACROBLOCK *x, int row,
             src_int16[diff_stride * j + i] = src[src_stride * j + i];
             pred[diff_stride * j + i] = dst[dst_stride * j + i];
           }
-        vp10_fwd_txfm_4x4(src_int16, coeff, diff_stride, tx_type, lossless);
-        vp10_fwd_txfm_4x4(pred, ref_coeff, diff_stride, tx_type, lossless);
+        av1_fwd_txfm_4x4(src_int16, coeff, diff_stride, tx_type, lossless);
+        av1_fwd_txfm_4x4(pred, ref_coeff, diff_stride, tx_type, lossless);
 #endif
 
         if (xd->lossless[xd->mi[0]->mbmi.segment_id]) {
@@ -1145,7 +1145,7 @@ static int64_t rd_pick_intra4x4block(AV1_COMP *cpi, MACROBLOCK *x, int row,
       PVQ_INFO *pvq_info = &x->pvq[block][0];
       int lossless = xd->lossless[xd->mi[0]->mbmi.segment_id];
 
-      vp10_predict_intra_block(xd, 1, 1, TX_4X4, *best_mode, dst, dst_stride, dst,
+      av1_predict_intra_block(xd, 1, 1, TX_4X4, *best_mode, dst, dst_stride, dst,
                                dst_stride, col + idx, row + idy, 0);
 
       if (xd->lossless[xd->mi[0]->mbmi.segment_id])
@@ -1161,8 +1161,8 @@ static int64_t rd_pick_intra4x4block(AV1_COMP *cpi, MACROBLOCK *x, int row,
           pred[diff_stride * j + i] = dst[dst_stride * j + i];
         }
 
-      vp10_fwd_txfm_4x4(src_int16, coeff, diff_stride, tx_type, lossless);
-      vp10_fwd_txfm_4x4(pred, ref_coeff, diff_stride, tx_type, lossless);
+      av1_fwd_txfm_4x4(src_int16, coeff, diff_stride, tx_type, lossless);
+      av1_fwd_txfm_4x4(pred, ref_coeff, diff_stride, tx_type, lossless);
 
       skip = pvq_encode_helper(&x->daala_enc, coeff, ref_coeff, dqcoeff,
           &p->eobs[block], pd->dequant,
@@ -1174,7 +1174,7 @@ static int64_t rd_pick_intra4x4block(AV1_COMP *cpi, MACROBLOCK *x, int row,
             for (i = 0; i < tx_blk_size; i++)
               dst[j * dst_stride + i] -= dst[j * dst_stride + i];
 
-        vp10_inv_txfm_add_4x4(BLOCK_OFFSET(pd->dqcoeff, block), dst,
+        av1_inv_txfm_add_4x4(BLOCK_OFFSET(pd->dqcoeff, block), dst,
                                 dst_stride, p->eobs[block], DCT_DCT, 1);
         }
       } else {
@@ -1183,7 +1183,7 @@ static int64_t rd_pick_intra4x4block(AV1_COMP *cpi, MACROBLOCK *x, int row,
             for (i = 0; i < tx_blk_size; i++)
               dst[j * dst_stride + i] -= dst[j * dst_stride + i];
 
-        vp10_inv_txfm_add_4x4(BLOCK_OFFSET(pd->dqcoeff, block), dst,
+        av1_inv_txfm_add_4x4(BLOCK_OFFSET(pd->dqcoeff, block), dst,
                               dst_stride, p->eobs[block], tx_type, 0);
         }
       }

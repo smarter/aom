@@ -21,15 +21,15 @@
 #include "av1/common/reconinter.h"
 #include "av1/common/reconintra.h"
 #include "av1/common/scan.h"
-#include "vp10/common/partition.h"
+#include "av1/common/partition.h"
 
 #include "av1/encoder/encodemb.h"
 #include "av1/encoder/rd.h"
 #include "av1/encoder/tokenize.h"
 
 #if CONFIG_PVQ
-#include "vp10/encoder/encint.h"
-#include "vp10/encoder/pvq_encoder.h"
+#include "av1/encoder/encint.h"
+#include "av1/encoder/pvq_encoder.h"
 #endif
 
 struct optimize_ctx {
@@ -643,20 +643,20 @@ void av1_xform_quant_fp(MACROBLOCK *x, int plane, int block, int blk_row,
       fdct32x32(0, src_int16, coeff, diff_stride);
       break;
     case TX_16X16:
-      vpx_fdct16x16(pred, ref_coeff, diff_stride);
-      vpx_fdct16x16(src_int16, coeff, diff_stride);
+      aom_fdct16x16(pred, ref_coeff, diff_stride);
+      aom_fdct16x16(src_int16, coeff, diff_stride);
       break;
     case TX_8X8:
-      vpx_fdct8x8(pred, ref_coeff, diff_stride);
-      vpx_fdct8x8(src_int16, coeff, diff_stride);
+      aom_fdct8x8(pred, ref_coeff, diff_stride);
+      aom_fdct8x8(src_int16, coeff, diff_stride);
       break;
     case TX_4X4:
       if (xd->lossless[seg_id]) {
-        vp10_fwht4x4(pred, ref_coeff, diff_stride);
-        vp10_fwht4x4(src_int16, coeff, diff_stride);
+        av1_fwht4x4(pred, ref_coeff, diff_stride);
+        av1_fwht4x4(src_int16, coeff, diff_stride);
       } else {
-        vpx_fdct4x4(pred, ref_coeff, diff_stride);
-        vpx_fdct4x4(src_int16, coeff, diff_stride);
+        aom_fdct4x4(pred, ref_coeff, diff_stride);
+        aom_fdct4x4(src_int16, coeff, diff_stride);
       }
       break;
     default: assert(0); break;
@@ -669,7 +669,7 @@ void av1_xform_quant_fp(MACROBLOCK *x, int plane, int block, int blk_row,
                              ref_coeff,      // reference vector
                              dqcoeff,        // de-quantized vector
                              eob,            // End of Block marker
-                             pd->dequant,    // vpx's quantizers
+                             pd->dequant,    // aom's quantizers
                              plane,          // image plane
                              tx_size,        // block size in log_2 - 2
                              &x->rate,       // rate measured
@@ -983,9 +983,9 @@ void av1_xform_quant(MACROBLOCK *x, int plane, int block, int blk_row,
       fwd_txfm_8x8(src_int16, coeff, diff_stride, tx_type);
       break;
     case TX_4X4:
-      vp10_fwd_txfm_4x4(pred, ref_coeff, diff_stride, tx_type,
+      av1_fwd_txfm_4x4(pred, ref_coeff, diff_stride, tx_type,
                         xd->lossless[seg_id]);
-      vp10_fwd_txfm_4x4(src_int16, coeff, diff_stride, tx_type,
+      av1_fwd_txfm_4x4(src_int16, coeff, diff_stride, tx_type,
                         xd->lossless[seg_id]);
       break;
     default: assert(0); break;
@@ -998,7 +998,7 @@ void av1_xform_quant(MACROBLOCK *x, int plane, int block, int blk_row,
                              ref_coeff,      // reference vector
                              dqcoeff,        // de-quantized vector
                              eob,            // End of Block marker
-                             pd->dequant,    // vpx's quantizers
+                             pd->dequant,    // aom's quantizers
                              plane,          // image plane
                              tx_size,        // block size in log_2 - 2
                              &x->rate,       // rate measured
@@ -1093,10 +1093,10 @@ static void encode_block(int plane, int block, int blk_row, int blk_col,
   // transform block size in pixels
   tx_blk_size = 1 << (tx_size + 2);
 
-  // Since vp10 does not have separate function which does inverse transform
-  // but vp10_inv_txfm_add_*x*() also does addition of predicted image to
+  // Since av1 does not have separate function which does inverse transform
+  // but av1_inv_txfm_add_*x*() also does addition of predicted image to
   // inverse transformed image,
-  // pass blank dummy image to vp10_inv_txfm_add_*x*(), i.e. set dst as zeros
+  // pass blank dummy image to av1_inv_txfm_add_*x*(), i.e. set dst as zeros
     for (j=0; j < tx_blk_size; j++)
       for (i = 0; i < tx_blk_size; i++)
         dst[j * pd->dst.stride + i] -= dst[j *  pd->dst.stride + i];
@@ -1451,9 +1451,9 @@ void av1_encode_block_intra(int plane, int block, int blk_row, int blk_col,
         fwd_txfm_8x8(src_int16, coeff, diff_stride, tx_type);
         break;
       case TX_4X4:
-        vp10_fwd_txfm_4x4(pred, ref_coeff, diff_stride, tx_type,
+        av1_fwd_txfm_4x4(pred, ref_coeff, diff_stride, tx_type,
                           xd->lossless[seg_id]);
-        vp10_fwd_txfm_4x4(src_int16, coeff, diff_stride, tx_type,
+        av1_fwd_txfm_4x4(src_int16, coeff, diff_stride, tx_type,
                           xd->lossless[seg_id]);
         break;
       default: assert(0); break;
@@ -1466,7 +1466,7 @@ void av1_encode_block_intra(int plane, int block, int blk_row, int blk_col,
                                ref_coeff,      // reference vector
                                dqcoeff,        // de-quantized vector
                                eob,            // End of Block marker
-                               pd->dequant,    // vpx's quantizers
+                               pd->dequant,    // aom's quantizers
                                plane,          // image plane
                                tx_size,        // block size in log_2 - 2
                                &x->rate,       // rate measured
@@ -1479,10 +1479,10 @@ void av1_encode_block_intra(int plane, int block, int blk_row, int blk_col,
   if (!skip)
     mbmi->skip = 0;
 
-  // Since vp10 does not have separate function which does inverse transform
-  // but vp10_inv_txfm_add_*x*() also does addition of predicted image to
+  // Since av1 does not have separate function which does inverse transform
+  // but av1_inv_txfm_add_*x*() also does addition of predicted image to
   // inverse transformed image,
-  // pass blank dummy image to vp10_inv_txfm_add_*x*(), i.e. set dst as zeros
+  // pass blank dummy image to av1_inv_txfm_add_*x*(), i.e. set dst as zeros
 
   if (!skip) {
     for (j=0; j < tx_blk_size; j++)
@@ -1491,19 +1491,19 @@ void av1_encode_block_intra(int plane, int block, int blk_row, int blk_col,
 
     switch (tx_size) {
       case TX_32X32:
-       vp10_inv_txfm_add_32x32(dqcoeff, dst, dst_stride, *eob, tx_type);
+       av1_inv_txfm_add_32x32(dqcoeff, dst, dst_stride, *eob, tx_type);
         break;
       case TX_16X16:
-        vp10_inv_txfm_add_16x16(dqcoeff, dst, dst_stride, *eob, tx_type);
+        av1_inv_txfm_add_16x16(dqcoeff, dst, dst_stride, *eob, tx_type);
         break;
       case TX_8X8:
-        vp10_inv_txfm_add_8x8(dqcoeff, dst, dst_stride, *eob, tx_type);
+        av1_inv_txfm_add_8x8(dqcoeff, dst, dst_stride, *eob, tx_type);
         break;
       case TX_4X4:
-        // this is like vp10_short_idct4x4 but has a special case around eob<=1
+        // this is like av1_short_idct4x4 but has a special case around eob<=1
         // which is significant (not just an optimization) for the lossless
         // case.
-        vp10_inv_txfm_add_4x4(dqcoeff, dst, dst_stride, *eob, tx_type,
+        av1_inv_txfm_add_4x4(dqcoeff, dst, dst_stride, *eob, tx_type,
                               xd->lossless[seg_id]);
         break;
       default: assert(0); break;

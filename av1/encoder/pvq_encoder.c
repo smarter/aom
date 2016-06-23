@@ -28,14 +28,14 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 
 #include <stdlib.h>
 #include <stdio.h>
-#include "vp10/common/odintrin.h"
-#include "vp10/common/state.h"
-#include "vpx_dsp/entenc.h"
-#include "vpx_dsp/entcode.h"
+#include "av1/common/odintrin.h"
+#include "av1/common/state.h"
+#include "aom_dsp/entenc.h"
+#include "aom_dsp/entcode.h"
 #include "pvq_encoder.h"
-#include "vp10/common/partition.h"
-#include "vp10/common/blockd.h"
-#include "vp10/encoder/encodemb.h"
+#include "av1/common/partition.h"
+#include "av1/common/blockd.h"
+#include "av1/encoder/encodemb.h"
 
 #define OD_PVQ_RATE_APPROX (0)
 /*Shift to ensure that the upper bound (i.e. for the max blocksize) of the

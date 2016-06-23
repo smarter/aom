@@ -29,9 +29,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 #include <stdio.h>
 
 #include "pvq_decoder.h"
-#include "vp10/common/generic_code.h"
-#include "vpx_dsp/entdec.h"
-#include "vp10/common/odintrin.h"
+#include "av1/common/generic_code.h"
+#include "aom_dsp/entdec.h"
+#include "av1/common/odintrin.h"
 
 /** Decodes a value from 0 to N-1 (with N up to 16) based on a cdf and adapts
  * the cdf accordingly.

@@ -54,14 +54,14 @@
 #define MAX_AV1_HEADER_SIZE 80
 
 #if !CONFIG_PVQ
-#include "vp10/decoder/detokenize.h"
+#include "av1/decoder/detokenize.h"
 #else
-#include "vp10/encoder/encodemb.h"
-#include "vp10/decoder/pvq_decoder.h"
+#include "av1/encoder/encodemb.h"
+#include "av1/decoder/pvq_decoder.h"
 
-#include "vp10/decoder/decint.h"
-#include "vp10/common/partition.h"
-#include "vpx_dsp/entdec.h"
+#include "av1/decoder/decint.h"
+#include "av1/common/partition.h"
+#include "aom_dsp/entdec.h"
 #endif
 
 static int is_compound_reference_allowed(const AV1_COMMON *cm) {
@@ -535,13 +535,13 @@ static void predict_and_reconstruct_intra_block(MACROBLOCKD *const xd,
           fwd_txfm_8x8(pred, pvq_ref_coeff, diff_stride, tx_type);
           break;
         case TX_4X4:
-          vp10_fwd_txfm_4x4(pred, pvq_ref_coeff, diff_stride, tx_type,
+          av1_fwd_txfm_4x4(pred, pvq_ref_coeff, diff_stride, tx_type,
                             xd->lossless[seg_id]);
           break;
         default: assert(0); break;
       }
 
-      quant = &pd->seg_dequant[seg_id][0]; //vpx's quantizer
+      quant = &pd->seg_dequant[seg_id][0]; //aom's quantizer
 
       eob = pvq_decode_helper(&xd->daala_dec,
         pvq_ref_coeff,
@@ -552,9 +552,9 @@ static void predict_and_reconstruct_intra_block(MACROBLOCKD *const xd,
         xdec,
         ac_dc_coded);
 
-      // Since vp10 does not have separate inverse transform
+      // Since av1 does not have separate inverse transform
       // but also contains adding to predicted image,
-      // pass blank dummy image to vp10_inv_txfm_add_*x*(), i.e. set dst as zeros
+      // pass blank dummy image to av1_inv_txfm_add_*x*(), i.e. set dst as zeros
 			if (eob > 0) {
         for (j=0; j < tx_blk_size; j++)
           for (i = 0; i < tx_blk_size; i++)
@@ -635,13 +635,13 @@ static int reconstruct_inter_block(MACROBLOCKD *const xd, aom_reader *r,
         fwd_txfm_8x8(pred, pvq_ref_coeff, diff_stride, tx_type);
         break;
       case TX_4X4:
-        vp10_fwd_txfm_4x4(pred, pvq_ref_coeff, diff_stride, tx_type,
+        av1_fwd_txfm_4x4(pred, pvq_ref_coeff, diff_stride, tx_type,
                           xd->lossless[seg_id]);
         break;
       default: assert(0); break;
     }
 
-    quant = &pd->seg_dequant[seg_id][0]; //vpx's DC quantizer
+    quant = &pd->seg_dequant[seg_id][0]; //aom's DC quantizer
 
     eob = pvq_decode_helper(&xd->daala_dec,
       pvq_ref_coeff,
@@ -652,9 +652,9 @@ static int reconstruct_inter_block(MACROBLOCKD *const xd, aom_reader *r,
       xdec,
       ac_dc_coded);
 
-    // Since vp10 does not have separate inverse transform
+    // Since av1 does not have separate inverse transform
     // but also contains adding to predicted image,
-    // pass blank dummy image to vp10_inv_txfm_add_*x*(), i.e. set dst as zeros
+    // pass blank dummy image to av1_inv_txfm_add_*x*(), i.e. set dst as zeros
 		if (eob > 0) {
       for (j=0; j < tx_blk_size; j++)
         for (i = 0; i < tx_blk_size; i++)
@@ -1470,9 +1470,9 @@ static void daala_dec_init(daala_dec_ctx *daala_dec, od_ec_dec *ec) {
   daala_dec->ec = ec;
   od_adapt_ctx_reset(&daala_dec->state.adapt, 0);
 
-  daala_dec->state.qm = vpx_calloc(OD_QM_BUFFER_SIZE,
+  daala_dec->state.qm = aom_calloc(OD_QM_BUFFER_SIZE,
       sizeof(daala_dec->state.qm[0]));
-  daala_dec->state.qm_inv = vpx_calloc(OD_QM_BUFFER_SIZE,
+  daala_dec->state.qm_inv = aom_calloc(OD_QM_BUFFER_SIZE,
       sizeof(daala_dec->state.qm_inv[0]));
   daala_dec->qm = OD_FLAT_QM;
 
@@ -1481,8 +1481,8 @@ static void daala_dec_init(daala_dec_ctx *daala_dec, od_ec_dec *ec) {
 }
 
 static void daala_dec_free(daala_dec_ctx *daala_dec) {
-  vpx_free(daala_dec->state.qm);
-  vpx_free(daala_dec->state.qm_inv);
+  aom_free(daala_dec->state.qm);
+  aom_free(daala_dec->state.qm_inv);
 }
 #endif
 
@@ -1552,7 +1552,7 @@ static const uint8_t *decode_tiles(AV1Decoder *pbi, const uint8_t *data,
               : NULL;
       av1_zero(tile_data->dqcoeff);
 #if CONFIG_PVQ
-      vp10_zero(tile_data->pvq_ref_coeff);
+      av1_zero(tile_data->pvq_ref_coeff);
 #endif
       av1_tile_init(&tile_data->xd.tile, tile_data->cm, tile_row, tile_col);
       setup_token_decoder(buf->data, data_end, buf->size, &cm->error,

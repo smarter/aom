@@ -15,7 +15,7 @@
 #include "av1/common/entropymv.h"
 #include "av1/common/entropy.h"
 #if CONFIG_PVQ
-#include "vp10/encoder/encint.h"
+#include "av1/encoder/encint.h"
 #endif
 #if CONFIG_REF_MV
 #include "av1/common/mvref_common.h"
