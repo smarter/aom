@@ -1815,16 +1815,28 @@ static int64_t rd_pick_intra_sbuv_mode(AV1_COMP *cpi, MACROBLOCK *x,
       if (!super_block_uvrd(cpi, x, &this_rate_tokenonly, &this_distortion, &s,
                             &this_sse, bsize, best_rd)) {
 #if CONFIG_PVQ
-      od_encode_rollback(&x->daala_enc, &buf);
+        od_encode_rollback(&x->daala_enc, &buf);
 #endif
         continue;
+      }
+      rate_overhead = cpi->intra_uv_mode_cost[mbmi->mode][mode];
     }
+    this_rate = this_rate_tokenonly + rate_overhead;
+#else
+    if (!super_block_uvrd(cpi, x, &this_rate_tokenonly, &this_distortion, &s,
+                          &this_sse, bsize, best_rd)) {
 #if CONFIG_PVQ
-    od_encode_rollback(&x->daala_enc, &buf);
+      od_encode_rollback(&x->daala_enc, &buf);
 #endif
+      continue;
+    }
     this_rate = this_rate_tokenonly + cpi->intra_uv_mode_cost[mbmi->mode][mode];
 #endif  // CONFIG_EXT_INTRA
     this_rd = RDCOST(x->rdmult, x->rddiv, this_rate, this_distortion);
+
+#if CONFIG_PVQ
+    od_encode_rollback(&x->daala_enc, &buf);
+#endif
 
     if (this_rd < best_rd) {
       mode_selected = mode;
