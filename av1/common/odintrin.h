@@ -29,6 +29,23 @@ extern "C" {
 /*The maximum length of the side of a block.*/
 #define OD_BSIZE_MAX (1 << OD_LOG_BSIZE_MAX)
 
+/**The maximum number of color planes allowed in a single frame.*/
+# define OD_NPLANES_MAX (4)
+
+# define OD_DISABLE_CFL (1)
+# define OD_DISABLE_FILTER (1)
+
+/*Possible block sizes, note that OD_BLOCK_NXN = log2(N) - 2.*/
+#define OD_BLOCK_4X4 (0)
+#define OD_BLOCK_8X8 (1)
+#define OD_BLOCK_16X16 (2)
+#define OD_BLOCK_32X32 (3)
+#define OD_BLOCK_64X64 (4)
+#define OD_BLOCK_SIZES (OD_BLOCK_64X64 + 1)
+
+# define OD_LIMIT_BSIZE_MIN (OD_BLOCK_4X4)
+# define OD_LIMIT_BSIZE_MAX (OD_BLOCK_64X64)
+
 typedef int od_coeff;
 
 typedef int16_t od_dering_in;
@@ -60,7 +77,7 @@ extern uint32_t OD_DIVU_SMALL_CONSTS[OD_DIVU_DMAX][2];
   We define a special version of the macro to use when x can be zero.*/
 #define OD_ILOG(x) ((x) ? OD_ILOG_NZ(x) : 0)
 
-#define OD_LOG2 AOMLOG2
+#define OD_LOG2(x) (M_LOG2E*log(x))
 
 /*Enable special features for gcc and compatible compilers.*/
 #if defined(__GNUC__) && defined(__GNUC_MINOR__) && defined(__GNUC_PATCHLEVEL__)
@@ -123,9 +140,82 @@ void od_fatal_impl(const char *_str, const char *_file, int _line);
 /** Copy n elements of memory from src to dst, allowing overlapping regions.
     The 0* term provides compile-time type checking */
 #if !defined(OVERRIDE_OD_MOVE)
-#define OD_MOVE(dst, src, n) \
-  (memmove((dst), (src), sizeof(*(dst)) * (n) + 0 * ((dst) - (src))))
+# define OD_MOVE(dst, src, n) \
+ (memmove((dst), (src), sizeof(*(dst))*(n) + 0*((dst) - (src)) ))
 #endif
+
+/** Set n elements of dst to zero */
+#if !defined(OVERRIDE_OD_CLEAR)
+# define OD_CLEAR(dst, n) (memset((dst), 0, sizeof(*(dst))*(n)))
+#endif
+
+/** Silence unused parameter/variable warnings */
+# define OD_UNUSED(expr) (void)(expr)
+
+#if defined(OD_FLOAT_PVQ)
+typedef double od_val16;
+typedef double od_val32;
+# define OD_ROUND16(x) (x)
+# define OD_ROUND32(x) (x)
+# define OD_SHL(x, shift) (x)
+# define OD_SHR(x, shift) (x)
+# define OD_SHR_ROUND(x, shift) (x)
+# define OD_ABS(x) (fabs(x))
+# define OD_MULT16_16(a, b) ((a)*(b))
+# define OD_MULT16_32_Q16(a, b) ((a)*(b))
+#else
+typedef int16_t od_val16;
+typedef int32_t od_val32;
+# define OD_ROUND16(x) (int16_t)(floor(.5 + (x)))
+# define OD_ROUND32(x) (int32_t)(floor(.5 + (x)))
+/*Shift x left by shift*/
+# define OD_SHL(a, shift) ((int32_t)((uint32_t)(a) << (shift)))
+/*Shift x right by shift (without rounding)*/
+# define OD_SHR(x, shift) \
+  ((int32_t)((x) >> (shift)))
+/*Shift x right by shift (with rounding)*/
+# define OD_SHR_ROUND(x, shift) \
+  ((int32_t)(((x) + (1 << (shift) >> 1)) >> (shift)))
+/*Shift x right by shift (without rounding) or left by -shift if shift
+  is negative.*/
+# define OD_VSHR(x, shift) \
+  ((shift) > 0 ? (int32_t)((x) >> (shift)) \
+  : (int32_t)((x) << -(shift)))
+/*Shift x right by shift (with rounding) or left by -shift if shift
+  is negative.*/
+# define OD_VSHR_ROUND(x, shift) \
+  ((shift) > 0 ? (int32_t)(((x) + (1 << (shift) >> 1)) >> (shift)) \
+  : (int32_t)((x) << -(shift)))
+# define OD_ABS(x) (abs(x))
+/* (od_val32)(od_val16) gives TI compiler a hint that it's 16x16->32 multiply */
+/** 16x16 multiplication where the result fits in 32 bits */
+# define OD_MULT16_16(a, b) \
+ (((od_val32)(od_val16)(a))*((od_val32)(od_val16)(b)))
+/* Multiplies 16-bit a by 32-bit b and keeps bits [16:47]. */
+# define OD_MULT16_32_Q16(a, b) ((int16_t)(a)*(int64_t)(int32_t)(b) >> 16)
+/*16x16 multiplication where the result fits in 16 bits, without rounding.*/
+# define OD_MULT16_16_Q15(a,b) \
+  (((int16_t)(a)*((int32_t)(int16_t)(b))) >> 15)
+/*16x16 multiplication where the result fits in 16 bits, without rounding.*/
+# define OD_MULT16_16_Q16(a,b) \
+  ((((int16_t)(a))*((int32_t)(int16_t)(b))) >> 16)
+#endif
+
+/*All of these macros should expect floats as arguments.*/
+/*These two should compile as a single SSE instruction.*/
+# define OD_MINF(a, b) ((a) < (b) ? (a) : (b))
+# define OD_MAXF(a, b) ((a) > (b) ? (a) : (b))
+
+# define OD_DIV_R0(x, y) (((x) + OD_FLIPSIGNI((((y) + 1) >> 1) - 1, (x)))/(y))
+
+# define OD_SIGNMASK(a) (-((a) < 0))
+# define OD_FLIPSIGNI(a, b) (((a) + OD_SIGNMASK(b)) ^ OD_SIGNMASK(b))
+
+# define OD_MULT16_16_Q15(a,b) \
+  (((int16_t)(a)*((int32_t)(int16_t)(b))) >> 15)
+
+/* Multiplies 16-bit a by 32-bit b and keeps bits [16:47]. */
+# define OD_MULT16_32_Q16(a, b) ((int16_t)(a)*(int64_t)(int32_t)(b) >> 16)
 
 #ifdef __cplusplus
 }  // extern "C"
