@@ -11,6 +11,10 @@
 #ifndef AV1_COMMON_ODINTRIN_H_
 #define AV1_COMMON_ODINTRIN_H_
 
+#include <string.h>
+#include <math.h>
+#include <stdlib.h>
+
 #include "aom/aom_integer.h"
 #include "aom_dsp/aom_dsp_common.h"
 #include "aom_ports/bitops.h"
