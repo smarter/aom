@@ -405,11 +405,6 @@ static INLINE void av1_init_macroblockd(AV1_COMMON *cm, MACROBLOCKD *xd,
 #else
              tran_low_t *dqcoeff, tran_low_t *pvq_ref_coeff) {
 #endif
-#else
-  static INLINE void av1_init_macroblockd(VP10_COMMON *cm, MACROBLOCKD *xd,
-                                           tran_low_t *dqcoeff,
-                                           tran_low_t *pvq_ref_coeff) {
-#endif
   int i;
 
   for (i = 0; i < MAX_MB_PLANE; ++i) {
