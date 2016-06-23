@@ -20,6 +20,10 @@
 extern "C" {
 #endif
 
+# if !defined(M_LOG2E)
+#  define M_LOG2E (1.4426950408889634073599246810019)
+# endif
+
 /*Smallest blocks are 4x4*/
 #define OD_LOG_BSIZE0 (2)
 /*There are 5 block sizes total (4x4, 8x8, 16x16, 32x32 and 64x64).*/
@@ -32,8 +36,13 @@ extern "C" {
 /**The maximum number of color planes allowed in a single frame.*/
 # define OD_NPLANES_MAX (4)
 
+# define OD_COEFF_SHIFT (4)
+
 # define OD_DISABLE_CFL (1)
 # define OD_DISABLE_FILTER (1)
+
+# define OD_LOG(a)
+# define OD_LOG_PARTIAL(a)
 
 /*Possible block sizes, note that OD_BLOCK_NXN = log2(N) - 2.*/
 #define OD_BLOCK_4X4 (0)
@@ -142,6 +151,14 @@ void od_fatal_impl(const char *_str, const char *_file, int _line);
 #if !defined(OVERRIDE_OD_MOVE)
 # define OD_MOVE(dst, src, n) \
  (memmove((dst), (src), sizeof(*(dst))*(n) + 0*((dst) - (src)) ))
+#endif
+
+/** Linkage will break without this if using a C++ compiler, and will issue
+ * warnings without this for a C compiler*/
+#if defined(__cplusplus)
+# define OD_EXTERN extern
+#else
+# define OD_EXTERN
 #endif
 
 /** Set n elements of dst to zero */
