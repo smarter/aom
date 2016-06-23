@@ -1558,7 +1558,6 @@ static const uint8_t *decode_tiles(AV1Decoder *pbi, const uint8_t *data,
       setup_token_decoder(buf->data, data_end, buf->size, &cm->error,
                           &tile_data->bit_reader, pbi->decrypt_cb,
                           pbi->decrypt_state);
-      av1_init_macroblockd(cm, &tile_data->xd, tile_data->dqcoeff);
 #if !CONFIG_PVQ
       av1_init_macroblockd(cm, &tile_data->xd, tile_data->dqcoeff);
 #else
