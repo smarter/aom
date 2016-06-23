@@ -1,11 +1,12 @@
 /*
- *  Copyright (c) 2012 The WebM project authors. All Rights Reserved.
+ * Copyright (c) 2016, Alliance for Open Media. All rights reserved
  *
- *  Use of this source code is governed by a BSD-style license
- *  that can be found in the LICENSE file in the root of the source
- *  tree. An additional intellectual property rights grant can be found
- *  in the file PATENTS.  All contributing project authors may
- *  be found in the AUTHORS file in the root of the source tree.
+ * This source code is subject to the terms of the BSD 2 Clause License and
+ * the Alliance for Open Media Patent License 1.0. If the BSD 2 Clause License
+ * was not distributed with this source code in the LICENSE file, you can
+ * obtain it at www.aomedia.org/license/software. If the Alliance for Open
+ * Media Patent License 1.0 was not distributed with this source code in the
+ * PATENTS file, you can obtain it at www.aomedia.org/license/patent.
  */
 
 #ifndef TEST_UTIL_H_
@@ -14,12 +15,12 @@
 #include <stdio.h>
 #include <math.h>
 #include "third_party/googletest/src/include/gtest/gtest.h"
-#include "vpx/vpx_image.h"
+#include "aom/aom_image.h"
 
 // Macros
 #define GET_PARAM(k) std::tr1::get<k>(GetParam())
 
-inline double compute_psnr(const vpx_image_t *img1, const vpx_image_t *img2) {
+inline double compute_psnr(const aom_image_t *img1, const aom_image_t *img2) {
   assert((img1->fmt == img2->fmt) && (img1->d_w == img2->d_w) &&
          (img1->d_h == img2->d_h));
 
@@ -30,8 +31,8 @@ inline double compute_psnr(const vpx_image_t *img1, const vpx_image_t *img2) {
   int64_t sqrerr = 0;
   for (i = 0; i < height_y; ++i)
     for (j = 0; j < width_y; ++j) {
-      int64_t d = img1->planes[VPX_PLANE_Y][i * img1->stride[VPX_PLANE_Y] + j] -
-                  img2->planes[VPX_PLANE_Y][i * img2->stride[VPX_PLANE_Y] + j];
+      int64_t d = img1->planes[AOM_PLANE_Y][i * img1->stride[AOM_PLANE_Y] + j] -
+                  img2->planes[AOM_PLANE_Y][i * img2->stride[AOM_PLANE_Y] + j];
       sqrerr += d * d;
     }
   double mse = static_cast<double>(sqrerr) / (width_y * height_y);

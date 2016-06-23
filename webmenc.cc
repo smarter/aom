@@ -1,12 +1,14 @@
 /*
- *  Copyright (c) 2014 The WebM project authors. All Rights Reserved.
+ * Copyright (c) 2016, Alliance for Open Media. All rights reserved
  *
- *  Use of this source code is governed by a BSD-style license
- *  that can be found in the LICENSE file in the root of the source
- *  tree. An additional intellectual property rights grant can be found
- *  in the file PATENTS.  All contributing project authors may
- *  be found in the AUTHORS file in the root of the source tree.
- */
+ * This source code is subject to the terms of the BSD 2 Clause License and
+ * the Alliance for Open Media Patent License 1.0. If the BSD 2 Clause License
+ * was not distributed with this source code in the LICENSE file, you can
+ * obtain it at www.aomedia.org/license/software. If the Alliance for Open
+ * Media Patent License 1.0 was not distributed with this source code in the
+ * PATENTS file, you can obtain it at www.aomedia.org/license/patent.
+*/
+
 #include "./webmenc.h"
 
 #include <string>
@@ -21,10 +23,10 @@ const int kVideoTrackNumber = 1;
 }  // namespace
 
 void write_webm_file_header(struct EbmlGlobal *glob,
-                            const vpx_codec_enc_cfg_t *cfg,
-                            const struct vpx_rational *fps,
+                            const aom_codec_enc_cfg_t *cfg,
+                            const struct aom_rational *fps,
                             stereo_format_t stereo_fmt, unsigned int fourcc,
-                            const struct VpxRational *par) {
+                            const struct AvxRational *par) {
   mkvmuxer::MkvWriter *const writer = new mkvmuxer::MkvWriter(glob->stream);
   mkvmuxer::Segment *const segment = new mkvmuxer::Segment();
   segment->Init(writer);
@@ -34,9 +36,9 @@ void write_webm_file_header(struct EbmlGlobal *glob,
   mkvmuxer::SegmentInfo *const info = segment->GetSegmentInfo();
   const uint64_t kTimecodeScale = 1000000;
   info->set_timecode_scale(kTimecodeScale);
-  std::string version = "vpxenc";
+  std::string version = "aomenc";
   if (!glob->debug) {
-    version.append(std::string(" ") + vpx_codec_version_str());
+    version.append(std::string(" ") + aom_codec_version_str());
   }
   info->set_writing_app(version.c_str());
 
@@ -48,10 +50,8 @@ void write_webm_file_header(struct EbmlGlobal *glob,
   video_track->SetStereoMode(stereo_fmt);
   const char *codec_id;
   switch (fourcc) {
-    case VP8_FOURCC: codec_id = "V_VP8"; break;
-    case VP9_FOURCC: codec_id = "V_VP9"; break;
-    case VP10_FOURCC: codec_id = "V_VP10"; break;
-    default: codec_id = "V_VP10"; break;
+    case AV1_FOURCC: codec_id = "V_AV1"; break;
+    default: codec_id = "V_AV1"; break;
   }
   video_track->set_codec_id(codec_id);
   if (par->numerator > 1 || par->denominator > 1) {
@@ -69,8 +69,8 @@ void write_webm_file_header(struct EbmlGlobal *glob,
   glob->segment = segment;
 }
 
-void write_webm_block(struct EbmlGlobal *glob, const vpx_codec_enc_cfg_t *cfg,
-                      const vpx_codec_cx_pkt_t *pkt) {
+void write_webm_block(struct EbmlGlobal *glob, const aom_codec_enc_cfg_t *cfg,
+                      const aom_codec_cx_pkt_t *pkt) {
   mkvmuxer::Segment *const segment =
       reinterpret_cast<mkvmuxer::Segment *>(glob->segment);
   int64_t pts_ns = pkt->data.frame.pts * 1000000000ll * cfg->g_timebase.num /
@@ -80,7 +80,7 @@ void write_webm_block(struct EbmlGlobal *glob, const vpx_codec_enc_cfg_t *cfg,
 
   segment->AddFrame(static_cast<uint8_t *>(pkt->data.frame.buf),
                     pkt->data.frame.sz, kVideoTrackNumber, pts_ns,
-                    pkt->data.frame.flags & VPX_FRAME_IS_KEY);
+                    pkt->data.frame.flags & AOM_FRAME_IS_KEY);
 }
 
 void write_webm_file_footer(struct EbmlGlobal *glob) {

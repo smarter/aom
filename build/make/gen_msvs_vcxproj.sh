@@ -1,12 +1,12 @@
 #!/bin/bash
+## Copyright (c) 2016, Alliance for Open Media. All rights reserved
 ##
-##  Copyright (c) 2013 The WebM project authors. All Rights Reserved.
-##
-##  Use of this source code is governed by a BSD-style license
-##  that can be found in the LICENSE file in the root of the source
-##  tree. An additional intellectual property rights grant can be found
-##  in the file PATENTS.  All contributing project authors may
-##  be found in the AUTHORS file in the root of the source tree.
+## This source code is subject to the terms of the BSD 2 Clause License and
+## the Alliance for Open Media Patent License 1.0. If the BSD 2 Clause License
+## was not distributed with this source code in the LICENSE file, you can
+## obtain it at www.aomedia.org/license/software. If the Alliance for Open
+## Media Patent License 1.0 was not distributed with this source code in the
+## PATENTS file, you can obtain it at www.aomedia.org/license/patent.
 ##
 
 self=$0
@@ -83,8 +83,8 @@ generate_filter() {
                              -e 's/^[\./]\+//g' -e 's,[:/ ],_,g')
 
                 if ([ "$pat" == "asm" ] || [ "$pat" == "s" ]) && $asm_use_custom_step; then
-                    # Avoid object file name collisions, i.e. vpx_config.c and
-                    # vpx_config.asm produce the same object file without
+                    # Avoid object file name collisions, i.e. aom_config.c and
+                    # aom_config.asm produce the same object file without
                     # this additional suffix.
                     objf=${objf%.obj}_asm.obj
                     open_tag CustomBuild \
@@ -299,7 +299,7 @@ generate_vcxproj() {
             tag_content AppContainerApplication true
             # The application type can be one of "Windows Store",
             # "Windows Phone" or "Windows Phone Silverlight". The
-            # actual value doesn't matter from the libvpx point of view,
+            # actual value doesn't matter from the libaom point of view,
             # since a static library built for one works on the others.
             # The PlatformToolset field needs to be set in sync with this;
             # for Windows Store and Windows Phone Silverlight it should be
@@ -392,7 +392,7 @@ generate_vcxproj() {
         for config in Debug Release; do
             open_tag ItemDefinitionGroup \
                 Condition="'\$(Configuration)|\$(Platform)'=='$config|$plat'"
-            if [ "$name" == "vpx" ]; then
+            if [ "$name" == "aom" ]; then
                 hostplat=$plat
                 if [ "$hostplat" == "ARM" ]; then
                     hostplat=Win32

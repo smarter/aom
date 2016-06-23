@@ -1,39 +1,40 @@
 /*
- *  Copyright (c) 2012 The WebM project authors. All Rights Reserved.
+ * Copyright (c) 2016, Alliance for Open Media. All rights reserved
  *
- *  Use of this source code is governed by a BSD-style license
- *  that can be found in the LICENSE file in the root of the source
- *  tree. An additional intellectual property rights grant can be found
- *  in the file PATENTS.  All contributing project authors may
- *  be found in the AUTHORS file in the root of the source tree.
- */
+ * This source code is subject to the terms of the BSD 2 Clause License and
+ * the Alliance for Open Media Patent License 1.0. If the BSD 2 Clause License
+ * was not distributed with this source code in the LICENSE file, you can
+ * obtain it at www.aomedia.org/license/software. If the Alliance for Open
+ * Media Patent License 1.0 was not distributed with this source code in the
+ * PATENTS file, you can obtain it at www.aomedia.org/license/patent.
+*/
 
 #include "third_party/googletest/src/include/gtest/gtest.h"
 
-#include "./vp10_rtcd.h"
-#include "./vpx_config.h"
-#include "./vpx_dsp_rtcd.h"
+#include "./av1_rtcd.h"
+#include "./aom_config.h"
+#include "./aom_dsp_rtcd.h"
 #include "test/acm_random.h"
 #include "test/clear_system_state.h"
 #include "test/register_state_check.h"
-#include "vp10/common/blockd.h"
-#include "vpx_mem/vpx_mem.h"
+#include "av1/common/blockd.h"
+#include "aom_mem/aom_mem.h"
 
 typedef void (*SubtractFunc)(int rows, int cols, int16_t *diff_ptr,
                              ptrdiff_t diff_stride, const uint8_t *src_ptr,
                              ptrdiff_t src_stride, const uint8_t *pred_ptr,
                              ptrdiff_t pred_stride);
 
-namespace vp9 {
+namespace av1 {
 
-class VP9SubtractBlockTest : public ::testing::TestWithParam<SubtractFunc> {
+class AV1SubtractBlockTest : public ::testing::TestWithParam<SubtractFunc> {
  public:
-  virtual void TearDown() { libvpx_test::ClearSystemState(); }
+  virtual void TearDown() { libaom_test::ClearSystemState(); }
 };
 
-using libvpx_test::ACMRandom;
+using libaom_test::ACMRandom;
 
-TEST_P(VP9SubtractBlockTest, SimpleSubtract) {
+TEST_P(AV1SubtractBlockTest, SimpleSubtract) {
   ACMRandom rnd(ACMRandom::DeterministicSeed());
 
   // FIXME(rbultje) split in its own file
@@ -42,11 +43,11 @@ TEST_P(VP9SubtractBlockTest, SimpleSubtract) {
     const int block_width = 4 * num_4x4_blocks_wide_lookup[bsize];
     const int block_height = 4 * num_4x4_blocks_high_lookup[bsize];
     int16_t *diff = reinterpret_cast<int16_t *>(
-        vpx_memalign(16, sizeof(*diff) * block_width * block_height * 2));
+        aom_memalign(16, sizeof(*diff) * block_width * block_height * 2));
     uint8_t *pred = reinterpret_cast<uint8_t *>(
-        vpx_memalign(16, block_width * block_height * 2));
+        aom_memalign(16, block_width * block_height * 2));
     uint8_t *src = reinterpret_cast<uint8_t *>(
-        vpx_memalign(16, block_width * block_height * 2));
+        aom_memalign(16, block_width * block_height * 2));
 
     for (int n = 0; n < 100; n++) {
       for (int r = 0; r < block_height; ++r) {
@@ -79,26 +80,26 @@ TEST_P(VP9SubtractBlockTest, SimpleSubtract) {
         }
       }
     }
-    vpx_free(diff);
-    vpx_free(pred);
-    vpx_free(src);
+    aom_free(diff);
+    aom_free(pred);
+    aom_free(src);
   }
 }
 
-INSTANTIATE_TEST_CASE_P(C, VP9SubtractBlockTest,
-                        ::testing::Values(vpx_subtract_block_c));
+INSTANTIATE_TEST_CASE_P(C, AV1SubtractBlockTest,
+                        ::testing::Values(aom_subtract_block_c));
 
 #if HAVE_SSE2 && CONFIG_USE_X86INC
-INSTANTIATE_TEST_CASE_P(SSE2, VP9SubtractBlockTest,
-                        ::testing::Values(vpx_subtract_block_sse2));
+INSTANTIATE_TEST_CASE_P(SSE2, AV1SubtractBlockTest,
+                        ::testing::Values(aom_subtract_block_sse2));
 #endif
 #if HAVE_NEON
-INSTANTIATE_TEST_CASE_P(NEON, VP9SubtractBlockTest,
-                        ::testing::Values(vpx_subtract_block_neon));
+INSTANTIATE_TEST_CASE_P(NEON, AV1SubtractBlockTest,
+                        ::testing::Values(aom_subtract_block_neon));
 #endif
 #if HAVE_MSA
-INSTANTIATE_TEST_CASE_P(MSA, VP9SubtractBlockTest,
-                        ::testing::Values(vpx_subtract_block_msa));
+INSTANTIATE_TEST_CASE_P(MSA, AV1SubtractBlockTest,
+                        ::testing::Values(aom_subtract_block_msa));
 #endif
 
-}  // namespace vp9
+}  // namespace av1

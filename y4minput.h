@@ -1,21 +1,22 @@
 /*
- *  Copyright (c) 2010 The WebM project authors. All Rights Reserved.
+ * Copyright (c) 2016, Alliance for Open Media. All rights reserved
  *
- *  Use of this source code is governed by a BSD-style license
- *  that can be found in the LICENSE file in the root of the source
- *  tree. An additional intellectual property rights grant can be found
- *  in the file PATENTS.  All contributing project authors may
- *  be found in the AUTHORS file in the root of the source tree.
+ * This source code is subject to the terms of the BSD 2 Clause License and
+ * the Alliance for Open Media Patent License 1.0. If the BSD 2 Clause License
+ * was not distributed with this source code in the LICENSE file, you can
+ * obtain it at www.aomedia.org/license/software. If the Alliance for Open
+ * Media Patent License 1.0 was not distributed with this source code in the
+ * PATENTS file, you can obtain it at www.aomedia.org/license/patent.
  *
- *  Based on code from the OggTheora software codec source code,
- *  Copyright (C) 2002-2010 The Xiph.Org Foundation and contributors.
+ * Based on code from the OggTheora software codec source code,
+ * Copyright (C) 2002-2010 The Xiph.Org Foundation and contributors.
  */
 
 #ifndef Y4MINPUT_H_
 #define Y4MINPUT_H_
 
 #include <stdio.h>
-#include "vpx/vpx_image.h"
+#include "aom/aom_image.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -51,7 +52,7 @@ struct y4m_input {
   y4m_convert_func convert;
   unsigned char *dst_buf;
   unsigned char *aux_buf;
-  enum vpx_img_fmt vpx_fmt;
+  enum aom_img_fmt aom_fmt;
   int bps;
   unsigned int bit_depth;
 };
@@ -59,7 +60,7 @@ struct y4m_input {
 int y4m_input_open(y4m_input *_y4m, FILE *_fin, char *_skip, int _nskip,
                    int only_420);
 void y4m_input_close(y4m_input *_y4m);
-int y4m_input_fetch_frame(y4m_input *_y4m, FILE *_fin, vpx_image_t *img);
+int y4m_input_fetch_frame(y4m_input *_y4m, FILE *_fin, aom_image_t *img);
 
 #ifdef __cplusplus
 }  // extern "C"

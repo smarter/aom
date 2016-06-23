@@ -1,11 +1,12 @@
 /*
- *  Copyright (c) 2013 The WebM project authors. All Rights Reserved.
+ * Copyright (c) 2016, Alliance for Open Media. All rights reserved
  *
- *  Use of this source code is governed by a BSD-style license
- *  that can be found in the LICENSE file in the root of the source
- *  tree. An additional intellectual property rights grant can be found
- *  in the file PATENTS.  All contributing project authors may
- *  be found in the AUTHORS file in the root of the source tree.
+ * This source code is subject to the terms of the BSD 2 Clause License and
+ * the Alliance for Open Media Patent License 1.0. If the BSD 2 Clause License
+ * was not distributed with this source code in the LICENSE file, you can
+ * obtain it at www.aomedia.org/license/software. If the Alliance for Open
+ * Media Patent License 1.0 was not distributed with this source code in the
+ * PATENTS file, you can obtain it at www.aomedia.org/license/patent.
  */
 #ifndef WARNINGS_H_
 #define WARNINGS_H_
@@ -14,8 +15,8 @@
 extern "C" {
 #endif
 
-struct vpx_codec_enc_cfg;
-struct VpxEncoderConfig;
+struct aom_codec_enc_cfg;
+struct AvxEncoderConfig;
 
 /*
  * Checks config for improperly used settings. Warns user upon encountering
@@ -23,8 +24,8 @@ struct VpxEncoderConfig;
  * when warnings are issued.
  */
 void check_encoder_config(int disable_prompt,
-                          const struct VpxEncoderConfig *global_config,
-                          const struct vpx_codec_enc_cfg *stream_config);
+                          const struct AvxEncoderConfig *global_config,
+                          const struct aom_codec_enc_cfg *stream_config);
 
 #ifdef __cplusplus
 }  // extern "C"

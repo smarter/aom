@@ -1,11 +1,12 @@
 /*
- *  Copyright (c) 2012 The WebM project authors. All Rights Reserved.
+ * Copyright (c) 2016, Alliance for Open Media. All rights reserved
  *
- *  Use of this source code is governed by a BSD-style license
- *  that can be found in the LICENSE file in the root of the source
- *  tree. An additional intellectual property rights grant can be found
- *  in the file PATENTS.  All contributing project authors may
- *  be found in the AUTHORS file in the root of the source tree.
+ * This source code is subject to the terms of the BSD 2 Clause License and
+ * the Alliance for Open Media Patent License 1.0. If the BSD 2 Clause License
+ * was not distributed with this source code in the LICENSE file, you can
+ * obtain it at www.aomedia.org/license/software. If the Alliance for Open
+ * Media Patent License 1.0 was not distributed with this source code in the
+ * PATENTS file, you can obtain it at www.aomedia.org/license/patent.
  */
 #ifndef TEST_I420_VIDEO_SOURCE_H_
 #define TEST_I420_VIDEO_SOURCE_H_
@@ -15,7 +16,7 @@
 
 #include "test/yuv_video_source.h"
 
-namespace libvpx_test {
+namespace libaom_test {
 
 // This class extends VideoSource to allow parsing of raw yv12
 // so that we can do actual file encodes.
@@ -24,10 +25,10 @@ class I420VideoSource : public YUVVideoSource {
   I420VideoSource(const std::string &file_name, unsigned int width,
                   unsigned int height, int rate_numerator, int rate_denominator,
                   unsigned int start, int limit)
-      : YUVVideoSource(file_name, VPX_IMG_FMT_I420, width, height,
+      : YUVVideoSource(file_name, AOM_IMG_FMT_I420, width, height,
                        rate_numerator, rate_denominator, start, limit) {}
 };
 
-}  // namespace libvpx_test
+}  // namespace libaom_test
 
 #endif  // TEST_I420_VIDEO_SOURCE_H_

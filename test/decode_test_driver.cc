@@ -1,12 +1,13 @@
 /*
- *  Copyright (c) 2012 The WebM project authors. All Rights Reserved.
+ * Copyright (c) 2016, Alliance for Open Media. All rights reserved
  *
- *  Use of this source code is governed by a BSD-style license
- *  that can be found in the LICENSE file in the root of the source
- *  tree. An additional intellectual property rights grant can be found
- *  in the file PATENTS.  All contributing project authors may
- *  be found in the AUTHORS file in the root of the source tree.
- */
+ * This source code is subject to the terms of the BSD 2 Clause License and
+ * the Alliance for Open Media Patent License 1.0. If the BSD 2 Clause License
+ * was not distributed with this source code in the LICENSE file, you can
+ * obtain it at www.aomedia.org/license/software. If the Alliance for Open
+ * Media Patent License 1.0 was not distributed with this source code in the
+ * PATENTS file, you can obtain it at www.aomedia.org/license/patent.
+*/
 
 #include "third_party/googletest/src/include/gtest/gtest.h"
 
@@ -15,56 +16,56 @@
 #include "test/register_state_check.h"
 #include "test/video_source.h"
 
-namespace libvpx_test {
+namespace libaom_test {
 
-const char kVP8Name[] = "WebM Project VP8";
+const char kAOMName[] = "AOMedia Project AOM";
 
-vpx_codec_err_t Decoder::PeekStream(const uint8_t *cxdata, size_t size,
-                                    vpx_codec_stream_info_t *stream_info) {
-  return vpx_codec_peek_stream_info(
+aom_codec_err_t Decoder::PeekStream(const uint8_t *cxdata, size_t size,
+                                    aom_codec_stream_info_t *stream_info) {
+  return aom_codec_peek_stream_info(
       CodecInterface(), cxdata, static_cast<unsigned int>(size), stream_info);
 }
 
-vpx_codec_err_t Decoder::DecodeFrame(const uint8_t *cxdata, size_t size) {
+aom_codec_err_t Decoder::DecodeFrame(const uint8_t *cxdata, size_t size) {
   return DecodeFrame(cxdata, size, NULL);
 }
 
-vpx_codec_err_t Decoder::DecodeFrame(const uint8_t *cxdata, size_t size,
+aom_codec_err_t Decoder::DecodeFrame(const uint8_t *cxdata, size_t size,
                                      void *user_priv) {
-  vpx_codec_err_t res_dec;
+  aom_codec_err_t res_dec;
   InitOnce();
   API_REGISTER_STATE_CHECK(
-      res_dec = vpx_codec_decode(
+      res_dec = aom_codec_decode(
           &decoder_, cxdata, static_cast<unsigned int>(size), user_priv, 0));
   return res_dec;
 }
 
-bool Decoder::IsVP8() const {
+bool Decoder::IsAOM() const {
   const char *codec_name = GetDecoderName();
-  return strncmp(kVP8Name, codec_name, sizeof(kVP8Name) - 1) == 0;
+  return strncmp(kAOMName, codec_name, sizeof(kAOMName) - 1) == 0;
 }
 
 void DecoderTest::HandlePeekResult(Decoder *const decoder,
                                    CompressedVideoSource *video,
-                                   const vpx_codec_err_t res_peek) {
-  const bool is_vp8 = decoder->IsVP8();
-  if (is_vp8) {
-    /* Vp8's implementation of PeekStream returns an error if the frame you
-     * pass it is not a keyframe, so we only expect VPX_CODEC_OK on the first
+                                   const aom_codec_err_t res_peek) {
+  const bool is_aom = decoder->IsAOM();
+  if (is_aom) {
+    /* AOM's implementation of PeekStream returns an error if the frame you
+     * pass it is not a keyframe, so we only expect AOM_CODEC_OK on the first
      * frame, which must be a keyframe. */
     if (video->frame_number() == 0)
-      ASSERT_EQ(VPX_CODEC_OK, res_peek) << "Peek return failed: "
-                                        << vpx_codec_err_to_string(res_peek);
+      ASSERT_EQ(AOM_CODEC_OK, res_peek) << "Peek return failed: "
+                                        << aom_codec_err_to_string(res_peek);
   } else {
-    /* The Vp9 implementation of PeekStream returns an error only if the
-     * data passed to it isn't a valid Vp9 chunk. */
-    ASSERT_EQ(VPX_CODEC_OK, res_peek) << "Peek return failed: "
-                                      << vpx_codec_err_to_string(res_peek);
+    /* The Av1 implementation of PeekStream returns an error only if the
+     * data passed to it isn't a valid Av1 chunk. */
+    ASSERT_EQ(AOM_CODEC_OK, res_peek) << "Peek return failed: "
+                                      << aom_codec_err_to_string(res_peek);
   }
 }
 
 void DecoderTest::RunLoop(CompressedVideoSource *video,
-                          const vpx_codec_dec_cfg_t &dec_cfg) {
+                          const aom_codec_dec_cfg_t &dec_cfg) {
   Decoder *const decoder = codec_->CreateDecoder(dec_cfg, flags_, 0);
   ASSERT_TRUE(decoder != NULL);
   bool end_of_file = false;
@@ -74,27 +75,27 @@ void DecoderTest::RunLoop(CompressedVideoSource *video,
        video->Next()) {
     PreDecodeFrameHook(*video, decoder);
 
-    vpx_codec_stream_info_t stream_info;
+    aom_codec_stream_info_t stream_info;
     stream_info.sz = sizeof(stream_info);
 
     if (video->cxdata() != NULL) {
-      const vpx_codec_err_t res_peek = decoder->PeekStream(
+      const aom_codec_err_t res_peek = decoder->PeekStream(
           video->cxdata(), video->frame_size(), &stream_info);
       HandlePeekResult(decoder, video, res_peek);
       ASSERT_FALSE(::testing::Test::HasFailure());
 
-      vpx_codec_err_t res_dec =
+      aom_codec_err_t res_dec =
           decoder->DecodeFrame(video->cxdata(), video->frame_size());
       if (!HandleDecodeResult(res_dec, *video, decoder)) break;
     } else {
       // Signal end of the file to the decoder.
-      const vpx_codec_err_t res_dec = decoder->DecodeFrame(NULL, 0);
-      ASSERT_EQ(VPX_CODEC_OK, res_dec) << decoder->DecodeError();
+      const aom_codec_err_t res_dec = decoder->DecodeFrame(NULL, 0);
+      ASSERT_EQ(AOM_CODEC_OK, res_dec) << decoder->DecodeError();
       end_of_file = true;
     }
 
     DxDataIterator dec_iter = decoder->GetDxData();
-    const vpx_image_t *img = NULL;
+    const aom_image_t *img = NULL;
 
     // Get decompressed data
     while ((img = dec_iter.Next()))
@@ -104,14 +105,14 @@ void DecoderTest::RunLoop(CompressedVideoSource *video,
 }
 
 void DecoderTest::RunLoop(CompressedVideoSource *video) {
-  vpx_codec_dec_cfg_t dec_cfg = vpx_codec_dec_cfg_t();
+  aom_codec_dec_cfg_t dec_cfg = aom_codec_dec_cfg_t();
   RunLoop(video, dec_cfg);
 }
 
-void DecoderTest::set_cfg(const vpx_codec_dec_cfg_t &dec_cfg) {
+void DecoderTest::set_cfg(const aom_codec_dec_cfg_t &dec_cfg) {
   memcpy(&cfg_, &dec_cfg, sizeof(cfg_));
 }
 
-void DecoderTest::set_flags(const vpx_codec_flags_t flags) { flags_ = flags; }
+void DecoderTest::set_flags(const aom_codec_flags_t flags) { flags_ = flags; }
 
-}  // namespace libvpx_test
+}  // namespace libaom_test

@@ -1,12 +1,14 @@
 ##
-##  Copyright (c) 2010 The WebM project authors. All Rights Reserved.
+## Copyright (c) 2016, Alliance for Open Media. All rights reserved
 ##
-##  Use of this source code is governed by a BSD-style license
-##  that can be found in the LICENSE file in the root of the source
-##  tree. An additional intellectual property rights grant can be found
-##  in the file PATENTS.  All contributing project authors may
-##  be found in the AUTHORS file in the root of the source tree.
+## This source code is subject to the terms of the BSD 2 Clause License and
+## the Alliance for Open Media Patent License 1.0. If the BSD 2 Clause License
+## was not distributed with this source code in the LICENSE file, you can
+## obtain it at www.aomedia.org/license/software. If the Alliance for Open
+## Media Patent License 1.0 was not distributed with this source code in the
+## PATENTS file, you can obtain it at www.aomedia.org/license/patent.
 ##
+
 
 
 # ARM assembly files are written in RVCT-style. We use some make magic to
@@ -34,58 +36,58 @@ endef
 CODEC_SRCS-yes += CHANGELOG
 CODEC_SRCS-yes += libs.mk
 
-include $(SRC_PATH_BARE)/vpx/vpx_codec.mk
-CODEC_SRCS-yes += $(addprefix vpx/,$(call enabled,API_SRCS))
-CODEC_DOC_SRCS += $(addprefix vpx/,$(call enabled,API_DOC_SRCS))
+include $(SRC_PATH_BARE)/aom/aom_codec.mk
+CODEC_SRCS-yes += $(addprefix aom/,$(call enabled,API_SRCS))
+CODEC_DOC_SRCS += $(addprefix aom/,$(call enabled,API_DOC_SRCS))
 
-include $(SRC_PATH_BARE)/vpx_mem/vpx_mem.mk
-CODEC_SRCS-yes += $(addprefix vpx_mem/,$(call enabled,MEM_SRCS))
+include $(SRC_PATH_BARE)/aom_mem/aom_mem.mk
+CODEC_SRCS-yes += $(addprefix aom_mem/,$(call enabled,MEM_SRCS))
 
-include $(SRC_PATH_BARE)/vpx_scale/vpx_scale.mk
-CODEC_SRCS-yes += $(addprefix vpx_scale/,$(call enabled,SCALE_SRCS))
+include $(SRC_PATH_BARE)/aom_scale/aom_scale.mk
+CODEC_SRCS-yes += $(addprefix aom_scale/,$(call enabled,SCALE_SRCS))
 
-include $(SRC_PATH_BARE)/vpx_ports/vpx_ports.mk
-CODEC_SRCS-yes += $(addprefix vpx_ports/,$(call enabled,PORTS_SRCS))
+include $(SRC_PATH_BARE)/aom_ports/aom_ports.mk
+CODEC_SRCS-yes += $(addprefix aom_ports/,$(call enabled,PORTS_SRCS))
 
-include $(SRC_PATH_BARE)/vpx_dsp/vpx_dsp.mk
-CODEC_SRCS-yes += $(addprefix vpx_dsp/,$(call enabled,DSP_SRCS))
+include $(SRC_PATH_BARE)/aom_dsp/aom_dsp.mk
+CODEC_SRCS-yes += $(addprefix aom_dsp/,$(call enabled,DSP_SRCS))
 
-include $(SRC_PATH_BARE)/vpx_util/vpx_util.mk
-CODEC_SRCS-yes += $(addprefix vpx_util/,$(call enabled,UTIL_SRCS))
+include $(SRC_PATH_BARE)/aom_util/aom_util.mk
+CODEC_SRCS-yes += $(addprefix aom_util/,$(call enabled,UTIL_SRCS))
 
-#  VP10 make file
-ifeq ($(CONFIG_VP10),yes)
-  VP10_PREFIX=vp10/
-  include $(SRC_PATH_BARE)/$(VP10_PREFIX)vp10_common.mk
+#  AV1 make file
+ifeq ($(CONFIG_AV1),yes)
+  AV1_PREFIX=av1/
+  include $(SRC_PATH_BARE)/$(AV1_PREFIX)av1_common.mk
 endif
 
-ifeq ($(CONFIG_VP10_ENCODER),yes)
-  VP10_PREFIX=vp10/
-  include $(SRC_PATH_BARE)/$(VP10_PREFIX)vp10cx.mk
-  CODEC_SRCS-yes += $(addprefix $(VP10_PREFIX),$(call enabled,VP10_CX_SRCS))
-  CODEC_EXPORTS-yes += $(addprefix $(VP10_PREFIX),$(VP10_CX_EXPORTS))
-  CODEC_SRCS-yes += $(VP10_PREFIX)vp10cx.mk vpx/vp8.h vpx/vp8cx.h
-  INSTALL-LIBS-yes += include/vpx/vp8.h include/vpx/vp8cx.h
-  INSTALL-LIBS-$(CONFIG_SPATIAL_SVC) += include/vpx/svc_context.h
-  INSTALL_MAPS += include/vpx/% $(SRC_PATH_BARE)/$(VP10_PREFIX)/%
-  CODEC_DOC_SRCS += vpx/vp8.h vpx/vp8cx.h
-  CODEC_DOC_SECTIONS += vp10 vp10_encoder
+ifeq ($(CONFIG_AV1_ENCODER),yes)
+  AV1_PREFIX=av1/
+  include $(SRC_PATH_BARE)/$(AV1_PREFIX)av1_cx.mk
+  CODEC_SRCS-yes += $(addprefix $(AV1_PREFIX),$(call enabled,AV1_CX_SRCS))
+  CODEC_EXPORTS-yes += $(addprefix $(AV1_PREFIX),$(AV1_CX_EXPORTS))
+  CODEC_SRCS-yes += $(AV1_PREFIX)av1_cx.mk aom/aom.h aom/aomcx.h
+  INSTALL-LIBS-yes += include/aom/aom.h include/aom/aomcx.h
+  INSTALL-LIBS-$(CONFIG_SPATIAL_SVC) += include/aom/svc_context.h
+  INSTALL_MAPS += include/aom/% $(SRC_PATH_BARE)/$(AV1_PREFIX)/%
+  CODEC_DOC_SRCS += aom/aom.h aom/aomcx.h
+  CODEC_DOC_SECTIONS += av1 av1_encoder
 endif
 
-ifeq ($(CONFIG_VP10_DECODER),yes)
-  VP10_PREFIX=vp10/
-  include $(SRC_PATH_BARE)/$(VP10_PREFIX)vp10dx.mk
-  CODEC_SRCS-yes += $(addprefix $(VP10_PREFIX),$(call enabled,VP10_DX_SRCS))
-  CODEC_EXPORTS-yes += $(addprefix $(VP10_PREFIX),$(VP10_DX_EXPORTS))
-  CODEC_SRCS-yes += $(VP10_PREFIX)vp10dx.mk vpx/vp8.h vpx/vp8dx.h
-  INSTALL-LIBS-yes += include/vpx/vp8.h include/vpx/vp8dx.h
-  INSTALL_MAPS += include/vpx/% $(SRC_PATH_BARE)/$(VP10_PREFIX)/%
-  CODEC_DOC_SRCS += vpx/vp8.h vpx/vp8dx.h
-  CODEC_DOC_SECTIONS += vp10 vp10_decoder
+ifeq ($(CONFIG_AV1_DECODER),yes)
+  AV1_PREFIX=av1/
+  include $(SRC_PATH_BARE)/$(AV1_PREFIX)av1_dx.mk
+  CODEC_SRCS-yes += $(addprefix $(AV1_PREFIX),$(call enabled,AV1_DX_SRCS))
+  CODEC_EXPORTS-yes += $(addprefix $(AV1_PREFIX),$(AV1_DX_EXPORTS))
+  CODEC_SRCS-yes += $(AV1_PREFIX)av1_dx.mk aom/aom.h aom/aomdx.h
+  INSTALL-LIBS-yes += include/aom/aom.h include/aom/aomdx.h
+  INSTALL_MAPS += include/aom/% $(SRC_PATH_BARE)/$(AV1_PREFIX)/%
+  CODEC_DOC_SRCS += aom/aom.h aom/aomdx.h
+  CODEC_DOC_SECTIONS += av1 av1_decoder
 endif
 
-VP10_PREFIX=vp10/
-$(BUILD_PFX)$(VP10_PREFIX)%.c.o: CFLAGS += -Wextra
+AV1_PREFIX=av1/
+$(BUILD_PFX)$(AV1_PREFIX)%.c.o: CFLAGS += -Wextra
 
 ifeq ($(CONFIG_ENCODERS),yes)
   CODEC_DOC_SECTIONS += encoder
@@ -96,7 +98,7 @@ endif
 
 
 ifeq ($(CONFIG_MSVS),yes)
-CODEC_LIB=$(if $(CONFIG_STATIC_MSVCRT),vpxmt,vpxmd)
+CODEC_LIB=$(if $(CONFIG_STATIC_MSVCRT),aommt,aommd)
 GTEST_LIB=$(if $(CONFIG_STATIC_MSVCRT),gtestmt,gtestmd)
 # This variable uses deferred expansion intentionally, since the results of
 # $(wildcard) may change during the course of the Make.
@@ -105,8 +107,8 @@ endif
 
 # The following pairs define a mapping of locations in the distribution
 # tree to locations in the source/build trees.
-INSTALL_MAPS += include/vpx/% $(SRC_PATH_BARE)/vpx/%
-INSTALL_MAPS += include/vpx/% $(SRC_PATH_BARE)/vpx_ports/%
+INSTALL_MAPS += include/aom/% $(SRC_PATH_BARE)/aom/%
+INSTALL_MAPS += include/aom/% $(SRC_PATH_BARE)/aom_ports/%
 INSTALL_MAPS += $(LIBSUBDIR)/%     %
 INSTALL_MAPS += src/%     $(SRC_PATH_BARE)/%
 ifeq ($(CONFIG_MSVS),yes)
@@ -116,35 +118,35 @@ endif
 
 CODEC_SRCS-yes += build/make/version.sh
 CODEC_SRCS-yes += build/make/rtcd.pl
-CODEC_SRCS-yes += vpx_ports/emmintrin_compat.h
-CODEC_SRCS-yes += vpx_ports/mem_ops.h
-CODEC_SRCS-yes += vpx_ports/mem_ops_aligned.h
-CODEC_SRCS-yes += vpx_ports/vpx_once.h
-CODEC_SRCS-yes += $(BUILD_PFX)vpx_config.c
-INSTALL-SRCS-no += $(BUILD_PFX)vpx_config.c
+CODEC_SRCS-yes += aom_ports/emmintrin_compat.h
+CODEC_SRCS-yes += aom_ports/mem_ops.h
+CODEC_SRCS-yes += aom_ports/mem_ops_aligned.h
+CODEC_SRCS-yes += aom_ports/aom_once.h
+CODEC_SRCS-yes += $(BUILD_PFX)aom_config.c
+INSTALL-SRCS-no += $(BUILD_PFX)aom_config.c
 ifeq ($(ARCH_X86)$(ARCH_X86_64),yes)
 INSTALL-SRCS-$(CONFIG_CODEC_SRCS) += third_party/x86inc/x86inc.asm
 endif
-CODEC_EXPORTS-yes += vpx/exports_com
-CODEC_EXPORTS-$(CONFIG_ENCODERS) += vpx/exports_enc
-CODEC_EXPORTS-$(CONFIG_DECODERS) += vpx/exports_dec
+CODEC_EXPORTS-yes += aom/exports_com
+CODEC_EXPORTS-$(CONFIG_ENCODERS) += aom/exports_enc
+CODEC_EXPORTS-$(CONFIG_DECODERS) += aom/exports_dec
 
-INSTALL-LIBS-yes += include/vpx/vpx_codec.h
-INSTALL-LIBS-yes += include/vpx/vpx_frame_buffer.h
-INSTALL-LIBS-yes += include/vpx/vpx_image.h
-INSTALL-LIBS-yes += include/vpx/vpx_integer.h
-INSTALL-LIBS-$(CONFIG_DECODERS) += include/vpx/vpx_decoder.h
-INSTALL-LIBS-$(CONFIG_ENCODERS) += include/vpx/vpx_encoder.h
+INSTALL-LIBS-yes += include/aom/aom_codec.h
+INSTALL-LIBS-yes += include/aom/aom_frame_buffer.h
+INSTALL-LIBS-yes += include/aom/aom_image.h
+INSTALL-LIBS-yes += include/aom/aom_integer.h
+INSTALL-LIBS-$(CONFIG_DECODERS) += include/aom/aom_decoder.h
+INSTALL-LIBS-$(CONFIG_ENCODERS) += include/aom/aom_encoder.h
 ifeq ($(CONFIG_EXTERNAL_BUILD),yes)
 ifeq ($(CONFIG_MSVS),yes)
 INSTALL-LIBS-yes                  += $(foreach p,$(VS_PLATFORMS),$(LIBSUBDIR)/$(p)/$(CODEC_LIB).lib)
 INSTALL-LIBS-$(CONFIG_DEBUG_LIBS) += $(foreach p,$(VS_PLATFORMS),$(LIBSUBDIR)/$(p)/$(CODEC_LIB)d.lib)
-INSTALL-LIBS-$(CONFIG_SHARED) += $(foreach p,$(VS_PLATFORMS),$(LIBSUBDIR)/$(p)/vpx.dll)
-INSTALL-LIBS-$(CONFIG_SHARED) += $(foreach p,$(VS_PLATFORMS),$(LIBSUBDIR)/$(p)/vpx.exp)
+INSTALL-LIBS-$(CONFIG_SHARED) += $(foreach p,$(VS_PLATFORMS),$(LIBSUBDIR)/$(p)/aom.dll)
+INSTALL-LIBS-$(CONFIG_SHARED) += $(foreach p,$(VS_PLATFORMS),$(LIBSUBDIR)/$(p)/aom.exp)
 endif
 else
-INSTALL-LIBS-$(CONFIG_STATIC) += $(LIBSUBDIR)/libvpx.a
-INSTALL-LIBS-$(CONFIG_DEBUG_LIBS) += $(LIBSUBDIR)/libvpx_g.a
+INSTALL-LIBS-$(CONFIG_STATIC) += $(LIBSUBDIR)/libaom.a
+INSTALL-LIBS-$(CONFIG_DEBUG_LIBS) += $(LIBSUBDIR)/libaom_g.a
 endif
 
 CODEC_SRCS=$(call enabled,CODEC_SRCS)
@@ -154,159 +156,159 @@ INSTALL-SRCS-$(CONFIG_CODEC_SRCS) += $(call enabled,CODEC_EXPORTS)
 
 # Generate a list of all enabled sources, in particular for exporting to gyp
 # based build systems.
-libvpx_srcs.txt:
+libaom_srcs.txt:
 	@echo "    [CREATE] $@"
 	@echo $(CODEC_SRCS) | xargs -n1 echo | LC_ALL=C sort -u > $@
-CLEAN-OBJS += libvpx_srcs.txt
+CLEAN-OBJS += libaom_srcs.txt
 
 
 ifeq ($(CONFIG_EXTERNAL_BUILD),yes)
 ifeq ($(CONFIG_MSVS),yes)
 
-vpx.def: $(call enabled,CODEC_EXPORTS)
+aom.def: $(call enabled,CODEC_EXPORTS)
 	@echo "    [CREATE] $@"
 	$(qexec)$(SRC_PATH_BARE)/build/make/gen_msvs_def.sh\
-            --name=vpx\
+            --name=aom\
             --out=$@ $^
-CLEAN-OBJS += vpx.def
+CLEAN-OBJS += aom.def
 
 # Assembly files that are included, but don't define symbols themselves.
 # Filtered out to avoid Visual Studio build warnings.
 ASM_INCLUDES := \
     third_party/x86inc/x86inc.asm \
-    vpx_config.asm \
-    vpx_ports/x86_abi_support.asm \
+    aom_config.asm \
+    aom_ports/x86_abi_support.asm \
 
-vpx.$(VCPROJ_SFX): $(CODEC_SRCS) vpx.def
+aom.$(VCPROJ_SFX): $(CODEC_SRCS) aom.def
 	@echo "    [CREATE] $@"
 	$(qexec)$(GEN_VCPROJ) \
             $(if $(CONFIG_SHARED),--dll,--lib) \
             --target=$(TOOLCHAIN) \
             $(if $(CONFIG_STATIC_MSVCRT),--static-crt) \
-            --name=vpx \
+            --name=aom \
             --proj-guid=DCE19DAF-69AC-46DB-B14A-39F0FAA5DB74 \
-            --module-def=vpx.def \
+            --module-def=aom.def \
             --ver=$(CONFIG_VS_VERSION) \
             --src-path-bare="$(SRC_PATH_BARE)" \
             --out=$@ $(CFLAGS) \
             $(filter-out $(addprefix %, $(ASM_INCLUDES)), $^) \
             --src-path-bare="$(SRC_PATH_BARE)" \
 
-PROJECTS-yes += vpx.$(VCPROJ_SFX)
+PROJECTS-yes += aom.$(VCPROJ_SFX)
 
-vpx.$(VCPROJ_SFX): vpx_config.asm
-vpx.$(VCPROJ_SFX): $(RTCD)
+aom.$(VCPROJ_SFX): aom_config.asm
+aom.$(VCPROJ_SFX): $(RTCD)
 
 endif
 else
-LIBVPX_OBJS=$(call objs,$(CODEC_SRCS))
-OBJS-yes += $(LIBVPX_OBJS)
-LIBS-$(if yes,$(CONFIG_STATIC)) += $(BUILD_PFX)libvpx.a $(BUILD_PFX)libvpx_g.a
-$(BUILD_PFX)libvpx_g.a: $(LIBVPX_OBJS)
+LIBAOM_OBJS=$(call objs,$(CODEC_SRCS))
+OBJS-yes += $(LIBAOM_OBJS)
+LIBS-$(if yes,$(CONFIG_STATIC)) += $(BUILD_PFX)libaom.a $(BUILD_PFX)libaom_g.a
+$(BUILD_PFX)libaom_g.a: $(LIBAOM_OBJS)
 
 SO_VERSION_MAJOR := 3
 SO_VERSION_MINOR := 0
 SO_VERSION_PATCH := 0
 ifeq ($(filter darwin%,$(TGT_OS)),$(TGT_OS))
-LIBVPX_SO               := libvpx.$(SO_VERSION_MAJOR).dylib
+LIBAOM_SO               := libaom.$(SO_VERSION_MAJOR).dylib
 SHARED_LIB_SUF          := .dylib
-EXPORT_FILE             := libvpx.syms
-LIBVPX_SO_SYMLINKS      := $(addprefix $(LIBSUBDIR)/, \
-                             libvpx.dylib  )
+EXPORT_FILE             := libaom.syms
+LIBAOM_SO_SYMLINKS      := $(addprefix $(LIBSUBDIR)/, \
+                             libaom.dylib  )
 else
 ifeq ($(filter os2%,$(TGT_OS)),$(TGT_OS))
-LIBVPX_SO               := libvpx$(SO_VERSION_MAJOR).dll
+LIBAOM_SO               := libaom$(SO_VERSION_MAJOR).dll
 SHARED_LIB_SUF          := _dll.a
-EXPORT_FILE             := libvpx.def
-LIBVPX_SO_SYMLINKS      :=
-LIBVPX_SO_IMPLIB        := libvpx_dll.a
+EXPORT_FILE             := libaom.def
+LIBAOM_SO_SYMLINKS      :=
+LIBAOM_SO_IMPLIB        := libaom_dll.a
 else
-LIBVPX_SO               := libvpx.so.$(SO_VERSION_MAJOR).$(SO_VERSION_MINOR).$(SO_VERSION_PATCH)
+LIBAOM_SO               := libaom.so.$(SO_VERSION_MAJOR).$(SO_VERSION_MINOR).$(SO_VERSION_PATCH)
 SHARED_LIB_SUF          := .so
-EXPORT_FILE             := libvpx.ver
-LIBVPX_SO_SYMLINKS      := $(addprefix $(LIBSUBDIR)/, \
-                             libvpx.so libvpx.so.$(SO_VERSION_MAJOR) \
-                             libvpx.so.$(SO_VERSION_MAJOR).$(SO_VERSION_MINOR))
+EXPORT_FILE             := libaom.ver
+LIBAOM_SO_SYMLINKS      := $(addprefix $(LIBSUBDIR)/, \
+                             libaom.so libaom.so.$(SO_VERSION_MAJOR) \
+                             libaom.so.$(SO_VERSION_MAJOR).$(SO_VERSION_MINOR))
 endif
 endif
 
-LIBS-$(CONFIG_SHARED) += $(BUILD_PFX)$(LIBVPX_SO)\
-                           $(notdir $(LIBVPX_SO_SYMLINKS)) \
-                           $(if $(LIBVPX_SO_IMPLIB), $(BUILD_PFX)$(LIBVPX_SO_IMPLIB))
-$(BUILD_PFX)$(LIBVPX_SO): $(LIBVPX_OBJS) $(EXPORT_FILE)
-$(BUILD_PFX)$(LIBVPX_SO): extralibs += -lm
-$(BUILD_PFX)$(LIBVPX_SO): SONAME = libvpx.so.$(SO_VERSION_MAJOR)
-$(BUILD_PFX)$(LIBVPX_SO): EXPORTS_FILE = $(EXPORT_FILE)
+LIBS-$(CONFIG_SHARED) += $(BUILD_PFX)$(LIBAOM_SO)\
+                           $(notdir $(LIBAOM_SO_SYMLINKS)) \
+                           $(if $(LIBAOM_SO_IMPLIB), $(BUILD_PFX)$(LIBAOM_SO_IMPLIB))
+$(BUILD_PFX)$(LIBAOM_SO): $(LIBAOM_OBJS) $(EXPORT_FILE)
+$(BUILD_PFX)$(LIBAOM_SO): extralibs += -lm
+$(BUILD_PFX)$(LIBAOM_SO): SONAME = libaom.so.$(SO_VERSION_MAJOR)
+$(BUILD_PFX)$(LIBAOM_SO): EXPORTS_FILE = $(EXPORT_FILE)
 
-libvpx.ver: $(call enabled,CODEC_EXPORTS)
+libaom.ver: $(call enabled,CODEC_EXPORTS)
 	@echo "    [CREATE] $@"
 	$(qexec)echo "{ global:" > $@
 	$(qexec)for f in $?; do awk '{print $$2";"}' < $$f >>$@; done
 	$(qexec)echo "local: *; };" >> $@
-CLEAN-OBJS += libvpx.ver
+CLEAN-OBJS += libaom.ver
 
-libvpx.syms: $(call enabled,CODEC_EXPORTS)
+libaom.syms: $(call enabled,CODEC_EXPORTS)
 	@echo "    [CREATE] $@"
 	$(qexec)awk '{print "_"$$2}' $^ >$@
-CLEAN-OBJS += libvpx.syms
+CLEAN-OBJS += libaom.syms
 
-libvpx.def: $(call enabled,CODEC_EXPORTS)
+libaom.def: $(call enabled,CODEC_EXPORTS)
 	@echo "    [CREATE] $@"
-	$(qexec)echo LIBRARY $(LIBVPX_SO:.dll=) INITINSTANCE TERMINSTANCE > $@
+	$(qexec)echo LIBRARY $(LIBAOM_SO:.dll=) INITINSTANCE TERMINSTANCE > $@
 	$(qexec)echo "DATA MULTIPLE NONSHARED" >> $@
 	$(qexec)echo "EXPORTS" >> $@
-	$(qexec)awk '!/vpx_svc_*/ {print "_"$$2}' $^ >>$@
-CLEAN-OBJS += libvpx.def
+	$(qexec)awk '!/aom_svc_*/ {print "_"$$2}' $^ >>$@
+CLEAN-OBJS += libaom.def
 
-libvpx_dll.a: $(LIBVPX_SO)
+libaom_dll.a: $(LIBAOM_SO)
 	@echo "    [IMPLIB] $@"
 	$(qexec)emximp -o $@ $<
-CLEAN-OBJS += libvpx_dll.a
+CLEAN-OBJS += libaom_dll.a
 
-define libvpx_symlink_template
+define libaom_symlink_template
 $(1): $(2)
 	@echo "    [LN]     $(2) $$@"
 	$(qexec)mkdir -p $$(dir $$@)
 	$(qexec)ln -sf $(2) $$@
 endef
 
-$(eval $(call libvpx_symlink_template,\
-    $(addprefix $(BUILD_PFX),$(notdir $(LIBVPX_SO_SYMLINKS))),\
-    $(BUILD_PFX)$(LIBVPX_SO)))
-$(eval $(call libvpx_symlink_template,\
-    $(addprefix $(DIST_DIR)/,$(LIBVPX_SO_SYMLINKS)),\
-    $(LIBVPX_SO)))
+$(eval $(call libaom_symlink_template,\
+    $(addprefix $(BUILD_PFX),$(notdir $(LIBAOM_SO_SYMLINKS))),\
+    $(BUILD_PFX)$(LIBAOM_SO)))
+$(eval $(call libaom_symlink_template,\
+    $(addprefix $(DIST_DIR)/,$(LIBAOM_SO_SYMLINKS)),\
+    $(LIBAOM_SO)))
 
 
-INSTALL-LIBS-$(CONFIG_SHARED) += $(LIBVPX_SO_SYMLINKS)
-INSTALL-LIBS-$(CONFIG_SHARED) += $(LIBSUBDIR)/$(LIBVPX_SO)
-INSTALL-LIBS-$(CONFIG_SHARED) += $(if $(LIBVPX_SO_IMPLIB),$(LIBSUBDIR)/$(LIBVPX_SO_IMPLIB))
+INSTALL-LIBS-$(CONFIG_SHARED) += $(LIBAOM_SO_SYMLINKS)
+INSTALL-LIBS-$(CONFIG_SHARED) += $(LIBSUBDIR)/$(LIBAOM_SO)
+INSTALL-LIBS-$(CONFIG_SHARED) += $(if $(LIBAOM_SO_IMPLIB),$(LIBSUBDIR)/$(LIBAOM_SO_IMPLIB))
 
 
-LIBS-yes += vpx.pc
-vpx.pc: config.mk libs.mk
+LIBS-yes += aom.pc
+aom.pc: config.mk libs.mk
 	@echo "    [CREATE] $@"
-	$(qexec)echo '# pkg-config file from libvpx $(VERSION_STRING)' > $@
+	$(qexec)echo '# pkg-config file from libaom $(VERSION_STRING)' > $@
 	$(qexec)echo 'prefix=$(PREFIX)' >> $@
 	$(qexec)echo 'exec_prefix=$${prefix}' >> $@
 	$(qexec)echo 'libdir=$${prefix}/$(LIBSUBDIR)' >> $@
 	$(qexec)echo 'includedir=$${prefix}/include' >> $@
 	$(qexec)echo '' >> $@
-	$(qexec)echo 'Name: vpx' >> $@
-	$(qexec)echo 'Description: WebM Project VPx codec implementation' >> $@
+	$(qexec)echo 'Name: aom' >> $@
+	$(qexec)echo 'Description: AOMedia Project AVx codec implementation' >> $@
 	$(qexec)echo 'Version: $(VERSION_MAJOR).$(VERSION_MINOR).$(VERSION_PATCH)' >> $@
 	$(qexec)echo 'Requires:' >> $@
 	$(qexec)echo 'Conflicts:' >> $@
-	$(qexec)echo 'Libs: -L$${libdir} -lvpx -lm' >> $@
+	$(qexec)echo 'Libs: -L$${libdir} -laom -lm' >> $@
 ifeq ($(HAVE_PTHREAD_H),yes)
 	$(qexec)echo 'Libs.private: -lm -lpthread' >> $@
 else
 	$(qexec)echo 'Libs.private: -lm' >> $@
 endif
 	$(qexec)echo 'Cflags: -I$${includedir}' >> $@
-INSTALL-LIBS-yes += $(LIBSUBDIR)/pkgconfig/vpx.pc
+INSTALL-LIBS-yes += $(LIBSUBDIR)/pkgconfig/aom.pc
 INSTALL_MAPS += $(LIBSUBDIR)/pkgconfig/%.pc %.pc
-CLEAN-OBJS += vpx.pc
+CLEAN-OBJS += aom.pc
 endif
 
 #
@@ -314,68 +316,68 @@ endif
 #
 ifeq ($(ARCH_X86)$(ARCH_X86_64),yes)
 # YASM
-$(BUILD_PFX)vpx_config.asm: $(BUILD_PFX)vpx_config.h
+$(BUILD_PFX)aom_config.asm: $(BUILD_PFX)aom_config.h
 	@echo "    [CREATE] $@"
 	@egrep "#define [A-Z0-9_]+ [01]" $< \
 	    | awk '{print $$2 " equ " $$3}' > $@
 else
 ADS2GAS=$(if $(filter yes,$(CONFIG_GCC)),| $(ASM_CONVERSION))
-$(BUILD_PFX)vpx_config.asm: $(BUILD_PFX)vpx_config.h
+$(BUILD_PFX)aom_config.asm: $(BUILD_PFX)aom_config.h
 	@echo "    [CREATE] $@"
 	@egrep "#define [A-Z0-9_]+ [01]" $< \
 	    | awk '{print $$2 " EQU " $$3}' $(ADS2GAS) > $@
 	@echo "        END" $(ADS2GAS) >> $@
-CLEAN-OBJS += $(BUILD_PFX)vpx_config.asm
+CLEAN-OBJS += $(BUILD_PFX)aom_config.asm
 endif
 
 #
 # Add assembler dependencies for configuration.
 #
-$(filter %.s.o,$(OBJS-yes)):     $(BUILD_PFX)vpx_config.asm
-$(filter %$(ASM).o,$(OBJS-yes)): $(BUILD_PFX)vpx_config.asm
+$(filter %.s.o,$(OBJS-yes)):     $(BUILD_PFX)aom_config.asm
+$(filter %$(ASM).o,$(OBJS-yes)): $(BUILD_PFX)aom_config.asm
 
 
-$(shell $(SRC_PATH_BARE)/build/make/version.sh "$(SRC_PATH_BARE)" $(BUILD_PFX)vpx_version.h)
-CLEAN-OBJS += $(BUILD_PFX)vpx_version.h
+$(shell $(SRC_PATH_BARE)/build/make/version.sh "$(SRC_PATH_BARE)" $(BUILD_PFX)aom_version.h)
+CLEAN-OBJS += $(BUILD_PFX)aom_version.h
 
 
 ##
-## libvpx test directives
+## libaom test directives
 ##
 ifeq ($(CONFIG_UNIT_TESTS),yes)
-LIBVPX_TEST_DATA_PATH ?= .
+LIBAOM_TEST_DATA_PATH ?= .
 
 include $(SRC_PATH_BARE)/test/test.mk
-LIBVPX_TEST_SRCS=$(addprefix test/,$(call enabled,LIBVPX_TEST_SRCS))
-LIBVPX_TEST_BIN=./test_libvpx$(EXE_SFX)
-LIBVPX_TEST_DATA=$(addprefix $(LIBVPX_TEST_DATA_PATH)/,\
-                     $(call enabled,LIBVPX_TEST_DATA))
-libvpx_test_data_url=http://downloads.webmproject.org/test_data/libvpx/$(1)
+LIBAOM_TEST_SRCS=$(addprefix test/,$(call enabled,LIBAOM_TEST_SRCS))
+LIBAOM_TEST_BIN=./test_libaom$(EXE_SFX)
+LIBAOM_TEST_DATA=$(addprefix $(LIBAOM_TEST_DATA_PATH)/,\
+                     $(call enabled,LIBAOM_TEST_DATA))
+libaom_test_data_url=http://downloads.webmproject.org/test_data/libvpx/$(1)
 
 TEST_INTRA_PRED_SPEED_BIN=./test_intra_pred_speed$(EXE_SFX)
 TEST_INTRA_PRED_SPEED_SRCS=$(addprefix test/,$(call enabled,TEST_INTRA_PRED_SPEED_SRCS))
 TEST_INTRA_PRED_SPEED_OBJS := $(sort $(call objs,$(TEST_INTRA_PRED_SPEED_SRCS)))
 
-libvpx_test_srcs.txt:
+libaom_test_srcs.txt:
 	@echo "    [CREATE] $@"
-	@echo $(LIBVPX_TEST_SRCS) | xargs -n1 echo | LC_ALL=C sort -u > $@
-CLEAN-OBJS += libvpx_test_srcs.txt
+	@echo $(LIBAOM_TEST_SRCS) | xargs -n1 echo | LC_ALL=C sort -u > $@
+CLEAN-OBJS += libaom_test_srcs.txt
 
-$(LIBVPX_TEST_DATA): $(SRC_PATH_BARE)/test/test-data.sha1
+$(LIBAOM_TEST_DATA): $(SRC_PATH_BARE)/test/test-data.sha1
 	@echo "    [DOWNLOAD] $@"
 	$(qexec)trap 'rm -f $@' INT TERM &&\
-            curl -L -o $@ $(call libvpx_test_data_url,$(@F))
+            curl -L -o $@ $(call libaom_test_data_url,$(@F))
 
-testdata:: $(LIBVPX_TEST_DATA)
+testdata:: $(LIBAOM_TEST_DATA)
 	$(qexec)[ -x "$$(which sha1sum)" ] && sha1sum=sha1sum;\
           [ -x "$$(which shasum)" ] && sha1sum=shasum;\
           [ -x "$$(which sha1)" ] && sha1sum=sha1;\
           if [ -n "$${sha1sum}" ]; then\
             set -e;\
             echo "Checking test data:";\
-            for f in $(call enabled,LIBVPX_TEST_DATA); do\
+            for f in $(call enabled,LIBAOM_TEST_DATA); do\
                 grep $$f $(SRC_PATH_BARE)/test/test-data.sha1 |\
-                    (cd $(LIBVPX_TEST_DATA_PATH); $${sha1sum} -c);\
+                    (cd $(LIBAOM_TEST_DATA_PATH); $${sha1sum} -c);\
             done; \
         else\
             echo "Skipping test data integrity check, sha1sum not found.";\
@@ -400,12 +402,12 @@ gtest.$(VCPROJ_SFX): $(SRC_PATH_BARE)/third_party/googletest/src/src/gtest-all.c
 
 PROJECTS-$(CONFIG_MSVS) += gtest.$(VCPROJ_SFX)
 
-test_libvpx.$(VCPROJ_SFX): $(LIBVPX_TEST_SRCS) vpx.$(VCPROJ_SFX) gtest.$(VCPROJ_SFX)
+test_libaom.$(VCPROJ_SFX): $(LIBAOM_TEST_SRCS) aom.$(VCPROJ_SFX) gtest.$(VCPROJ_SFX)
 	@echo "    [CREATE] $@"
 	$(qexec)$(GEN_VCPROJ) \
             --exe \
             --target=$(TOOLCHAIN) \
-            --name=test_libvpx \
+            --name=test_libaom \
             -D_VARIADIC_MAX=10 \
             --proj-guid=CD837F5F-52D8-4314-A370-895D614166A7 \
             --ver=$(CONFIG_VS_VERSION) \
@@ -415,13 +417,13 @@ test_libvpx.$(VCPROJ_SFX): $(LIBVPX_TEST_SRCS) vpx.$(VCPROJ_SFX) gtest.$(VCPROJ_
             -I. -I"$(SRC_PATH_BARE)/third_party/googletest/src/include" \
             -L. -l$(CODEC_LIB) -l$(GTEST_LIB) $^
 
-PROJECTS-$(CONFIG_MSVS) += test_libvpx.$(VCPROJ_SFX)
+PROJECTS-$(CONFIG_MSVS) += test_libaom.$(VCPROJ_SFX)
 
-LIBVPX_TEST_BIN := $(addprefix $(TGT_OS:win64=x64)/Release/,$(notdir $(LIBVPX_TEST_BIN)))
+LIBAOM_TEST_BIN := $(addprefix $(TGT_OS:win64=x64)/Release/,$(notdir $(LIBAOM_TEST_BIN)))
 
 ifneq ($(strip $(TEST_INTRA_PRED_SPEED_OBJS)),)
 PROJECTS-$(CONFIG_MSVS) += test_intra_pred_speed.$(VCPROJ_SFX)
-test_intra_pred_speed.$(VCPROJ_SFX): $(TEST_INTRA_PRED_SPEED_SRCS) vpx.$(VCPROJ_SFX) gtest.$(VCPROJ_SFX)
+test_intra_pred_speed.$(VCPROJ_SFX): $(TEST_INTRA_PRED_SPEED_SRCS) aom.$(VCPROJ_SFX) gtest.$(VCPROJ_SFX)
 	@echo "    [CREATE] $@"
 	$(qexec)$(GEN_VCPROJ) \
             --exe \
@@ -453,18 +455,18 @@ OBJS-yes += $(GTEST_OBJS)
 LIBS-yes += $(BUILD_PFX)libgtest.a $(BUILD_PFX)libgtest_g.a
 $(BUILD_PFX)libgtest_g.a: $(GTEST_OBJS)
 
-LIBVPX_TEST_OBJS=$(sort $(call objs,$(LIBVPX_TEST_SRCS)))
-$(LIBVPX_TEST_OBJS) $(LIBVPX_TEST_OBJS:.o=.d): CXXFLAGS += $(GTEST_INCLUDES)
-OBJS-yes += $(LIBVPX_TEST_OBJS)
-BINS-yes += $(LIBVPX_TEST_BIN)
+LIBAOM_TEST_OBJS=$(sort $(call objs,$(LIBAOM_TEST_SRCS)))
+$(LIBAOM_TEST_OBJS) $(LIBAOM_TEST_OBJS:.o=.d): CXXFLAGS += $(GTEST_INCLUDES)
+OBJS-yes += $(LIBAOM_TEST_OBJS)
+BINS-yes += $(LIBAOM_TEST_BIN)
 
-CODEC_LIB=$(if $(CONFIG_DEBUG_LIBS),vpx_g,vpx)
+CODEC_LIB=$(if $(CONFIG_DEBUG_LIBS),aom_g,aom)
 CODEC_LIB_SUF=$(if $(CONFIG_SHARED),$(SHARED_LIB_SUF),.a)
 TEST_LIBS := lib$(CODEC_LIB)$(CODEC_LIB_SUF) libgtest.a
-$(LIBVPX_TEST_BIN): $(TEST_LIBS)
-$(eval $(call linkerxx_template,$(LIBVPX_TEST_BIN), \
-              $(LIBVPX_TEST_OBJS) \
-              -L. -lvpx -lgtest $(extralibs) -lm))
+$(LIBAOM_TEST_BIN): $(TEST_LIBS)
+$(eval $(call linkerxx_template,$(LIBAOM_TEST_BIN), \
+              $(LIBAOM_TEST_OBJS) \
+              -L. -laom -lgtest $(extralibs) -lm))
 
 ifneq ($(strip $(TEST_INTRA_PRED_SPEED_OBJS)),)
 $(TEST_INTRA_PRED_SPEED_OBJS) $(TEST_INTRA_PRED_SPEED_OBJS:.o=.d): CXXFLAGS += $(GTEST_INCLUDES)
@@ -474,7 +476,7 @@ BINS-yes += $(TEST_INTRA_PRED_SPEED_BIN)
 $(TEST_INTRA_PRED_SPEED_BIN): $(TEST_LIBS)
 $(eval $(call linkerxx_template,$(TEST_INTRA_PRED_SPEED_BIN), \
               $(TEST_INTRA_PRED_SPEED_OBJS) \
-              -L. -lvpx -lgtest $(extralibs) -lm))
+              -L. -laom -lgtest $(extralibs) -lm))
 endif  # TEST_INTRA_PRED_SPEED
 
 endif  # CONFIG_UNIT_TESTS
@@ -482,17 +484,17 @@ endif  # CONFIG_UNIT_TESTS
 # Install test sources only if codec source is included
 INSTALL-SRCS-$(CONFIG_CODEC_SRCS) += $(patsubst $(SRC_PATH_BARE)/%,%,\
     $(shell find $(SRC_PATH_BARE)/third_party/googletest -type f))
-INSTALL-SRCS-$(CONFIG_CODEC_SRCS) += $(LIBVPX_TEST_SRCS)
+INSTALL-SRCS-$(CONFIG_CODEC_SRCS) += $(LIBAOM_TEST_SRCS)
 INSTALL-SRCS-$(CONFIG_CODEC_SRCS) += $(TEST_INTRA_PRED_SPEED_SRCS)
 
 define test_shard_template
 test:: test_shard.$(1)
 test-no-data-check:: test_shard_ndc.$(1)
-test_shard.$(1) test_shard_ndc.$(1): $(LIBVPX_TEST_BIN)
+test_shard.$(1) test_shard_ndc.$(1): $(LIBAOM_TEST_BIN)
 	@set -e; \
 	 export GTEST_SHARD_INDEX=$(1); \
 	 export GTEST_TOTAL_SHARDS=$(2); \
-	 $(LIBVPX_TEST_BIN)
+	 $(LIBAOM_TEST_BIN)
 test_shard.$(1): testdata
 .PHONY: test_shard.$(1)
 endef
@@ -523,10 +525,10 @@ $(OBJS-yes): $(RTCD)
 endif
 
 ## Update the global src list
-SRCS += $(CODEC_SRCS) $(LIBVPX_TEST_SRCS) $(GTEST_SRCS)
+SRCS += $(CODEC_SRCS) $(LIBAOM_TEST_SRCS) $(GTEST_SRCS)
 
 ##
-## vpxdec/vpxenc tests.
+## aomdec/aomenc tests.
 ##
 ifeq ($(CONFIG_UNIT_TESTS),yes)
 TEST_BIN_PATH = .
@@ -539,11 +541,11 @@ ifeq ($(CONFIG_MSVS),yes)
 TEST_BIN_PATH := $(addsuffix /$(TGT_OS:win64=x64)/Release, $(TEST_BIN_PATH))
 endif
 utiltest utiltest-no-data-check:
-	$(qexec)$(SRC_PATH_BARE)/test/vpxdec.sh \
-		--test-data-path $(LIBVPX_TEST_DATA_PATH) \
+	$(qexec)$(SRC_PATH_BARE)/test/aomdec.sh \
+		--test-data-path $(LIBAOM_TEST_DATA_PATH) \
 		--bin-path $(TEST_BIN_PATH)
-	$(qexec)$(SRC_PATH_BARE)/test/vpxenc.sh \
-		--test-data-path $(LIBVPX_TEST_DATA_PATH) \
+	$(qexec)$(SRC_PATH_BARE)/test/aomenc.sh \
+		--test-data-path $(LIBAOM_TEST_DATA_PATH) \
 		--bin-path $(TEST_BIN_PATH)
 utiltest: testdata
 else
@@ -567,7 +569,7 @@ EXAMPLES_BIN_PATH := $(TGT_OS:win64=x64)/Release
 endif
 exampletest exampletest-no-data-check: examples
 	$(qexec)$(SRC_PATH_BARE)/test/examples.sh \
-		--test-data-path $(LIBVPX_TEST_DATA_PATH) \
+		--test-data-path $(LIBAOM_TEST_DATA_PATH) \
 		--bin-path $(EXAMPLES_BIN_PATH)
 exampletest: testdata
 else

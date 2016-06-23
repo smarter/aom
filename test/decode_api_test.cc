@@ -1,56 +1,57 @@
 /*
- *  Copyright (c) 2014 The WebM project authors. All Rights Reserved.
+ * Copyright (c) 2016, Alliance for Open Media. All rights reserved
  *
- *  Use of this source code is governed by a BSD-style license
- *  that can be found in the LICENSE file in the root of the source
- *  tree. An additional intellectual property rights grant can be found
- *  in the file PATENTS.  All contributing project authors may
- *  be found in the AUTHORS file in the root of the source tree.
- */
+ * This source code is subject to the terms of the BSD 2 Clause License and
+ * the Alliance for Open Media Patent License 1.0. If the BSD 2 Clause License
+ * was not distributed with this source code in the LICENSE file, you can
+ * obtain it at www.aomedia.org/license/software. If the Alliance for Open
+ * Media Patent License 1.0 was not distributed with this source code in the
+ * PATENTS file, you can obtain it at www.aomedia.org/license/patent.
+*/
 
 #include "third_party/googletest/src/include/gtest/gtest.h"
 
-#include "./vpx_config.h"
+#include "./aom_config.h"
 #include "test/ivf_video_source.h"
-#include "vpx/vp8dx.h"
-#include "vpx/vpx_decoder.h"
+#include "aom/aomdx.h"
+#include "aom/aom_decoder.h"
 
 namespace {
 
 #define NELEMENTS(x) static_cast<int>(sizeof(x) / sizeof(x[0]))
 
 TEST(DecodeAPI, InvalidParams) {
-  static const vpx_codec_iface_t *kCodecs[] = {
-#if CONFIG_VP10_DECODER
-    &vpx_codec_vp10_dx_algo,
+  static const aom_codec_iface_t *kCodecs[] = {
+#if CONFIG_AV1_DECODER
+    &aom_codec_av1_dx_algo,
 #endif
   };
   uint8_t buf[1] = { 0 };
-  vpx_codec_ctx_t dec;
+  aom_codec_ctx_t dec;
 
-  EXPECT_EQ(VPX_CODEC_INVALID_PARAM, vpx_codec_dec_init(NULL, NULL, NULL, 0));
-  EXPECT_EQ(VPX_CODEC_INVALID_PARAM, vpx_codec_dec_init(&dec, NULL, NULL, 0));
-  EXPECT_EQ(VPX_CODEC_INVALID_PARAM, vpx_codec_decode(NULL, NULL, 0, NULL, 0));
-  EXPECT_EQ(VPX_CODEC_INVALID_PARAM, vpx_codec_decode(NULL, buf, 0, NULL, 0));
-  EXPECT_EQ(VPX_CODEC_INVALID_PARAM,
-            vpx_codec_decode(NULL, buf, NELEMENTS(buf), NULL, 0));
-  EXPECT_EQ(VPX_CODEC_INVALID_PARAM,
-            vpx_codec_decode(NULL, NULL, NELEMENTS(buf), NULL, 0));
-  EXPECT_EQ(VPX_CODEC_INVALID_PARAM, vpx_codec_destroy(NULL));
-  EXPECT_TRUE(vpx_codec_error(NULL) != NULL);
+  EXPECT_EQ(AOM_CODEC_INVALID_PARAM, aom_codec_dec_init(NULL, NULL, NULL, 0));
+  EXPECT_EQ(AOM_CODEC_INVALID_PARAM, aom_codec_dec_init(&dec, NULL, NULL, 0));
+  EXPECT_EQ(AOM_CODEC_INVALID_PARAM, aom_codec_decode(NULL, NULL, 0, NULL, 0));
+  EXPECT_EQ(AOM_CODEC_INVALID_PARAM, aom_codec_decode(NULL, buf, 0, NULL, 0));
+  EXPECT_EQ(AOM_CODEC_INVALID_PARAM,
+            aom_codec_decode(NULL, buf, NELEMENTS(buf), NULL, 0));
+  EXPECT_EQ(AOM_CODEC_INVALID_PARAM,
+            aom_codec_decode(NULL, NULL, NELEMENTS(buf), NULL, 0));
+  EXPECT_EQ(AOM_CODEC_INVALID_PARAM, aom_codec_destroy(NULL));
+  EXPECT_TRUE(aom_codec_error(NULL) != NULL);
 
   for (int i = 0; i < NELEMENTS(kCodecs); ++i) {
-    EXPECT_EQ(VPX_CODEC_INVALID_PARAM,
-              vpx_codec_dec_init(NULL, kCodecs[i], NULL, 0));
+    EXPECT_EQ(AOM_CODEC_INVALID_PARAM,
+              aom_codec_dec_init(NULL, kCodecs[i], NULL, 0));
 
-    EXPECT_EQ(VPX_CODEC_OK, vpx_codec_dec_init(&dec, kCodecs[i], NULL, 0));
-    EXPECT_EQ(VPX_CODEC_UNSUP_BITSTREAM,
-              vpx_codec_decode(&dec, buf, NELEMENTS(buf), NULL, 0));
-    EXPECT_EQ(VPX_CODEC_INVALID_PARAM,
-              vpx_codec_decode(&dec, NULL, NELEMENTS(buf), NULL, 0));
-    EXPECT_EQ(VPX_CODEC_INVALID_PARAM, vpx_codec_decode(&dec, buf, 0, NULL, 0));
+    EXPECT_EQ(AOM_CODEC_OK, aom_codec_dec_init(&dec, kCodecs[i], NULL, 0));
+    EXPECT_EQ(AOM_CODEC_UNSUP_BITSTREAM,
+              aom_codec_decode(&dec, buf, NELEMENTS(buf), NULL, 0));
+    EXPECT_EQ(AOM_CODEC_INVALID_PARAM,
+              aom_codec_decode(&dec, NULL, NELEMENTS(buf), NULL, 0));
+    EXPECT_EQ(AOM_CODEC_INVALID_PARAM, aom_codec_decode(&dec, buf, 0, NULL, 0));
 
-    EXPECT_EQ(VPX_CODEC_OK, vpx_codec_destroy(&dec));
+    EXPECT_EQ(AOM_CODEC_OK, aom_codec_destroy(&dec));
   }
 }
 

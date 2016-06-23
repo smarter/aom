@@ -1,12 +1,13 @@
 /*
- *  Copyright (c) 2014 The WebM project authors. All Rights Reserved.
+ * Copyright (c) 2016, Alliance for Open Media. All rights reserved
  *
- *  Use of this source code is governed by a BSD-style license
- *  that can be found in the LICENSE file in the root of the source
- *  tree. An additional intellectual property rights grant can be found
- *  in the file PATENTS.  All contributing project authors may
- *  be found in the AUTHORS file in the root of the source tree.
- */
+ * This source code is subject to the terms of the BSD 2 Clause License and
+ * the Alliance for Open Media Patent License 1.0. If the BSD 2 Clause License
+ * was not distributed with this source code in the LICENSE file, you can
+ * obtain it at www.aomedia.org/license/software. If the Alliance for Open
+ * Media Patent License 1.0 was not distributed with this source code in the
+ * PATENTS file, you can obtain it at www.aomedia.org/license/patent.
+*/
 
 #include <math.h>
 #include <stdlib.h>
@@ -18,30 +19,30 @@
 #include "test/register_state_check.h"
 #include "test/util.h"
 
-#include "vpx_scale/yv12config.h"
-#include "vpx/vpx_integer.h"
-#include "vp10/common/reconinter.h"
-#include "vp10/encoder/context_tree.h"
-#include "vp10/encoder/denoiser.h"
+#include "aom_scale/yv12config.h"
+#include "aom/aom_integer.h"
+#include "av1/common/reconinter.h"
+#include "av1/encoder/context_tree.h"
+#include "av1/encoder/denoiser.h"
 
-using libvpx_test::ACMRandom;
+using libaom_test::ACMRandom;
 
 namespace {
 
 const int kNumPixels = 64 * 64;
-class VP9DenoiserTest : public ::testing::TestWithParam<BLOCK_SIZE> {
+class AV1DenoiserTest : public ::testing::TestWithParam<BLOCK_SIZE> {
  public:
-  virtual ~VP9DenoiserTest() {}
+  virtual ~AV1DenoiserTest() {}
 
   virtual void SetUp() { bs_ = GetParam(); }
 
-  virtual void TearDown() { libvpx_test::ClearSystemState(); }
+  virtual void TearDown() { libaom_test::ClearSystemState(); }
 
  protected:
   BLOCK_SIZE bs_;
 };
 
-TEST_P(VP9DenoiserTest, BitexactCheck) {
+TEST_P(AV1DenoiserTest, BitexactCheck) {
   ACMRandom rnd(ACMRandom::DeterministicSeed());
   const int count_test_block = 4000;
 
@@ -72,11 +73,11 @@ TEST_P(VP9DenoiserTest, BitexactCheck) {
       mc_avg_block[j] = (temp < 0) ? 0 : ((temp > 255) ? 255 : temp);
     }
 
-    ASM_REGISTER_STATE_CHECK(vp9_denoiser_filter_c(sig_block, 64, mc_avg_block,
+    ASM_REGISTER_STATE_CHECK(av1_denoiser_filter_c(sig_block, 64, mc_avg_block,
                                                    64, avg_block_c, 64, 0, bs_,
                                                    motion_magnitude_random));
 
-    ASM_REGISTER_STATE_CHECK(vp9_denoiser_filter_sse2(
+    ASM_REGISTER_STATE_CHECK(av1_denoiser_filter_sse2(
         sig_block, 64, mc_avg_block, 64, avg_block_sse2, 64, 0, bs_,
         motion_magnitude_random));
 
@@ -90,7 +91,7 @@ TEST_P(VP9DenoiserTest, BitexactCheck) {
 }
 
 // Test for all block size.
-INSTANTIATE_TEST_CASE_P(SSE2, VP9DenoiserTest,
+INSTANTIATE_TEST_CASE_P(SSE2, AV1DenoiserTest,
                         ::testing::Values(BLOCK_4X4, BLOCK_4X8, BLOCK_8X4,
                                           BLOCK_8X8, BLOCK_8X16, BLOCK_16X8,
                                           BLOCK_16X16, BLOCK_16X32, BLOCK_32X16,

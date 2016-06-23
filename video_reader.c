@@ -1,11 +1,12 @@
 /*
- *  Copyright (c) 2014 The WebM project authors. All Rights Reserved.
+ * Copyright (c) 2016, Alliance for Open Media. All rights reserved
  *
- *  Use of this source code is governed by a BSD-style license
- *  that can be found in the LICENSE file in the root of the source
- *  tree. An additional intellectual property rights grant can be found
- *  in the file PATENTS.  All contributing project authors may
- *  be found in the AUTHORS file in the root of the source tree.
+ * This source code is subject to the terms of the BSD 2 Clause License and
+ * the Alliance for Open Media Patent License 1.0. If the BSD 2 Clause License
+ * was not distributed with this source code in the LICENSE file, you can
+ * obtain it at www.aomedia.org/license/software. If the Alliance for Open
+ * Media Patent License 1.0 was not distributed with this source code in the
+ * PATENTS file, you can obtain it at www.aomedia.org/license/patent.
  */
 
 #include <stdlib.h>
@@ -14,21 +15,21 @@
 #include "./ivfdec.h"
 #include "./video_reader.h"
 
-#include "vpx_ports/mem_ops.h"
+#include "aom_ports/mem_ops.h"
 
 static const char *const kIVFSignature = "DKIF";
 
-struct VpxVideoReaderStruct {
-  VpxVideoInfo info;
+struct AvxVideoReaderStruct {
+  AvxVideoInfo info;
   FILE *file;
   uint8_t *buffer;
   size_t buffer_size;
   size_t frame_size;
 };
 
-VpxVideoReader *vpx_video_reader_open(const char *filename) {
+AvxVideoReader *aom_video_reader_open(const char *filename) {
   char header[32];
-  VpxVideoReader *reader = NULL;
+  AvxVideoReader *reader = NULL;
   FILE *const file = fopen(filename, "rb");
   if (!file) return NULL;  // Can't open file
 
@@ -40,7 +41,7 @@ VpxVideoReader *vpx_video_reader_open(const char *filename) {
   if (mem_get_le16(header + 4) != 0) return NULL;  // Wrong IVF version
 
   reader = calloc(1, sizeof(*reader));
-  if (!reader) return NULL;  // Can't allocate VpxVideoReader
+  if (!reader) return NULL;  // Can't allocate AvxVideoReader
 
   reader->file = file;
   reader->info.codec_fourcc = mem_get_le32(header + 8);
@@ -52,7 +53,7 @@ VpxVideoReader *vpx_video_reader_open(const char *filename) {
   return reader;
 }
 
-void vpx_video_reader_close(VpxVideoReader *reader) {
+void aom_video_reader_close(AvxVideoReader *reader) {
   if (reader) {
     fclose(reader->file);
     free(reader->buffer);
@@ -60,18 +61,18 @@ void vpx_video_reader_close(VpxVideoReader *reader) {
   }
 }
 
-int vpx_video_reader_read_frame(VpxVideoReader *reader) {
+int aom_video_reader_read_frame(AvxVideoReader *reader) {
   return !ivf_read_frame(reader->file, &reader->buffer, &reader->frame_size,
                          &reader->buffer_size);
 }
 
-const uint8_t *vpx_video_reader_get_frame(VpxVideoReader *reader,
+const uint8_t *aom_video_reader_get_frame(AvxVideoReader *reader,
                                           size_t *size) {
   if (size) *size = reader->frame_size;
 
   return reader->buffer;
 }
 
-const VpxVideoInfo *vpx_video_reader_get_info(VpxVideoReader *reader) {
+const AvxVideoInfo *aom_video_reader_get_info(AvxVideoReader *reader) {
   return &reader->info;
 }

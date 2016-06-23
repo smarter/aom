@@ -1,12 +1,13 @@
 /*
- *  Copyright (c) 2015 The WebM project authors. All Rights Reserved.
+ * Copyright (c) 2016, Alliance for Open Media. All rights reserved
  *
- *  Use of this source code is governed by a BSD-style license
- *  that can be found in the LICENSE file in the root of the source
- *  tree. An additional intellectual property rights grant can be found
- *  in the file PATENTS.  All contributing project authors may
- *  be found in the AUTHORS file in the root of the source tree.
- */
+ * This source code is subject to the terms of the BSD 2 Clause License and
+ * the Alliance for Open Media Patent License 1.0. If the BSD 2 Clause License
+ * was not distributed with this source code in the LICENSE file, you can
+ * obtain it at www.aomedia.org/license/software. If the Alliance for Open
+ * Media Patent License 1.0 was not distributed with this source code in the
+ * PATENTS file, you can obtain it at www.aomedia.org/license/patent.
+*/
 
 #include "third_party/googletest/src/include/gtest/gtest.h"
 
@@ -15,7 +16,7 @@
 #include "test/util.h"
 #include "test/y4m_video_source.h"
 #include "test/yuv_video_source.h"
-#include "vp10/encoder/ratectrl.h"
+#include "av1/encoder/ratectrl.h"
 
 namespace {
 
@@ -32,37 +33,37 @@ typedef struct {
   unsigned int framerate_num;
   unsigned int framerate_den;
   unsigned int input_bit_depth;
-  vpx_img_fmt fmt;
-  vpx_bit_depth_t bit_depth;
+  aom_img_fmt fmt;
+  aom_bit_depth_t bit_depth;
   unsigned int profile;
 } TestVideoParam;
 
 typedef struct {
-  libvpx_test::TestMode mode;
+  libaom_test::TestMode mode;
   int cpu_used;
 } TestEncodeParam;
 
 const TestVideoParam kTestVectors[] = {
   // artificially increase framerate to trigger default check
-  { "hantro_collage_w352h288.yuv", 352, 288, 5000, 1, 8, VPX_IMG_FMT_I420,
-    VPX_BITS_8, 0 },
-  { "hantro_collage_w352h288.yuv", 352, 288, 30, 1, 8, VPX_IMG_FMT_I420,
-    VPX_BITS_8, 0 },
-  { "rush_hour_444.y4m", 352, 288, 30, 1, 8, VPX_IMG_FMT_I444, VPX_BITS_8, 1 },
-#if CONFIG_VPX_HIGHBITDEPTH
+  { "hantro_collage_w352h288.yuv", 352, 288, 5000, 1, 8, AOM_IMG_FMT_I420,
+    AOM_BITS_8, 0 },
+  { "hantro_collage_w352h288.yuv", 352, 288, 30, 1, 8, AOM_IMG_FMT_I420,
+    AOM_BITS_8, 0 },
+  { "rush_hour_444.y4m", 352, 288, 30, 1, 8, AOM_IMG_FMT_I444, AOM_BITS_8, 1 },
+#if CONFIG_AOM_HIGHBITDEPTH
 // Add list of profile 2/3 test videos here ...
-#endif  // CONFIG_VPX_HIGHBITDEPTH
+#endif  // CONFIG_AOM_HIGHBITDEPTH
 };
 
 const TestEncodeParam kEncodeVectors[] = {
-  { ::libvpx_test::kOnePassGood, 2 }, { ::libvpx_test::kOnePassGood, 5 },
-  { ::libvpx_test::kTwoPassGood, 1 }, { ::libvpx_test::kTwoPassGood, 2 },
-  { ::libvpx_test::kTwoPassGood, 5 }, { ::libvpx_test::kRealTime, 5 },
+  { ::libaom_test::kOnePassGood, 2 }, { ::libaom_test::kOnePassGood, 5 },
+  { ::libaom_test::kTwoPassGood, 1 }, { ::libaom_test::kTwoPassGood, 2 },
+  { ::libaom_test::kTwoPassGood, 5 }, { ::libaom_test::kRealTime, 5 },
 };
 
 const int kMinArfVectors[] = {
   // NOTE: 0 refers to the default built-in logic in:
-  //       vp10_rc_get_default_min_gf_interval(...)
+  //       av1_rc_get_default_min_gf_interval(...)
   0, 4, 8, 12, 15
 };
 
@@ -75,8 +76,8 @@ int is_extension_y4m(const char *filename) {
 }
 
 class ArfFreqTest
-    : public ::libvpx_test::EncoderTest,
-      public ::libvpx_test::CodecTestWith3Params<TestVideoParam,
+    : public ::libaom_test::EncoderTest,
+      public ::libaom_test::CodecTestWith3Params<TestVideoParam,
                                                  TestEncodeParam, int> {
  protected:
   ArfFreqTest()
@@ -88,12 +89,12 @@ class ArfFreqTest
   virtual void SetUp() {
     InitializeConfig();
     SetMode(test_encode_param_.mode);
-    if (test_encode_param_.mode != ::libvpx_test::kRealTime) {
+    if (test_encode_param_.mode != ::libaom_test::kRealTime) {
       cfg_.g_lag_in_frames = 25;
-      cfg_.rc_end_usage = VPX_VBR;
+      cfg_.rc_end_usage = AOM_VBR;
     } else {
       cfg_.g_lag_in_frames = 0;
-      cfg_.rc_end_usage = VPX_CBR;
+      cfg_.rc_end_usage = AOM_CBR;
       cfg_.rc_buf_sz = 1000;
       cfg_.rc_buf_initial_sz = 500;
       cfg_.rc_buf_optimal_sz = 600;
@@ -106,7 +107,7 @@ class ArfFreqTest
     run_of_visible_frames_ = 0;
   }
 
-  int GetNumFramesInPkt(const vpx_codec_cx_pkt_t *pkt) {
+  int GetNumFramesInPkt(const aom_codec_cx_pkt_t *pkt) {
     const uint8_t *buffer = reinterpret_cast<uint8_t *>(pkt->data.frame.buf);
     const uint8_t marker = buffer[pkt->data.frame.sz - 1];
     const int mag = ((marker >> 3) & 3) + 1;
@@ -123,8 +124,8 @@ class ArfFreqTest
     return frames;
   }
 
-  virtual void FramePktHook(const vpx_codec_cx_pkt_t *pkt) {
-    if (pkt->kind != VPX_CODEC_CX_FRAME_PKT) return;
+  virtual void FramePktHook(const aom_codec_cx_pkt_t *pkt) {
+    if (pkt->kind != AOM_CODEC_CX_FRAME_PKT) return;
     const int frames = GetNumFramesInPkt(pkt);
     if (frames == 1) {
       run_of_visible_frames_++;
@@ -142,18 +143,18 @@ class ArfFreqTest
     }
   }
 
-  virtual void PreEncodeFrameHook(::libvpx_test::VideoSource *video,
-                                  ::libvpx_test::Encoder *encoder) {
+  virtual void PreEncodeFrameHook(::libaom_test::VideoSource *video,
+                                  ::libaom_test::Encoder *encoder) {
     if (video->frame() == 0) {
-      encoder->Control(VP9E_SET_FRAME_PARALLEL_DECODING, 1);
-      encoder->Control(VP9E_SET_TILE_COLUMNS, 4);
-      encoder->Control(VP8E_SET_CPUUSED, test_encode_param_.cpu_used);
-      encoder->Control(VP9E_SET_MIN_GF_INTERVAL, min_arf_requested_);
-      if (test_encode_param_.mode != ::libvpx_test::kRealTime) {
-        encoder->Control(VP8E_SET_ENABLEAUTOALTREF, 1);
-        encoder->Control(VP8E_SET_ARNR_MAXFRAMES, 7);
-        encoder->Control(VP8E_SET_ARNR_STRENGTH, 5);
-        encoder->Control(VP8E_SET_ARNR_TYPE, 3);
+      encoder->Control(AV1E_SET_FRAME_PARALLEL_DECODING, 1);
+      encoder->Control(AV1E_SET_TILE_COLUMNS, 4);
+      encoder->Control(AOME_SET_CPUUSED, test_encode_param_.cpu_used);
+      encoder->Control(AV1E_SET_MIN_GF_INTERVAL, min_arf_requested_);
+      if (test_encode_param_.mode != ::libaom_test::kRealTime) {
+        encoder->Control(AOME_SET_ENABLEAUTOALTREF, 1);
+        encoder->Control(AOME_SET_ARNR_MAXFRAMES, 7);
+        encoder->Control(AOME_SET_ARNR_STRENGTH, 5);
+        encoder->Control(AOME_SET_ARNR_TYPE, 3);
       }
     }
   }
@@ -164,7 +165,7 @@ class ArfFreqTest
     if (min_arf_requested_)
       return min_arf_requested_;
     else
-      return vp10_rc_get_default_min_gf_interval(
+      return av1_rc_get_default_min_gf_interval(
           test_video_param_.width, test_video_param_.height,
           (double)test_video_param_.framerate_num /
               test_video_param_.framerate_den);
@@ -185,15 +186,15 @@ TEST_P(ArfFreqTest, MinArfFreqTest) {
   cfg_.g_profile = test_video_param_.profile;
   cfg_.g_input_bit_depth = test_video_param_.input_bit_depth;
   cfg_.g_bit_depth = test_video_param_.bit_depth;
-  init_flags_ = VPX_CODEC_USE_PSNR;
-  if (cfg_.g_bit_depth > 8) init_flags_ |= VPX_CODEC_USE_HIGHBITDEPTH;
+  init_flags_ = AOM_CODEC_USE_PSNR;
+  if (cfg_.g_bit_depth > 8) init_flags_ |= AOM_CODEC_USE_HIGHBITDEPTH;
 
-  libvpx_test::VideoSource *video;
+  libaom_test::VideoSource *video;
   if (is_extension_y4m(test_video_param_.filename)) {
     video =
-        new libvpx_test::Y4mVideoSource(test_video_param_.filename, 0, kFrames);
+        new libaom_test::Y4mVideoSource(test_video_param_.filename, 0, kFrames);
   } else {
-    video = new libvpx_test::YUVVideoSource(
+    video = new libaom_test::YUVVideoSource(
         test_video_param_.filename, test_video_param_.fmt,
         test_video_param_.width, test_video_param_.height,
         test_video_param_.framerate_num, test_video_param_.framerate_den, 0,
@@ -210,20 +211,20 @@ TEST_P(ArfFreqTest, MinArfFreqTest) {
   delete (video);
 }
 
-#if CONFIG_VPX_HIGHBITDEPTH
-#if CONFIG_VP10_ENCODER
+#if CONFIG_AOM_HIGHBITDEPTH
+#if CONFIG_AV1_ENCODER
 // TODO(angiebird): 25-29 fail in high bitdepth mode.
 INSTANTIATE_TEST_CASE_P(
-    DISABLED_VP10, ArfFreqTest,
+    DISABLED_AV1, ArfFreqTest,
     ::testing::Combine(
-        ::testing::Values(static_cast<const libvpx_test::CodecFactory *>(
-            &libvpx_test::kVP10)),
+        ::testing::Values(
+            static_cast<const libaom_test::CodecFactory *>(&libaom_test::kAV1)),
         ::testing::ValuesIn(kTestVectors), ::testing::ValuesIn(kEncodeVectors),
         ::testing::ValuesIn(kMinArfVectors)));
-#endif  // CONFIG_VP10_ENCODER
+#endif  // CONFIG_AV1_ENCODER
 #else
-VP10_INSTANTIATE_TEST_CASE(ArfFreqTest, ::testing::ValuesIn(kTestVectors),
-                           ::testing::ValuesIn(kEncodeVectors),
-                           ::testing::ValuesIn(kMinArfVectors));
-#endif  // CONFIG_VPX_HIGHBITDEPTH
+AV1_INSTANTIATE_TEST_CASE(ArfFreqTest, ::testing::ValuesIn(kTestVectors),
+                          ::testing::ValuesIn(kEncodeVectors),
+                          ::testing::ValuesIn(kMinArfVectors));
+#endif  // CONFIG_AOM_HIGHBITDEPTH
 }  // namespace

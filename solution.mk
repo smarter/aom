@@ -1,30 +1,32 @@
 ##
-##  Copyright (c) 2010 The WebM project authors. All Rights Reserved.
+## Copyright (c) 2016, Alliance for Open Media. All rights reserved
 ##
-##  Use of this source code is governed by a BSD-style license
-##  that can be found in the LICENSE file in the root of the source
-##  tree. An additional intellectual property rights grant can be found
-##  in the file PATENTS.  All contributing project authors may
-##  be found in the AUTHORS file in the root of the source tree.
+## This source code is subject to the terms of the BSD 2 Clause License and
+## the Alliance for Open Media Patent License 1.0. If the BSD 2 Clause License
+## was not distributed with this source code in the LICENSE file, you can
+## obtain it at www.aomedia.org/license/software. If the Alliance for Open
+## Media Patent License 1.0 was not distributed with this source code in the
+## PATENTS file, you can obtain it at www.aomedia.org/license/patent.
 ##
 
-# libvpx reverse dependencies (targets that depend on libvpx)
-VPX_NONDEPS=$(addsuffix .$(VCPROJ_SFX),vpx gtest)
-VPX_RDEPS=$(foreach vcp,\
-              $(filter-out $(VPX_NONDEPS),$^), --dep=$(vcp:.$(VCPROJ_SFX)=):vpx)
 
-vpx.sln: $(wildcard *.$(VCPROJ_SFX))
+# libaom reverse dependencies (targets that depend on libaom)
+AOM_NONDEPS=$(addsuffix .$(VCPROJ_SFX),aom gtest)
+AOM_RDEPS=$(foreach vcp,\
+              $(filter-out $(AOM_NONDEPS),$^), --dep=$(vcp:.$(VCPROJ_SFX)=):aom)
+
+aom.sln: $(wildcard *.$(VCPROJ_SFX))
 	@echo "    [CREATE] $@"
 	$(SRC_PATH_BARE)/build/make/gen_msvs_sln.sh \
-            $(if $(filter vpx.$(VCPROJ_SFX),$^),$(VPX_RDEPS)) \
-            --dep=test_libvpx:gtest \
+            $(if $(filter aom.$(VCPROJ_SFX),$^),$(AOM_RDEPS)) \
+            --dep=test_libaom:gtest \
             --ver=$(CONFIG_VS_VERSION)\
             --out=$@ $^
-vpx.sln.mk: vpx.sln
+aom.sln.mk: aom.sln
 	@true
 
-PROJECTS-yes += vpx.sln vpx.sln.mk
--include vpx.sln.mk
+PROJECTS-yes += aom.sln aom.sln.mk
+-include aom.sln.mk
 
 # Always install this file, as it is an unconditional post-build rule.
 INSTALL_MAPS += src/%     $(SRC_PATH_BARE)/%

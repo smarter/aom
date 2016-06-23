@@ -1,25 +1,26 @@
 /*
- *  Copyright (c) 2012 The WebM project authors. All Rights Reserved.
+ * Copyright (c) 2016, Alliance for Open Media. All rights reserved
  *
- *  Use of this source code is governed by a BSD-style license
- *  that can be found in the LICENSE file in the root of the source
- *  tree. An additional intellectual property rights grant can be found
- *  in the file PATENTS.  All contributing project authors may
- *  be found in the AUTHORS file in the root of the source tree.
+ * This source code is subject to the terms of the BSD 2 Clause License and
+ * the Alliance for Open Media Patent License 1.0. If the BSD 2 Clause License
+ * was not distributed with this source code in the LICENSE file, you can
+ * obtain it at www.aomedia.org/license/software. If the Alliance for Open
+ * Media Patent License 1.0 was not distributed with this source code in the
+ * PATENTS file, you can obtain it at www.aomedia.org/license/patent.
  */
 
 #ifndef TEST_MD5_HELPER_H_
 #define TEST_MD5_HELPER_H_
 
 #include "./md5_utils.h"
-#include "vpx/vpx_decoder.h"
+#include "aom/aom_decoder.h"
 
-namespace libvpx_test {
+namespace libaom_test {
 class MD5 {
  public:
   MD5() { MD5Init(&md5_); }
 
-  void Add(const vpx_image_t *img) {
+  void Add(const aom_image_t *img) {
     for (int plane = 0; plane < 3; ++plane) {
       const uint8_t *buf = img->planes[plane];
       // Calculate the width and height to do the md5 check. For the chroma
@@ -27,7 +28,7 @@ class MD5 {
       // we are shifting by 1 (chroma_shift) we add 1 before doing the shift.
       // This works only for chroma_shift of 0 and 1.
       const int bytes_per_sample =
-          (img->fmt & VPX_IMG_FMT_HIGHBITDEPTH) ? 2 : 1;
+          (img->fmt & AOM_IMG_FMT_HIGHBITDEPTH) ? 2 : 1;
       const int h =
           plane ? (img->d_h + img->y_chroma_shift) >> img->y_chroma_shift
                 : img->d_h;
@@ -70,6 +71,6 @@ class MD5 {
   MD5Context md5_;
 };
 
-}  // namespace libvpx_test
+}  // namespace libaom_test
 
 #endif  // TEST_MD5_HELPER_H_

@@ -34,10 +34,10 @@
 ; as this feature might be useful for others as well.  Send patches or ideas
 ; to x264-devel@videolan.org .
 
-%include "vpx_config.asm"
+%include "aom_config.asm"
 
 %ifndef private_prefix
-    %define private_prefix vpx
+    %define private_prefix aom
 %endif
 
 %ifndef public_prefix
@@ -81,7 +81,7 @@
 ; In some instances macho32 tables get misaligned when using .rodata.
 ; When looking at the disassembly it appears that the offset is either
 ; correct or consistently off by 90. Placing them in the .text section
-; works around the issue. It appears to be specific to the way libvpx
+; works around the issue. It appears to be specific to the way libaom
 ; handles the tables.
 %macro SECTION_RODATA 0-1 16
     %ifidn __OUTPUT_FORMAT__,macho32
@@ -102,7 +102,7 @@
     %endif
 %endmacro
 
-; PIC macros are copied from vpx_ports/x86_abi_support.asm. The "define PIC"
+; PIC macros are copied from aom_ports/x86_abi_support.asm. The "define PIC"
 ; from original code is added in for 64bit.
 %ifidn __OUTPUT_FORMAT__,elf32
 %define ABI_IS_32BIT 1
@@ -764,7 +764,7 @@ BRANCH_INSTR jz, je, jnz, jne, jl, jle, jnl, jnle, jg, jge, jng, jnge, ja, jae, 
 %macro cglobal_internal 2-3+
     %if %1
         %xdefine %%FUNCTION_PREFIX private_prefix
-        ; libvpx explicitly sets visibility in shared object builds. Avoid
+        ; libaom explicitly sets visibility in shared object builds. Avoid
         ; setting visibility to hidden as it may break builds that split
         ; sources on e.g., directory boundaries.
         %ifdef CHROMIUM

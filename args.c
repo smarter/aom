@@ -1,11 +1,12 @@
 /*
- *  Copyright (c) 2010 The WebM project authors. All Rights Reserved.
+ * Copyright (c) 2016, Alliance for Open Media. All rights reserved
  *
- *  Use of this source code is governed by a BSD-style license
- *  that can be found in the LICENSE file in the root of the source
- *  tree. An additional intellectual property rights grant can be found
- *  in the file PATENTS.  All contributing project authors may
- *  be found in the AUTHORS file in the root of the source tree.
+ * This source code is subject to the terms of the BSD 2 Clause License and
+ * the Alliance for Open Media Patent License 1.0. If the BSD 2 Clause License
+ * was not distributed with this source code in the LICENSE file, you can
+ * obtain it at www.aomedia.org/license/software. If the Alliance for Open
+ * Media Patent License 1.0 was not distributed with this source code in the
+ * PATENTS file, you can obtain it at www.aomedia.org/license/patent.
  */
 
 #include <stdlib.h>
@@ -13,7 +14,7 @@
 #include <limits.h>
 #include "args.h"
 
-#include "vpx_ports/msvc.h"
+#include "aom_ports/msvc.h"
 
 #if defined(__GNUC__) && __GNUC__
 extern void die(const char *fmt, ...) __attribute__((noreturn));
@@ -151,14 +152,14 @@ int arg_parse_int(const struct arg *arg) {
   return 0;
 }
 
-struct vpx_rational {
+struct aom_rational {
   int num; /**< fraction numerator */
   int den; /**< fraction denominator */
 };
-struct vpx_rational arg_parse_rational(const struct arg *arg) {
+struct aom_rational arg_parse_rational(const struct arg *arg) {
   long int rawval;
   char *endptr;
-  struct vpx_rational rat;
+  struct aom_rational rat;
 
   /* parse numerator */
   rawval = strtol(arg->val, &endptr, 10);

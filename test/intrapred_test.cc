@@ -1,37 +1,38 @@
 /*
- *  Copyright (c) 2014 The WebM project authors. All Rights Reserved.
+ * Copyright (c) 2016, Alliance for Open Media. All rights reserved
  *
- *  Use of this source code is governed by a BSD-style license
- *  that can be found in the LICENSE file in the root of the source
- *  tree. An additional intellectual property rights grant can be found
- *  in the file PATENTS.  All contributing project authors may
- *  be found in the AUTHORS file in the root of the source tree.
- */
+ * This source code is subject to the terms of the BSD 2 Clause License and
+ * the Alliance for Open Media Patent License 1.0. If the BSD 2 Clause License
+ * was not distributed with this source code in the LICENSE file, you can
+ * obtain it at www.aomedia.org/license/software. If the Alliance for Open
+ * Media Patent License 1.0 was not distributed with this source code in the
+ * PATENTS file, you can obtain it at www.aomedia.org/license/patent.
+*/
 
 #include <string>
 
 #include "third_party/googletest/src/include/gtest/gtest.h"
 
-#include "./vpx_config.h"
-#include "./vpx_dsp_rtcd.h"
+#include "./aom_config.h"
+#include "./aom_dsp_rtcd.h"
 #include "test/acm_random.h"
 #include "test/clear_system_state.h"
 #include "test/register_state_check.h"
 #include "test/util.h"
-#include "vp10/common/blockd.h"
-#include "vp10/common/pred_common.h"
-#include "vpx_mem/vpx_mem.h"
+#include "av1/common/blockd.h"
+#include "av1/common/pred_common.h"
+#include "aom_mem/aom_mem.h"
 
 namespace {
 
-using libvpx_test::ACMRandom;
+using libaom_test::ACMRandom;
 
 const int count_test_block = 100000;
 
-// Base class for VP9 intra prediction tests.
-class VP9IntraPredBase {
+// Base class for AV1 intra prediction tests.
+class AV1IntraPredBase {
  public:
-  virtual ~VP9IntraPredBase() { libvpx_test::ClearSystemState(); }
+  virtual ~AV1IntraPredBase() { libaom_test::ClearSystemState(); }
 
  protected:
   virtual void Predict(PREDICTION_MODE mode) = 0;
@@ -93,7 +94,7 @@ typedef void (*intra_pred_fn_t)(uint16_t *dst, ptrdiff_t stride,
                                 int bps);
 typedef std::tr1::tuple<intra_pred_fn_t, intra_pred_fn_t, int, int>
     intra_pred_params_t;
-class VP9IntraPredTest : public VP9IntraPredBase,
+class AV1IntraPredTest : public AV1IntraPredBase,
                          public ::testing::TestWithParam<intra_pred_params_t> {
   virtual void SetUp() {
     pred_fn_ = GET_PARAM(0);
@@ -116,7 +117,7 @@ class VP9IntraPredTest : public VP9IntraPredBase,
   int bit_depth_;
 };
 
-TEST_P(VP9IntraPredTest, IntraPredTests) {
+TEST_P(AV1IntraPredTest, IntraPredTests) {
   // max block size is 32
   DECLARE_ALIGNED(16, uint16_t, left_col[2 * 32]);
   DECLARE_ALIGNED(16, uint16_t, above_data[2 * 32 + 32]);
@@ -128,90 +129,90 @@ TEST_P(VP9IntraPredTest, IntraPredTests) {
 using std::tr1::make_tuple;
 
 #if HAVE_SSE2
-#if CONFIG_VPX_HIGHBITDEPTH
+#if CONFIG_AOM_HIGHBITDEPTH
 #if CONFIG_USE_X86INC
 INSTANTIATE_TEST_CASE_P(
-    SSE2_TO_C_8, VP9IntraPredTest,
-    ::testing::Values(make_tuple(&vpx_highbd_dc_predictor_32x32_sse2,
-                                 &vpx_highbd_dc_predictor_32x32_c, 32, 8),
-                      make_tuple(&vpx_highbd_tm_predictor_16x16_sse2,
-                                 &vpx_highbd_tm_predictor_16x16_c, 16, 8),
-                      make_tuple(&vpx_highbd_tm_predictor_32x32_sse2,
-                                 &vpx_highbd_tm_predictor_32x32_c, 32, 8),
-                      make_tuple(&vpx_highbd_dc_predictor_4x4_sse2,
-                                 &vpx_highbd_dc_predictor_4x4_c, 4, 8),
-                      make_tuple(&vpx_highbd_dc_predictor_8x8_sse2,
-                                 &vpx_highbd_dc_predictor_8x8_c, 8, 8),
-                      make_tuple(&vpx_highbd_dc_predictor_16x16_sse2,
-                                 &vpx_highbd_dc_predictor_16x16_c, 16, 8),
-                      make_tuple(&vpx_highbd_v_predictor_4x4_sse2,
-                                 &vpx_highbd_v_predictor_4x4_c, 4, 8),
-                      make_tuple(&vpx_highbd_v_predictor_8x8_sse2,
-                                 &vpx_highbd_v_predictor_8x8_c, 8, 8),
-                      make_tuple(&vpx_highbd_v_predictor_16x16_sse2,
-                                 &vpx_highbd_v_predictor_16x16_c, 16, 8),
-                      make_tuple(&vpx_highbd_v_predictor_32x32_sse2,
-                                 &vpx_highbd_v_predictor_32x32_c, 32, 8),
-                      make_tuple(&vpx_highbd_tm_predictor_4x4_sse2,
-                                 &vpx_highbd_tm_predictor_4x4_c, 4, 8),
-                      make_tuple(&vpx_highbd_tm_predictor_8x8_sse2,
-                                 &vpx_highbd_tm_predictor_8x8_c, 8, 8)));
+    SSE2_TO_C_8, AV1IntraPredTest,
+    ::testing::Values(make_tuple(&aom_highbd_dc_predictor_32x32_sse2,
+                                 &aom_highbd_dc_predictor_32x32_c, 32, 8),
+                      make_tuple(&aom_highbd_tm_predictor_16x16_sse2,
+                                 &aom_highbd_tm_predictor_16x16_c, 16, 8),
+                      make_tuple(&aom_highbd_tm_predictor_32x32_sse2,
+                                 &aom_highbd_tm_predictor_32x32_c, 32, 8),
+                      make_tuple(&aom_highbd_dc_predictor_4x4_sse2,
+                                 &aom_highbd_dc_predictor_4x4_c, 4, 8),
+                      make_tuple(&aom_highbd_dc_predictor_8x8_sse2,
+                                 &aom_highbd_dc_predictor_8x8_c, 8, 8),
+                      make_tuple(&aom_highbd_dc_predictor_16x16_sse2,
+                                 &aom_highbd_dc_predictor_16x16_c, 16, 8),
+                      make_tuple(&aom_highbd_v_predictor_4x4_sse2,
+                                 &aom_highbd_v_predictor_4x4_c, 4, 8),
+                      make_tuple(&aom_highbd_v_predictor_8x8_sse2,
+                                 &aom_highbd_v_predictor_8x8_c, 8, 8),
+                      make_tuple(&aom_highbd_v_predictor_16x16_sse2,
+                                 &aom_highbd_v_predictor_16x16_c, 16, 8),
+                      make_tuple(&aom_highbd_v_predictor_32x32_sse2,
+                                 &aom_highbd_v_predictor_32x32_c, 32, 8),
+                      make_tuple(&aom_highbd_tm_predictor_4x4_sse2,
+                                 &aom_highbd_tm_predictor_4x4_c, 4, 8),
+                      make_tuple(&aom_highbd_tm_predictor_8x8_sse2,
+                                 &aom_highbd_tm_predictor_8x8_c, 8, 8)));
 
 INSTANTIATE_TEST_CASE_P(
-    SSE2_TO_C_10, VP9IntraPredTest,
-    ::testing::Values(make_tuple(&vpx_highbd_dc_predictor_32x32_sse2,
-                                 &vpx_highbd_dc_predictor_32x32_c, 32, 10),
-                      make_tuple(&vpx_highbd_tm_predictor_16x16_sse2,
-                                 &vpx_highbd_tm_predictor_16x16_c, 16, 10),
-                      make_tuple(&vpx_highbd_tm_predictor_32x32_sse2,
-                                 &vpx_highbd_tm_predictor_32x32_c, 32, 10),
-                      make_tuple(&vpx_highbd_dc_predictor_4x4_sse2,
-                                 &vpx_highbd_dc_predictor_4x4_c, 4, 10),
-                      make_tuple(&vpx_highbd_dc_predictor_8x8_sse2,
-                                 &vpx_highbd_dc_predictor_8x8_c, 8, 10),
-                      make_tuple(&vpx_highbd_dc_predictor_16x16_sse2,
-                                 &vpx_highbd_dc_predictor_16x16_c, 16, 10),
-                      make_tuple(&vpx_highbd_v_predictor_4x4_sse2,
-                                 &vpx_highbd_v_predictor_4x4_c, 4, 10),
-                      make_tuple(&vpx_highbd_v_predictor_8x8_sse2,
-                                 &vpx_highbd_v_predictor_8x8_c, 8, 10),
-                      make_tuple(&vpx_highbd_v_predictor_16x16_sse2,
-                                 &vpx_highbd_v_predictor_16x16_c, 16, 10),
-                      make_tuple(&vpx_highbd_v_predictor_32x32_sse2,
-                                 &vpx_highbd_v_predictor_32x32_c, 32, 10),
-                      make_tuple(&vpx_highbd_tm_predictor_4x4_sse2,
-                                 &vpx_highbd_tm_predictor_4x4_c, 4, 10),
-                      make_tuple(&vpx_highbd_tm_predictor_8x8_sse2,
-                                 &vpx_highbd_tm_predictor_8x8_c, 8, 10)));
+    SSE2_TO_C_10, AV1IntraPredTest,
+    ::testing::Values(make_tuple(&aom_highbd_dc_predictor_32x32_sse2,
+                                 &aom_highbd_dc_predictor_32x32_c, 32, 10),
+                      make_tuple(&aom_highbd_tm_predictor_16x16_sse2,
+                                 &aom_highbd_tm_predictor_16x16_c, 16, 10),
+                      make_tuple(&aom_highbd_tm_predictor_32x32_sse2,
+                                 &aom_highbd_tm_predictor_32x32_c, 32, 10),
+                      make_tuple(&aom_highbd_dc_predictor_4x4_sse2,
+                                 &aom_highbd_dc_predictor_4x4_c, 4, 10),
+                      make_tuple(&aom_highbd_dc_predictor_8x8_sse2,
+                                 &aom_highbd_dc_predictor_8x8_c, 8, 10),
+                      make_tuple(&aom_highbd_dc_predictor_16x16_sse2,
+                                 &aom_highbd_dc_predictor_16x16_c, 16, 10),
+                      make_tuple(&aom_highbd_v_predictor_4x4_sse2,
+                                 &aom_highbd_v_predictor_4x4_c, 4, 10),
+                      make_tuple(&aom_highbd_v_predictor_8x8_sse2,
+                                 &aom_highbd_v_predictor_8x8_c, 8, 10),
+                      make_tuple(&aom_highbd_v_predictor_16x16_sse2,
+                                 &aom_highbd_v_predictor_16x16_c, 16, 10),
+                      make_tuple(&aom_highbd_v_predictor_32x32_sse2,
+                                 &aom_highbd_v_predictor_32x32_c, 32, 10),
+                      make_tuple(&aom_highbd_tm_predictor_4x4_sse2,
+                                 &aom_highbd_tm_predictor_4x4_c, 4, 10),
+                      make_tuple(&aom_highbd_tm_predictor_8x8_sse2,
+                                 &aom_highbd_tm_predictor_8x8_c, 8, 10)));
 
 INSTANTIATE_TEST_CASE_P(
-    SSE2_TO_C_12, VP9IntraPredTest,
-    ::testing::Values(make_tuple(&vpx_highbd_dc_predictor_32x32_sse2,
-                                 &vpx_highbd_dc_predictor_32x32_c, 32, 12),
-                      make_tuple(&vpx_highbd_tm_predictor_16x16_sse2,
-                                 &vpx_highbd_tm_predictor_16x16_c, 16, 12),
-                      make_tuple(&vpx_highbd_tm_predictor_32x32_sse2,
-                                 &vpx_highbd_tm_predictor_32x32_c, 32, 12),
-                      make_tuple(&vpx_highbd_dc_predictor_4x4_sse2,
-                                 &vpx_highbd_dc_predictor_4x4_c, 4, 12),
-                      make_tuple(&vpx_highbd_dc_predictor_8x8_sse2,
-                                 &vpx_highbd_dc_predictor_8x8_c, 8, 12),
-                      make_tuple(&vpx_highbd_dc_predictor_16x16_sse2,
-                                 &vpx_highbd_dc_predictor_16x16_c, 16, 12),
-                      make_tuple(&vpx_highbd_v_predictor_4x4_sse2,
-                                 &vpx_highbd_v_predictor_4x4_c, 4, 12),
-                      make_tuple(&vpx_highbd_v_predictor_8x8_sse2,
-                                 &vpx_highbd_v_predictor_8x8_c, 8, 12),
-                      make_tuple(&vpx_highbd_v_predictor_16x16_sse2,
-                                 &vpx_highbd_v_predictor_16x16_c, 16, 12),
-                      make_tuple(&vpx_highbd_v_predictor_32x32_sse2,
-                                 &vpx_highbd_v_predictor_32x32_c, 32, 12),
-                      make_tuple(&vpx_highbd_tm_predictor_4x4_sse2,
-                                 &vpx_highbd_tm_predictor_4x4_c, 4, 12),
-                      make_tuple(&vpx_highbd_tm_predictor_8x8_sse2,
-                                 &vpx_highbd_tm_predictor_8x8_c, 8, 12)));
+    SSE2_TO_C_12, AV1IntraPredTest,
+    ::testing::Values(make_tuple(&aom_highbd_dc_predictor_32x32_sse2,
+                                 &aom_highbd_dc_predictor_32x32_c, 32, 12),
+                      make_tuple(&aom_highbd_tm_predictor_16x16_sse2,
+                                 &aom_highbd_tm_predictor_16x16_c, 16, 12),
+                      make_tuple(&aom_highbd_tm_predictor_32x32_sse2,
+                                 &aom_highbd_tm_predictor_32x32_c, 32, 12),
+                      make_tuple(&aom_highbd_dc_predictor_4x4_sse2,
+                                 &aom_highbd_dc_predictor_4x4_c, 4, 12),
+                      make_tuple(&aom_highbd_dc_predictor_8x8_sse2,
+                                 &aom_highbd_dc_predictor_8x8_c, 8, 12),
+                      make_tuple(&aom_highbd_dc_predictor_16x16_sse2,
+                                 &aom_highbd_dc_predictor_16x16_c, 16, 12),
+                      make_tuple(&aom_highbd_v_predictor_4x4_sse2,
+                                 &aom_highbd_v_predictor_4x4_c, 4, 12),
+                      make_tuple(&aom_highbd_v_predictor_8x8_sse2,
+                                 &aom_highbd_v_predictor_8x8_c, 8, 12),
+                      make_tuple(&aom_highbd_v_predictor_16x16_sse2,
+                                 &aom_highbd_v_predictor_16x16_c, 16, 12),
+                      make_tuple(&aom_highbd_v_predictor_32x32_sse2,
+                                 &aom_highbd_v_predictor_32x32_c, 32, 12),
+                      make_tuple(&aom_highbd_tm_predictor_4x4_sse2,
+                                 &aom_highbd_tm_predictor_4x4_c, 4, 12),
+                      make_tuple(&aom_highbd_tm_predictor_8x8_sse2,
+                                 &aom_highbd_tm_predictor_8x8_c, 8, 12)));
 
 #endif  // CONFIG_USE_X86INC
-#endif  // CONFIG_VPX_HIGHBITDEPTH
+#endif  // CONFIG_AOM_HIGHBITDEPTH
 #endif  // HAVE_SSE2
 }  // namespace

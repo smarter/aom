@@ -1,11 +1,13 @@
-// Copyright (c) 2012 The WebM project authors. All Rights Reserved.
 //
-// Use of this source code is governed by a BSD-style license
-// that can be found in the LICENSE file in the root of the source
-// tree. An additional intellectual property rights grant can be found
-// in the file PATENTS.  All contributing project authors may
-// be found in the AUTHORS file in the root of the source tree.
-
+// Copyright (c) 2016, Alliance for Open Media. All rights reserved
+//
+// This source code is subject to the terms of the BSD 2 Clause License and
+// the Alliance for Open Media Patent License 1.0. If the BSD 2 Clause License
+// was not distributed with this source code in the LICENSE file, you can
+// obtain it at www.aomedia.org/license/software. If the Alliance for Open
+// Media Patent License 1.0 was not distributed with this source code in the
+// PATENTS file, you can obtain it at www.aomedia.org/license/patent.
+//
 #include "mkvmuxer.hpp"
 
 #include <climits>
@@ -1043,9 +1045,8 @@ bool AudioTrack::Write(IMkvWriter* writer) const {
 
 const char Tracks::kOpusCodecId[] = "A_OPUS";
 const char Tracks::kVorbisCodecId[] = "A_VORBIS";
-const char Tracks::kVp8CodecId[] = "V_VP8";
-const char Tracks::kVp9CodecId[] = "V_VP9";
-const char Tracks::kVp10CodecId[] = "V_VP10";
+const char Tracks::kAOMCodecId[] = "V_AOM";
+const char Tracks::kAV1CodecId[] = "V_AV1";
 
 Tracks::Tracks() : track_entries_(NULL), track_entries_size_(0) {}
 
@@ -2514,7 +2515,7 @@ uint64 Segment::AddVideoTrack(int32 width, int32 height, int32 number) {
     return 0;
 
   track->set_type(Tracks::kVideo);
-  track->set_codec_id(Tracks::kVp8CodecId);
+  track->set_codec_id(Tracks::kAOMCodecId);
   track->set_width(width);
   track->set_height(height);
 

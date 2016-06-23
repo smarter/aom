@@ -1,12 +1,13 @@
 /*
- *  Copyright (c) 2012 The WebM project authors. All Rights Reserved.
+ * Copyright (c) 2016, Alliance for Open Media. All rights reserved
  *
- *  Use of this source code is governed by a BSD-style license
- *  that can be found in the LICENSE file in the root of the source
- *  tree. An additional intellectual property rights grant can be found
- *  in the file PATENTS.  All contributing project authors may
- *  be found in the AUTHORS file in the root of the source tree.
- */
+ * This source code is subject to the terms of the BSD 2 Clause License and
+ * the Alliance for Open Media Patent License 1.0. If the BSD 2 Clause License
+ * was not distributed with this source code in the LICENSE file, you can
+ * obtain it at www.aomedia.org/license/software. If the Alliance for Open
+ * Media Patent License 1.0 was not distributed with this source code in the
+ * PATENTS file, you can obtain it at www.aomedia.org/license/patent.
+*/
 
 #include <math.h>
 #include <stdlib.h>
@@ -14,11 +15,11 @@
 
 #include "third_party/googletest/src/include/gtest/gtest.h"
 
-#include "./vpx_dsp_rtcd.h"
+#include "./aom_dsp_rtcd.h"
 #include "test/acm_random.h"
-#include "vpx/vpx_integer.h"
+#include "aom/aom_integer.h"
 
-using libvpx_test::ACMRandom;
+using libaom_test::ACMRandom;
 
 namespace {
 
@@ -61,7 +62,7 @@ void reference_dct_2d(int16_t input[64], double output[64]) {
   for (int i = 0; i < 64; ++i) output[i] *= 2;
 }
 
-TEST(VP9Idct8x8Test, AccuracyCheck) {
+TEST(AV1Idct8x8Test, AccuracyCheck) {
   ACMRandom rnd(ACMRandom::DeterministicSeed());
   const int count_test_block = 10000;
   for (int i = 0; i < count_test_block; ++i) {
@@ -79,7 +80,7 @@ TEST(VP9Idct8x8Test, AccuracyCheck) {
 
     reference_dct_2d(input, output_r);
     for (int j = 0; j < 64; ++j) coeff[j] = round(output_r[j]);
-    vpx_idct8x8_64_add_c(coeff, dst, 8);
+    aom_idct8x8_64_add_c(coeff, dst, 8);
     for (int j = 0; j < 64; ++j) {
       const int diff = dst[j] - src[j];
       const int error = diff * diff;

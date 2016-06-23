@@ -1,12 +1,14 @@
 /*
- *  Copyright (c) 2015 The WebM project authors. All Rights Reserved.
+ * Copyright (c) 2016, Alliance for Open Media. All rights reserved
  *
- *  Use of this source code is governed by a BSD-style license
- *  that can be found in the LICENSE file in the root of the source
- *  tree. An additional intellectual property rights grant can be found
- *  in the file PATENTS.  All contributing project authors may
- *  be found in the AUTHORS file in the root of the source tree.
- */
+ * This source code is subject to the terms of the BSD 2 Clause License and
+ * the Alliance for Open Media Patent License 1.0. If the BSD 2 Clause License
+ * was not distributed with this source code in the LICENSE file, you can
+ * obtain it at www.aomedia.org/license/software. If the Alliance for Open
+ * Media Patent License 1.0 was not distributed with this source code in the
+ * PATENTS file, you can obtain it at www.aomedia.org/license/patent.
+*/
+
 #include <algorithm>
 #include "third_party/googletest/src/include/gtest/gtest.h"
 #include "test/codec_factory.h"
@@ -17,7 +19,7 @@
 namespace {
 
 // Check if any pixel in a 16x16 macroblock varies between frames.
-int CheckMb(const vpx_image_t &current, const vpx_image_t &previous, int mb_r,
+int CheckMb(const aom_image_t &current, const aom_image_t &previous, int mb_r,
             int mb_c) {
   for (int plane = 0; plane < 3; plane++) {
     int r = 16 * mb_r;
@@ -45,8 +47,8 @@ int CheckMb(const vpx_image_t &current, const vpx_image_t &previous, int mb_r,
   return 0;
 }
 
-void GenerateMap(int mb_rows, int mb_cols, const vpx_image_t &current,
-                 const vpx_image_t &previous, uint8_t *map) {
+void GenerateMap(int mb_rows, int mb_cols, const aom_image_t &current,
+                 const aom_image_t &previous, uint8_t *map) {
   for (int mb_r = 0; mb_r < mb_rows; ++mb_r) {
     for (int mb_c = 0; mb_c < mb_cols; ++mb_c) {
       map[mb_r * mb_cols + mb_c] = CheckMb(current, previous, mb_r, mb_c);
@@ -57,8 +59,8 @@ void GenerateMap(int mb_rows, int mb_cols, const vpx_image_t &current,
 const int kAqModeCyclicRefresh = 3;
 
 class ActiveMapRefreshTest
-    : public ::libvpx_test::EncoderTest,
-      public ::libvpx_test::CodecTestWith2Params<libvpx_test::TestMode, int> {
+    : public ::libaom_test::EncoderTest,
+      public ::libaom_test::CodecTestWith2Params<libaom_test::TestMode, int> {
  protected:
   ActiveMapRefreshTest() : EncoderTest(GET_PARAM(0)) {}
   virtual ~ActiveMapRefreshTest() {}
@@ -69,18 +71,18 @@ class ActiveMapRefreshTest
     cpu_used_ = GET_PARAM(2);
   }
 
-  virtual void PreEncodeFrameHook(::libvpx_test::VideoSource *video,
-                                  ::libvpx_test::Encoder *encoder) {
-    ::libvpx_test::Y4mVideoSource *y4m_video =
-        static_cast<libvpx_test::Y4mVideoSource *>(video);
+  virtual void PreEncodeFrameHook(::libaom_test::VideoSource *video,
+                                  ::libaom_test::Encoder *encoder) {
+    ::libaom_test::Y4mVideoSource *y4m_video =
+        static_cast<libaom_test::Y4mVideoSource *>(video);
     if (video->frame() == 1) {
-      encoder->Control(VP8E_SET_CPUUSED, cpu_used_);
-      encoder->Control(VP9E_SET_AQ_MODE, kAqModeCyclicRefresh);
+      encoder->Control(AOME_SET_CPUUSED, cpu_used_);
+      encoder->Control(AV1E_SET_AQ_MODE, kAqModeCyclicRefresh);
     } else if (video->frame() >= 2 && video->img()) {
-      vpx_image_t *current = video->img();
-      vpx_image_t *previous = y4m_holder_->img();
+      aom_image_t *current = video->img();
+      aom_image_t *previous = y4m_holder_->img();
       ASSERT_TRUE(previous != NULL);
-      vpx_active_map_t map = vpx_active_map_t();
+      aom_active_map_t map = aom_active_map_t();
       const int width = static_cast<int>(current->d_w);
       const int height = static_cast<int>(current->d_h);
       const int mb_width = (width + 15) / 16;
@@ -90,7 +92,7 @@ class ActiveMapRefreshTest
       map.cols = mb_width;
       map.rows = mb_height;
       map.active_map = active_map;
-      encoder->Control(VP8E_SET_ACTIVEMAP, &map);
+      encoder->Control(AOME_SET_ACTIVEMAP, &map);
       delete[] active_map;
     }
     if (video->img()) {
@@ -99,7 +101,7 @@ class ActiveMapRefreshTest
   }
 
   int cpu_used_;
-  ::libvpx_test::Y4mVideoSource *y4m_holder_;
+  ::libaom_test::Y4mVideoSource *y4m_holder_;
 };
 
 TEST_P(ActiveMapRefreshTest, Test) {
@@ -109,19 +111,19 @@ TEST_P(ActiveMapRefreshTest, Test) {
   cfg_.rc_resize_allowed = 0;
   cfg_.rc_min_quantizer = 8;
   cfg_.rc_max_quantizer = 30;
-  cfg_.g_pass = VPX_RC_ONE_PASS;
-  cfg_.rc_end_usage = VPX_CBR;
+  cfg_.g_pass = AOM_RC_ONE_PASS;
+  cfg_.rc_end_usage = AOM_CBR;
   cfg_.kf_max_dist = 90000;
 
-  ::libvpx_test::Y4mVideoSource video("desktop_credits.y4m", 0, 30);
-  ::libvpx_test::Y4mVideoSource video_holder("desktop_credits.y4m", 0, 30);
+  ::libaom_test::Y4mVideoSource video("desktop_credits.y4m", 0, 30);
+  ::libaom_test::Y4mVideoSource video_holder("desktop_credits.y4m", 0, 30);
   video_holder.Begin();
   y4m_holder_ = &video_holder;
 
   ASSERT_NO_FATAL_FAILURE(RunLoop(&video));
 }
 
-VP10_INSTANTIATE_TEST_CASE(ActiveMapRefreshTest,
-                           ::testing::Values(::libvpx_test::kRealTime),
-                           ::testing::Range(5, 6));
+AV1_INSTANTIATE_TEST_CASE(ActiveMapRefreshTest,
+                          ::testing::Values(::libaom_test::kRealTime),
+                          ::testing::Range(5, 6));
 }  // namespace

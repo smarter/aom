@@ -1,12 +1,13 @@
 /*
- *  Copyright (c) 2013 The WebM project authors. All Rights Reserved.
+ * Copyright (c) 2016, Alliance for Open Media. All rights reserved
  *
- *  Use of this source code is governed by a BSD-style license
- *  that can be found in the LICENSE file in the root of the source
- *  tree. An additional intellectual property rights grant can be found
- *  in the file PATENTS.  All contributing project authors may
- *  be found in the AUTHORS file in the root of the source tree.
- */
+ * This source code is subject to the terms of the BSD 2 Clause License and
+ * the Alliance for Open Media Patent License 1.0. If the BSD 2 Clause License
+ * was not distributed with this source code in the LICENSE file, you can
+ * obtain it at www.aomedia.org/license/software. If the Alliance for Open
+ * Media Patent License 1.0 was not distributed with this source code in the
+ * PATENTS file, you can obtain it at www.aomedia.org/license/patent.
+*/
 
 #include <string>
 #include "test/codec_factory.h"
@@ -17,9 +18,9 @@
 #include "test/md5_helper.h"
 #include "test/util.h"
 #include "test/webm_video_source.h"
-#include "vpx_ports/vpx_timer.h"
+#include "aom_ports/aom_timer.h"
 #include "./ivfenc.h"
-#include "./vpx_version.h"
+#include "./aom_version.h"
 
 using std::tr1::make_tuple;
 
@@ -37,26 +38,26 @@ const char kNewEncodeOutputFile[] = "new_encode.ivf";
  */
 typedef std::tr1::tuple<const char *, unsigned> DecodePerfParam;
 
-const DecodePerfParam kVP9DecodePerfVectors[] = {
-  make_tuple("vp90-2-bbb_426x240_tile_1x1_180kbps.webm", 1),
-  make_tuple("vp90-2-bbb_640x360_tile_1x2_337kbps.webm", 2),
-  make_tuple("vp90-2-bbb_854x480_tile_1x2_651kbps.webm", 2),
-  make_tuple("vp90-2-bbb_1280x720_tile_1x4_1310kbps.webm", 4),
-  make_tuple("vp90-2-bbb_1920x1080_tile_1x1_2581kbps.webm", 1),
-  make_tuple("vp90-2-bbb_1920x1080_tile_1x4_2586kbps.webm", 4),
-  make_tuple("vp90-2-bbb_1920x1080_tile_1x4_fpm_2304kbps.webm", 4),
-  make_tuple("vp90-2-sintel_426x182_tile_1x1_171kbps.webm", 1),
-  make_tuple("vp90-2-sintel_640x272_tile_1x2_318kbps.webm", 2),
-  make_tuple("vp90-2-sintel_854x364_tile_1x2_621kbps.webm", 2),
-  make_tuple("vp90-2-sintel_1280x546_tile_1x4_1257kbps.webm", 4),
-  make_tuple("vp90-2-sintel_1920x818_tile_1x4_fpm_2279kbps.webm", 4),
-  make_tuple("vp90-2-tos_426x178_tile_1x1_181kbps.webm", 1),
-  make_tuple("vp90-2-tos_640x266_tile_1x2_336kbps.webm", 2),
-  make_tuple("vp90-2-tos_854x356_tile_1x2_656kbps.webm", 2),
-  make_tuple("vp90-2-tos_854x356_tile_1x2_fpm_546kbps.webm", 2),
-  make_tuple("vp90-2-tos_1280x534_tile_1x4_1306kbps.webm", 4),
-  make_tuple("vp90-2-tos_1280x534_tile_1x4_fpm_952kbps.webm", 4),
-  make_tuple("vp90-2-tos_1920x800_tile_1x4_fpm_2335kbps.webm", 4),
+const DecodePerfParam kAV1DecodePerfVectors[] = {
+  make_tuple("av10-2-bbb_426x240_tile_1x1_180kbps.webm", 1),
+  make_tuple("av10-2-bbb_640x360_tile_1x2_337kbps.webm", 2),
+  make_tuple("av10-2-bbb_854x480_tile_1x2_651kbps.webm", 2),
+  make_tuple("av10-2-bbb_1280x720_tile_1x4_1310kbps.webm", 4),
+  make_tuple("av10-2-bbb_1920x1080_tile_1x1_2581kbps.webm", 1),
+  make_tuple("av10-2-bbb_1920x1080_tile_1x4_2586kbps.webm", 4),
+  make_tuple("av10-2-bbb_1920x1080_tile_1x4_fpm_2304kbps.webm", 4),
+  make_tuple("av10-2-sintel_426x182_tile_1x1_171kbps.webm", 1),
+  make_tuple("av10-2-sintel_640x272_tile_1x2_318kbps.webm", 2),
+  make_tuple("av10-2-sintel_854x364_tile_1x2_621kbps.webm", 2),
+  make_tuple("av10-2-sintel_1280x546_tile_1x4_1257kbps.webm", 4),
+  make_tuple("av10-2-sintel_1920x818_tile_1x4_fpm_2279kbps.webm", 4),
+  make_tuple("av10-2-tos_426x178_tile_1x1_181kbps.webm", 1),
+  make_tuple("av10-2-tos_640x266_tile_1x2_336kbps.webm", 2),
+  make_tuple("av10-2-tos_854x356_tile_1x2_656kbps.webm", 2),
+  make_tuple("av10-2-tos_854x356_tile_1x2_fpm_546kbps.webm", 2),
+  make_tuple("av10-2-tos_1280x534_tile_1x4_1306kbps.webm", 4),
+  make_tuple("av10-2-tos_1280x534_tile_1x4_fpm_952kbps.webm", 4),
+  make_tuple("av10-2-tos_1920x800_tile_1x4_fpm_2335kbps.webm", 4),
 };
 
 /*
@@ -76,22 +77,22 @@ TEST_P(DecodePerfTest, PerfTest) {
   const char *const video_name = GET_PARAM(VIDEO_NAME);
   const unsigned threads = GET_PARAM(THREADS);
 
-  libvpx_test::WebMVideoSource video(video_name);
+  libaom_test::WebMVideoSource video(video_name);
   video.Init();
 
-  vpx_codec_dec_cfg_t cfg = vpx_codec_dec_cfg_t();
+  aom_codec_dec_cfg_t cfg = aom_codec_dec_cfg_t();
   cfg.threads = threads;
-  libvpx_test::VP9Decoder decoder(cfg, 0);
+  libaom_test::AV1Decoder decoder(cfg, 0);
 
-  vpx_usec_timer t;
-  vpx_usec_timer_start(&t);
+  aom_usec_timer t;
+  aom_usec_timer_start(&t);
 
   for (video.Begin(); video.cxdata() != NULL; video.Next()) {
     decoder.DecodeFrame(video.cxdata(), video.frame_size());
   }
 
-  vpx_usec_timer_mark(&t);
-  const double elapsed_secs = double(vpx_usec_timer_elapsed(&t)) / kUsecsInSec;
+  aom_usec_timer_mark(&t);
+  const double elapsed_secs = double(aom_usec_timer_elapsed(&t)) / kUsecsInSec;
   const unsigned frames = video.frame_number();
   const double fps = double(frames) / elapsed_secs;
 
@@ -106,18 +107,18 @@ TEST_P(DecodePerfTest, PerfTest) {
   printf("}\n");
 }
 
-INSTANTIATE_TEST_CASE_P(VP9, DecodePerfTest,
-                        ::testing::ValuesIn(kVP9DecodePerfVectors));
+INSTANTIATE_TEST_CASE_P(AV1, DecodePerfTest,
+                        ::testing::ValuesIn(kAV1DecodePerfVectors));
 
-class VP9NewEncodeDecodePerfTest
-    : public ::libvpx_test::EncoderTest,
-      public ::libvpx_test::CodecTestWithParam<libvpx_test::TestMode> {
+class AV1NewEncodeDecodePerfTest
+    : public ::libaom_test::EncoderTest,
+      public ::libaom_test::CodecTestWithParam<libaom_test::TestMode> {
  protected:
-  VP9NewEncodeDecodePerfTest()
+  AV1NewEncodeDecodePerfTest()
       : EncoderTest(GET_PARAM(0)), encoding_mode_(GET_PARAM(1)), speed_(0),
         outfile_(0), out_frames_(0) {}
 
-  virtual ~VP9NewEncodeDecodePerfTest() {}
+  virtual ~AV1NewEncodeDecodePerfTest() {}
 
   virtual void SetUp() {
     InitializeConfig();
@@ -133,20 +134,20 @@ class VP9NewEncodeDecodePerfTest
     cfg_.rc_buf_initial_sz = 500;
     cfg_.rc_buf_optimal_sz = 600;
     cfg_.rc_resize_allowed = 0;
-    cfg_.rc_end_usage = VPX_VBR;
+    cfg_.rc_end_usage = AOM_VBR;
   }
 
-  virtual void PreEncodeFrameHook(::libvpx_test::VideoSource *video,
-                                  ::libvpx_test::Encoder *encoder) {
+  virtual void PreEncodeFrameHook(::libaom_test::VideoSource *video,
+                                  ::libaom_test::Encoder *encoder) {
     if (video->frame() == 1) {
-      encoder->Control(VP8E_SET_CPUUSED, speed_);
-      encoder->Control(VP9E_SET_FRAME_PARALLEL_DECODING, 1);
-      encoder->Control(VP9E_SET_TILE_COLUMNS, 2);
+      encoder->Control(AOME_SET_CPUUSED, speed_);
+      encoder->Control(AV1E_SET_FRAME_PARALLEL_DECODING, 1);
+      encoder->Control(AV1E_SET_TILE_COLUMNS, 2);
     }
   }
 
   virtual void BeginPassHook(unsigned int /*pass*/) {
-    const std::string data_path = getenv("LIBVPX_TEST_DATA_PATH");
+    const std::string data_path = getenv("LIBAOM_TEST_DATA_PATH");
     const std::string path_to_source = data_path + "/" + kNewEncodeOutputFile;
     outfile_ = fopen(path_to_source.c_str(), "wb");
     ASSERT_TRUE(outfile_ != NULL);
@@ -155,18 +156,18 @@ class VP9NewEncodeDecodePerfTest
   virtual void EndPassHook() {
     if (outfile_ != NULL) {
       if (!fseek(outfile_, 0, SEEK_SET))
-        ivf_write_file_header(outfile_, &cfg_, VP9_FOURCC, out_frames_);
+        ivf_write_file_header(outfile_, &cfg_, AV1_FOURCC, out_frames_);
       fclose(outfile_);
       outfile_ = NULL;
     }
   }
 
-  virtual void FramePktHook(const vpx_codec_cx_pkt_t *pkt) {
+  virtual void FramePktHook(const aom_codec_cx_pkt_t *pkt) {
     ++out_frames_;
 
     // Write initial file header if first frame.
     if (pkt->data.frame.pts == 0)
-      ivf_write_file_header(outfile_, &cfg_, VP9_FOURCC, out_frames_);
+      ivf_write_file_header(outfile_, &cfg_, AV1_FOURCC, out_frames_);
 
     // Write frame header and data.
     ivf_write_frame_header(outfile_, out_frames_, pkt->data.frame.sz);
@@ -179,7 +180,7 @@ class VP9NewEncodeDecodePerfTest
   void set_speed(unsigned int speed) { speed_ = speed; }
 
  private:
-  libvpx_test::TestMode encoding_mode_;
+  libaom_test::TestMode encoding_mode_;
   uint32_t speed_;
   FILE *outfile_;
   uint32_t out_frames_;
@@ -197,50 +198,50 @@ struct EncodePerfTestVideo {
   int frames;
 };
 
-const EncodePerfTestVideo kVP9EncodePerfTestVectors[] = {
+const EncodePerfTestVideo kAV1EncodePerfTestVectors[] = {
   EncodePerfTestVideo("niklas_1280_720_30.yuv", 1280, 720, 600, 470),
 };
 
-TEST_P(VP9NewEncodeDecodePerfTest, PerfTest) {
+TEST_P(AV1NewEncodeDecodePerfTest, PerfTest) {
   SetUp();
 
   // TODO(JBB): Make this work by going through the set of given files.
   const int i = 0;
-  const vpx_rational timebase = { 33333333, 1000000000 };
+  const aom_rational timebase = { 33333333, 1000000000 };
   cfg_.g_timebase = timebase;
-  cfg_.rc_target_bitrate = kVP9EncodePerfTestVectors[i].bitrate;
+  cfg_.rc_target_bitrate = kAV1EncodePerfTestVectors[i].bitrate;
 
-  init_flags_ = VPX_CODEC_USE_PSNR;
+  init_flags_ = AOM_CODEC_USE_PSNR;
 
-  const char *video_name = kVP9EncodePerfTestVectors[i].name;
-  libvpx_test::I420VideoSource video(
-      video_name, kVP9EncodePerfTestVectors[i].width,
-      kVP9EncodePerfTestVectors[i].height, timebase.den, timebase.num, 0,
-      kVP9EncodePerfTestVectors[i].frames);
+  const char *video_name = kAV1EncodePerfTestVectors[i].name;
+  libaom_test::I420VideoSource video(
+      video_name, kAV1EncodePerfTestVectors[i].width,
+      kAV1EncodePerfTestVectors[i].height, timebase.den, timebase.num, 0,
+      kAV1EncodePerfTestVectors[i].frames);
   set_speed(2);
 
   ASSERT_NO_FATAL_FAILURE(RunLoop(&video));
 
   const uint32_t threads = 4;
 
-  libvpx_test::IVFVideoSource decode_video(kNewEncodeOutputFile);
+  libaom_test::IVFVideoSource decode_video(kNewEncodeOutputFile);
   decode_video.Init();
 
-  vpx_codec_dec_cfg_t cfg = vpx_codec_dec_cfg_t();
+  aom_codec_dec_cfg_t cfg = aom_codec_dec_cfg_t();
   cfg.threads = threads;
-  libvpx_test::VP9Decoder decoder(cfg, 0);
+  libaom_test::AV1Decoder decoder(cfg, 0);
 
-  vpx_usec_timer t;
-  vpx_usec_timer_start(&t);
+  aom_usec_timer t;
+  aom_usec_timer_start(&t);
 
   for (decode_video.Begin(); decode_video.cxdata() != NULL;
        decode_video.Next()) {
     decoder.DecodeFrame(decode_video.cxdata(), decode_video.frame_size());
   }
 
-  vpx_usec_timer_mark(&t);
+  aom_usec_timer_mark(&t);
   const double elapsed_secs =
-      static_cast<double>(vpx_usec_timer_elapsed(&t)) / kUsecsInSec;
+      static_cast<double>(aom_usec_timer_elapsed(&t)) / kUsecsInSec;
   const unsigned decode_frames = decode_video.frame_number();
   const double fps = static_cast<double>(decode_frames) / elapsed_secs;
 
@@ -255,6 +256,6 @@ TEST_P(VP9NewEncodeDecodePerfTest, PerfTest) {
   printf("}\n");
 }
 
-VP10_INSTANTIATE_TEST_CASE(VP9NewEncodeDecodePerfTest,
-                           ::testing::Values(::libvpx_test::kTwoPassGood));
+AV1_INSTANTIATE_TEST_CASE(AV1NewEncodeDecodePerfTest,
+                          ::testing::Values(::libaom_test::kTwoPassGood));
 }  // namespace

@@ -1,11 +1,12 @@
 /*
- *  Copyright (c) 2012 The WebM project authors. All Rights Reserved.
+ * Copyright (c) 2016, Alliance for Open Media. All rights reserved
  *
- *  Use of this source code is governed by a BSD-style license
- *  that can be found in the LICENSE file in the root of the source
- *  tree. An additional intellectual property rights grant can be found
- *  in the file PATENTS.  All contributing project authors may
- *  be found in the AUTHORS file in the root of the source tree.
+ * This source code is subject to the terms of the BSD 2 Clause License and
+ * the Alliance for Open Media Patent License 1.0. If the BSD 2 Clause License
+ * was not distributed with this source code in the LICENSE file, you can
+ * obtain it at www.aomedia.org/license/software. If the Alliance for Open
+ * Media Patent License 1.0 was not distributed with this source code in the
+ * PATENTS file, you can obtain it at www.aomedia.org/license/patent.
  */
 #ifndef TEST_Y4M_VIDEO_SOURCE_H_
 #define TEST_Y4M_VIDEO_SOURCE_H_
@@ -15,19 +16,19 @@
 #include "test/video_source.h"
 #include "./y4minput.h"
 
-namespace libvpx_test {
+namespace libaom_test {
 
 // This class extends VideoSource to allow parsing of raw yv12
 // so that we can do actual file encodes.
 class Y4mVideoSource : public VideoSource {
  public:
   Y4mVideoSource(const std::string &file_name, unsigned int start, int limit)
-      : file_name_(file_name), input_file_(NULL), img_(new vpx_image_t()),
+      : file_name_(file_name), input_file_(NULL), img_(new aom_image_t()),
         start_(start), limit_(limit), frame_(0), framerate_numerator_(0),
         framerate_denominator_(0), y4m_() {}
 
   virtual ~Y4mVideoSource() {
-    vpx_img_free(img_.get());
+    aom_img_free(img_.get());
     CloseSource();
   }
 
@@ -60,17 +61,17 @@ class Y4mVideoSource : public VideoSource {
     FillFrame();
   }
 
-  virtual vpx_image_t *img() const {
+  virtual aom_image_t *img() const {
     return (frame_ < limit_) ? img_.get() : NULL;
   }
 
   // Models a stream where Timebase = 1/FPS, so pts == frame.
-  virtual vpx_codec_pts_t pts() const { return frame_; }
+  virtual aom_codec_pts_t pts() const { return frame_; }
 
   virtual unsigned long duration() const { return 1; }
 
-  virtual vpx_rational_t timebase() const {
-    const vpx_rational_t t = { framerate_denominator_, framerate_numerator_ };
+  virtual aom_rational_t timebase() const {
+    const aom_rational_t t = { framerate_denominator_, framerate_numerator_ };
     return t;
   }
 
@@ -86,11 +87,11 @@ class Y4mVideoSource : public VideoSource {
 
   // Swap buffers with another y4m source. This allows reading a new frame
   // while keeping the old frame around. A whole Y4mSource is required and
-  // not just a vpx_image_t because of how the y4m reader manipulates
-  // vpx_image_t internals,
+  // not just a aom_image_t because of how the y4m reader manipulates
+  // aom_image_t internals,
   void SwapBuffers(Y4mVideoSource *other) {
     std::swap(other->y4m_.dst_buf, y4m_.dst_buf);
-    vpx_image_t *tmp;
+    aom_image_t *tmp;
     tmp = other->img_.release();
     other->img_.reset(img_.release());
     img_.reset(tmp);
@@ -108,7 +109,7 @@ class Y4mVideoSource : public VideoSource {
 
   std::string file_name_;
   FILE *input_file_;
-  testing::internal::scoped_ptr<vpx_image_t> img_;
+  testing::internal::scoped_ptr<aom_image_t> img_;
   unsigned int start_;
   unsigned int limit_;
   unsigned int frame_;
@@ -117,6 +118,6 @@ class Y4mVideoSource : public VideoSource {
   y4m_input y4m_;
 };
 
-}  // namespace libvpx_test
+}  // namespace libaom_test
 
 #endif  // TEST_Y4M_VIDEO_SOURCE_H_

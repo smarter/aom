@@ -1,18 +1,17 @@
 #!/bin/sh
+## Copyright (c) 2016, Alliance for Open Media. All rights reserved
 ##
-##  Copyright (c) 2014 The WebM project authors. All Rights Reserved.
+## This source code is subject to the terms of the BSD 2 Clause License and
+## the Alliance for Open Media Patent License 1.0. If the BSD 2 Clause License
+## was not distributed with this source code in the LICENSE file, you can
+## obtain it at www.aomedia.org/license/software. If the Alliance for Open
+## Media Patent License 1.0 was not distributed with this source code in the
+## PATENTS file, you can obtain it at www.aomedia.org/license/patent.
 ##
-##  Use of this source code is governed by a BSD-style license
-##  that can be found in the LICENSE file in the root of the source
-##  tree. An additional intellectual property rights grant can be found
-##  in the file PATENTS.  All contributing project authors may
-##  be found in the AUTHORS file in the root of the source tree.
+## This script generates 'AOM.framework'. An iOS app can encode and decode AVx
+## video by including 'AOM.framework'.
 ##
-##
-## This script generates 'VPX.framework'. An iOS app can encode and decode VPx
-## video by including 'VPX.framework'.
-##
-## Run iosbuild.sh to create 'VPX.framework' in the current directory.
+## Run iosbuild.sh to create 'AOM.framework' in the current directory.
 ##
 set -e
 devnull='> /dev/null 2>&1'
@@ -23,10 +22,10 @@ CONFIGURE_ARGS="--disable-docs
                 --disable-libyuv
                 --disable-unit-tests"
 DIST_DIR="_dist"
-FRAMEWORK_DIR="VPX.framework"
-HEADER_DIR="${FRAMEWORK_DIR}/Headers/vpx"
+FRAMEWORK_DIR="AOM.framework"
+HEADER_DIR="${FRAMEWORK_DIR}/Headers/aom"
 SCRIPT_DIR=$(dirname "$0")
-LIBVPX_SOURCE_DIR=$(cd ${SCRIPT_DIR}/../..; pwd)
+LIBAOM_SOURCE_DIR=$(cd ${SCRIPT_DIR}/../..; pwd)
 LIPO=$(xcrun -sdk iphoneos${SDK} -find lipo)
 ORIG_PWD="$(pwd)"
 ARM_TARGETS="arm64-darwin-gcc
@@ -56,7 +55,7 @@ build_target() {
 
   mkdir "${target}"
   cd "${target}"
-  eval "${LIBVPX_SOURCE_DIR}/configure" --target="${target}" \
+  eval "${LIBAOM_SOURCE_DIR}/configure" --target="${target}" \
     ${CONFIGURE_ARGS} ${EXTRA_CONFIGURE_ARGS} ${target_specific_flags} \
     ${devnull}
   export DIST_DIR
@@ -92,24 +91,25 @@ target_to_preproc_symbol() {
   esac
 }
 
-# Create a vpx_config.h shim that, based on preprocessor settings for the
-# current target CPU, includes the real vpx_config.h for the current target.
+# Create a aom_config.h shim that, based on preprocessor settings for the
+# current target CPU, includes the real aom_config.h for the current target.
 # $1 is the list of targets.
-create_vpx_framework_config_shim() {
+create_aom_framework_config_shim() {
   local targets="$1"
-  local config_file="${HEADER_DIR}/vpx_config.h"
+  local config_file="${HEADER_DIR}/aom_config.h"
   local preproc_symbol=""
   local target=""
-  local include_guard="VPX_FRAMEWORK_HEADERS_VPX_VPX_CONFIG_H_"
+  local include_guard="AOM_FRAMEWORK_HEADERS_AOM_AOM_CONFIG_H_"
 
   local file_header="/*
- *  Copyright (c) $(date +%Y) The WebM project authors. All Rights Reserved.
+ * Copyright (c) $(date +%Y) Alliance for Open Media. All rights reserved
  *
- *  Use of this source code is governed by a BSD-style license
- *  that can be found in the LICENSE file in the root of the source
- *  tree. An additional intellectual property rights grant can be found
- *  in the file PATENTS.  All contributing project authors may
- *  be found in the AUTHORS file in the root of the source tree.
+ * This source code is subject to the terms of the BSD 2 Clause License and
+ * the Alliance for Open Media Patent License 1.0. If the BSD 2 Clause License
+ * was not distributed with this source code in the LICENSE file, you can
+ * obtain it at www.aomedia.org/license/software. If the Alliance for Open
+ * Media Patent License 1.0 was not distributed with this source code in the
+ * PATENTS file, you can obtain it at www.aomedia.org/license/patent.
  */
 
 /* GENERATED FILE: DO NOT EDIT! */
@@ -123,11 +123,11 @@ create_vpx_framework_config_shim() {
   for target in ${targets}; do
     preproc_symbol=$(target_to_preproc_symbol "${target}")
     printf " ${preproc_symbol}\n" >> "${config_file}"
-    printf "#define VPX_FRAMEWORK_TARGET \"${target}\"\n" >> "${config_file}"
-    printf "#include \"VPX/vpx/${target}/vpx_config.h\"\n" >> "${config_file}"
+    printf "#define AOM_FRAMEWORK_TARGET \"${target}\"\n" >> "${config_file}"
+    printf "#include \"AOM/aom/${target}/aom_config.h\"\n" >> "${config_file}"
     printf "#elif defined" >> "${config_file}"
     mkdir "${HEADER_DIR}/${target}"
-    cp -p "${BUILD_ROOT}/${target}/vpx_config.h" "${HEADER_DIR}/${target}"
+    cp -p "${BUILD_ROOT}/${target}/aom_config.h" "${HEADER_DIR}/${target}"
   done
 
   # Consume the last line of output from the loop: We don't want it.
@@ -138,7 +138,7 @@ create_vpx_framework_config_shim() {
 }
 
 # Configures and builds each target specified by $1, and then builds
-# VPX.framework.
+# AOM.framework.
 build_framework() {
   local lib_list=""
   local targets="$1"
@@ -157,32 +157,32 @@ build_framework() {
   for target in ${targets}; do
     build_target "${target}"
     target_dist_dir="${BUILD_ROOT}/${target}/${DIST_DIR}"
-    lib_list="${lib_list} ${target_dist_dir}/lib/libvpx.a"
+    lib_list="${lib_list} ${target_dist_dir}/lib/libaom.a"
   done
 
   cd "${ORIG_PWD}"
 
-  # The basic libvpx API includes are all the same; just grab the most recent
+  # The basic libaom API includes are all the same; just grab the most recent
   # set.
-  cp -p "${target_dist_dir}"/include/vpx/* "${HEADER_DIR}"
+  cp -p "${target_dist_dir}"/include/aom/* "${HEADER_DIR}"
 
   # Build the fat library.
-  ${LIPO} -create ${lib_list} -output ${FRAMEWORK_DIR}/VPX
+  ${LIPO} -create ${lib_list} -output ${FRAMEWORK_DIR}/AOM
 
-  # Create the vpx_config.h shim that allows usage of vpx_config.h from
-  # within VPX.framework.
-  create_vpx_framework_config_shim "${targets}"
+  # Create the aom_config.h shim that allows usage of aom_config.h from
+  # within AOM.framework.
+  create_aom_framework_config_shim "${targets}"
 
-  # Copy in vpx_version.h.
-  cp -p "${BUILD_ROOT}/${target}/vpx_version.h" "${HEADER_DIR}"
+  # Copy in aom_version.h.
+  cp -p "${BUILD_ROOT}/${target}/aom_version.h" "${HEADER_DIR}"
 
-  vlog "Created fat library ${FRAMEWORK_DIR}/VPX containing:"
+  vlog "Created fat library ${FRAMEWORK_DIR}/AOM containing:"
   for lib in ${lib_list}; do
     vlog "  $(echo ${lib} | awk -F / '{print $2, $NF}')"
   done
 
   # TODO(tomfinegan): Verify that expected targets are included within
-  # VPX.framework/VPX via lipo -info.
+  # AOM.framework/AOM via lipo -info.
 }
 
 # Trap function. Cleans up the subtree used to build all targets contained in
@@ -213,7 +213,7 @@ iosbuild_usage() {
 cat << EOF
   Usage: ${0##*/} [arguments]
     --help: Display this message and exit.
-    --extra-configure-args <args>: Extra args to pass when configuring libvpx.
+    --extra-configure-args <args>: Extra args to pass when configuring libaom.
     --macosx: Uses darwin15 targets instead of iphonesimulator targets for x86
               and x86_64. Allows linking to framework when builds target MacOSX
               instead of iOS.
@@ -286,7 +286,7 @@ cat << EOF
   EXTRA_CONFIGURE_ARGS=${EXTRA_CONFIGURE_ARGS}
   FRAMEWORK_DIR=${FRAMEWORK_DIR}
   HEADER_DIR=${HEADER_DIR}
-  LIBVPX_SOURCE_DIR=${LIBVPX_SOURCE_DIR}
+  LIBAOM_SOURCE_DIR=${LIBAOM_SOURCE_DIR}
   LIPO=${LIPO}
   MAKEFLAGS=${MAKEFLAGS}
   ORIG_PWD=${ORIG_PWD}

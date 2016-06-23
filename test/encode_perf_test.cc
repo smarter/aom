@@ -1,22 +1,24 @@
 /*
- *  Copyright (c) 2014 The WebM project authors. All Rights Reserved.
+ * Copyright (c) 2016, Alliance for Open Media. All rights reserved
  *
- *  Use of this source code is governed by a BSD-style license
- *  that can be found in the LICENSE file in the root of the source
- *  tree. An additional intellectual property rights grant can be found
- *  in the file PATENTS.  All contributing project authors may
- *  be found in the AUTHORS file in the root of the source tree.
- */
+ * This source code is subject to the terms of the BSD 2 Clause License and
+ * the Alliance for Open Media Patent License 1.0. If the BSD 2 Clause License
+ * was not distributed with this source code in the LICENSE file, you can
+ * obtain it at www.aomedia.org/license/software. If the Alliance for Open
+ * Media Patent License 1.0 was not distributed with this source code in the
+ * PATENTS file, you can obtain it at www.aomedia.org/license/patent.
+*/
+
 #include <string>
 #include "third_party/googletest/src/include/gtest/gtest.h"
-#include "./vpx_config.h"
-#include "./vpx_version.h"
+#include "./aom_config.h"
+#include "./aom_version.h"
 #include "test/codec_factory.h"
 #include "test/encode_test_driver.h"
 #include "test/i420_video_source.h"
 #include "test/util.h"
 #include "test/y4m_video_source.h"
-#include "vpx_ports/vpx_timer.h"
+#include "aom_ports/aom_timer.h"
 
 namespace {
 
@@ -35,7 +37,7 @@ struct EncodePerfTestVideo {
   int frames;
 };
 
-const EncodePerfTestVideo kVP9EncodePerfTestVectors[] = {
+const EncodePerfTestVideo kAV1EncodePerfTestVectors[] = {
   EncodePerfTestVideo("desktop_640_360_30.yuv", 640, 360, 200, 2484),
   EncodePerfTestVideo("kirland_640_480_30.yuv", 640, 480, 200, 300),
   EncodePerfTestVideo("macmarcomoving_640_480_30.yuv", 640, 480, 200, 987),
@@ -53,15 +55,15 @@ const int kEncodePerfTestThreads[] = { 1, 2, 4 };
 
 #define NELEMENTS(x) (sizeof((x)) / sizeof((x)[0]))
 
-class VP9EncodePerfTest
-    : public ::libvpx_test::EncoderTest,
-      public ::libvpx_test::CodecTestWithParam<libvpx_test::TestMode> {
+class AV1EncodePerfTest
+    : public ::libaom_test::EncoderTest,
+      public ::libaom_test::CodecTestWithParam<libaom_test::TestMode> {
  protected:
-  VP9EncodePerfTest()
+  AV1EncodePerfTest()
       : EncoderTest(GET_PARAM(0)), min_psnr_(kMaxPsnr), nframes_(0),
         encoding_mode_(GET_PARAM(1)), speed_(0), threads_(1) {}
 
-  virtual ~VP9EncodePerfTest() {}
+  virtual ~AV1EncodePerfTest() {}
 
   virtual void SetUp() {
     InitializeConfig();
@@ -77,19 +79,19 @@ class VP9EncodePerfTest
     cfg_.rc_buf_initial_sz = 500;
     cfg_.rc_buf_optimal_sz = 600;
     cfg_.rc_resize_allowed = 0;
-    cfg_.rc_end_usage = VPX_CBR;
+    cfg_.rc_end_usage = AOM_CBR;
     cfg_.g_error_resilient = 1;
     cfg_.g_threads = threads_;
   }
 
-  virtual void PreEncodeFrameHook(::libvpx_test::VideoSource *video,
-                                  ::libvpx_test::Encoder *encoder) {
+  virtual void PreEncodeFrameHook(::libaom_test::VideoSource *video,
+                                  ::libaom_test::Encoder *encoder) {
     if (video->frame() == 0) {
       const int log2_tile_columns = 3;
-      encoder->Control(VP8E_SET_CPUUSED, speed_);
-      encoder->Control(VP9E_SET_TILE_COLUMNS, log2_tile_columns);
-      encoder->Control(VP9E_SET_FRAME_PARALLEL_DECODING, 1);
-      encoder->Control(VP8E_SET_ENABLEAUTOALTREF, 0);
+      encoder->Control(AOME_SET_CPUUSED, speed_);
+      encoder->Control(AV1E_SET_TILE_COLUMNS, log2_tile_columns);
+      encoder->Control(AV1E_SET_FRAME_PARALLEL_DECODING, 1);
+      encoder->Control(AOME_SET_ENABLEAUTOALTREF, 0);
     }
   }
 
@@ -98,7 +100,7 @@ class VP9EncodePerfTest
     nframes_ = 0;
   }
 
-  virtual void PSNRPktHook(const vpx_codec_cx_pkt_t *pkt) {
+  virtual void PSNRPktHook(const aom_codec_cx_pkt_t *pkt) {
     if (pkt->data.psnr.psnr[0] < min_psnr_) {
       min_psnr_ = pkt->data.psnr.psnr[0];
     }
@@ -116,46 +118,46 @@ class VP9EncodePerfTest
  private:
   double min_psnr_;
   unsigned int nframes_;
-  libvpx_test::TestMode encoding_mode_;
+  libaom_test::TestMode encoding_mode_;
   unsigned speed_;
   unsigned int threads_;
 };
 
-TEST_P(VP9EncodePerfTest, PerfTest) {
-  for (size_t i = 0; i < NELEMENTS(kVP9EncodePerfTestVectors); ++i) {
+TEST_P(AV1EncodePerfTest, PerfTest) {
+  for (size_t i = 0; i < NELEMENTS(kAV1EncodePerfTestVectors); ++i) {
     for (size_t j = 0; j < NELEMENTS(kEncodePerfTestSpeeds); ++j) {
       for (size_t k = 0; k < NELEMENTS(kEncodePerfTestThreads); ++k) {
-        if (kVP9EncodePerfTestVectors[i].width < 512 &&
+        if (kAV1EncodePerfTestVectors[i].width < 512 &&
             kEncodePerfTestThreads[k] > 1)
           continue;
-        else if (kVP9EncodePerfTestVectors[i].width < 1024 &&
+        else if (kAV1EncodePerfTestVectors[i].width < 1024 &&
                  kEncodePerfTestThreads[k] > 2)
           continue;
 
         set_threads(kEncodePerfTestThreads[k]);
         SetUp();
 
-        const vpx_rational timebase = { 33333333, 1000000000 };
+        const aom_rational timebase = { 33333333, 1000000000 };
         cfg_.g_timebase = timebase;
-        cfg_.rc_target_bitrate = kVP9EncodePerfTestVectors[i].bitrate;
+        cfg_.rc_target_bitrate = kAV1EncodePerfTestVectors[i].bitrate;
 
-        init_flags_ = VPX_CODEC_USE_PSNR;
+        init_flags_ = AOM_CODEC_USE_PSNR;
 
-        const unsigned frames = kVP9EncodePerfTestVectors[i].frames;
-        const char *video_name = kVP9EncodePerfTestVectors[i].name;
-        libvpx_test::I420VideoSource video(
-            video_name, kVP9EncodePerfTestVectors[i].width,
-            kVP9EncodePerfTestVectors[i].height, timebase.den, timebase.num, 0,
-            kVP9EncodePerfTestVectors[i].frames);
+        const unsigned frames = kAV1EncodePerfTestVectors[i].frames;
+        const char *video_name = kAV1EncodePerfTestVectors[i].name;
+        libaom_test::I420VideoSource video(
+            video_name, kAV1EncodePerfTestVectors[i].width,
+            kAV1EncodePerfTestVectors[i].height, timebase.den, timebase.num, 0,
+            kAV1EncodePerfTestVectors[i].frames);
         set_speed(kEncodePerfTestSpeeds[j]);
 
-        vpx_usec_timer t;
-        vpx_usec_timer_start(&t);
+        aom_usec_timer t;
+        aom_usec_timer_start(&t);
 
         ASSERT_NO_FATAL_FAILURE(RunLoop(&video));
 
-        vpx_usec_timer_mark(&t);
-        const double elapsed_secs = vpx_usec_timer_elapsed(&t) / kUsecsInSec;
+        aom_usec_timer_mark(&t);
+        const double elapsed_secs = aom_usec_timer_elapsed(&t) / kUsecsInSec;
         const double fps = frames / elapsed_secs;
         const double minimum_psnr = min_psnr();
         std::string display_name(video_name);
@@ -182,6 +184,6 @@ TEST_P(VP9EncodePerfTest, PerfTest) {
   }
 }
 
-VP10_INSTANTIATE_TEST_CASE(VP9EncodePerfTest,
-                           ::testing::Values(::libvpx_test::kRealTime));
+AV1_INSTANTIATE_TEST_CASE(AV1EncodePerfTest,
+                          ::testing::Values(::libaom_test::kRealTime));
 }  // namespace

@@ -1,11 +1,12 @@
 /*
- *  Copyright (c) 2010 The WebM project authors. All Rights Reserved.
+ * Copyright (c) 2016, Alliance for Open Media. All rights reserved
  *
- *  Use of this source code is governed by a BSD-style license
- *  that can be found in the LICENSE file in the root of the source
- *  tree. An additional intellectual property rights grant can be found
- *  in the file PATENTS.  All contributing project authors may
- *  be found in the AUTHORS file in the root of the source tree.
+ * This source code is subject to the terms of the BSD 2 Clause License and
+ * the Alliance for Open Media Patent License 1.0. If the BSD 2 Clause License
+ * was not distributed with this source code in the LICENSE file, you can
+ * obtain it at www.aomedia.org/license/software. If the Alliance for Open
+ * Media Patent License 1.0 was not distributed with this source code in the
+ * PATENTS file, you can obtain it at www.aomedia.org/license/patent.
  */
 
 // Simple Encoder
@@ -26,9 +27,9 @@
 //
 // Standard Includes
 // -----------------
-// For encoders, you only have to include `vpx_encoder.h` and then any
+// For encoders, you only have to include `aom_encoder.h` and then any
 // header files for the specific codecs you use. In this case, we're using
-// vp8.
+// aom.
 //
 // Getting The Default Configuration
 // ---------------------------------
@@ -60,32 +61,32 @@
 // is passed, indicating the End-Of-Stream condition to the encoder. The
 // `frame_cnt` is reused as the presentation time stamp (PTS) and each
 // frame is shown for one frame-time in duration. The flags parameter is
-// unused in this example. The deadline is set to VPX_DL_REALTIME to
+// unused in this example. The deadline is set to AOM_DL_REALTIME to
 // make the example run as quickly as possible.
 
 // Forced Keyframes
 // ----------------
-// Keyframes can be forced by setting the VPX_EFLAG_FORCE_KF bit of the
-// flags passed to `vpx_codec_control()`. In this example, we force a
+// Keyframes can be forced by setting the AOM_EFLAG_FORCE_KF bit of the
+// flags passed to `aom_codec_control()`. In this example, we force a
 // keyframe every <keyframe-interval> frames. Note, the output stream can
 // contain additional keyframes beyond those that have been forced using the
-// VPX_EFLAG_FORCE_KF flag because of automatic keyframe placement by the
+// AOM_EFLAG_FORCE_KF flag because of automatic keyframe placement by the
 // encoder.
 //
 // Processing The Encoded Data
 // ---------------------------
-// Each packet of type `VPX_CODEC_CX_FRAME_PKT` contains the encoded data
+// Each packet of type `AOM_CODEC_CX_FRAME_PKT` contains the encoded data
 // for this frame. We write a IVF frame header, followed by the raw data.
 //
 // Cleanup
 // -------
-// The `vpx_codec_destroy` call frees any memory allocated by the codec.
+// The `aom_codec_destroy` call frees any memory allocated by the codec.
 //
 // Error Handling
 // --------------
 // This example does not special case any error return codes. If there was
 // an error, a descriptive message is printed and the program exits. With
-// few exeptions, vpx_codec functions return an enumerated error status,
+// few exeptions, aom_codec functions return an enumerated error status,
 // with the value `0` indicating success.
 //
 // Error Resiliency Features
@@ -99,7 +100,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "vpx/vpx_encoder.h"
+#include "aom/aom_encoder.h"
 
 #include "../tools_common.h"
 #include "../video_writer.h"
@@ -109,27 +110,27 @@ static const char *exec_name;
 void usage_exit(void) {
   fprintf(stderr,
           "Usage: %s <codec> <width> <height> <infile> <outfile> "
-          "<keyframe-interval> [<error-resilient>]\nSee comments in "
-          "simple_encoder.c for more information.\n",
+          "<keyframe-interval> <error-resilient> <frames to encode>\n"
+          "See comments in simple_encoder.c for more information.\n",
           exec_name);
   exit(EXIT_FAILURE);
 }
 
-static int encode_frame(vpx_codec_ctx_t *codec, vpx_image_t *img,
-                        int frame_index, int flags, VpxVideoWriter *writer) {
+static int encode_frame(aom_codec_ctx_t *codec, aom_image_t *img,
+                        int frame_index, int flags, AvxVideoWriter *writer) {
   int got_pkts = 0;
-  vpx_codec_iter_t iter = NULL;
-  const vpx_codec_cx_pkt_t *pkt = NULL;
-  const vpx_codec_err_t res =
-      vpx_codec_encode(codec, img, frame_index, 1, flags, VPX_DL_GOOD_QUALITY);
-  if (res != VPX_CODEC_OK) die_codec(codec, "Failed to encode frame");
+  aom_codec_iter_t iter = NULL;
+  const aom_codec_cx_pkt_t *pkt = NULL;
+  const aom_codec_err_t res =
+      aom_codec_encode(codec, img, frame_index, 1, flags, AOM_DL_GOOD_QUALITY);
+  if (res != AOM_CODEC_OK) die_codec(codec, "Failed to encode frame");
 
-  while ((pkt = vpx_codec_get_cx_data(codec, &iter)) != NULL) {
+  while ((pkt = aom_codec_get_cx_data(codec, &iter)) != NULL) {
     got_pkts = 1;
 
-    if (pkt->kind == VPX_CODEC_CX_FRAME_PKT) {
-      const int keyframe = (pkt->data.frame.flags & VPX_FRAME_IS_KEY) != 0;
-      if (!vpx_video_writer_write_frame(writer, pkt->data.frame.buf,
+    if (pkt->kind == AOM_CODEC_CX_FRAME_PKT) {
+      const int keyframe = (pkt->data.frame.flags & AOM_FRAME_IS_KEY) != 0;
+      if (!aom_video_writer_write_frame(writer, pkt->data.frame.buf,
                                         pkt->data.frame.sz,
                                         pkt->data.frame.pts)) {
         die_codec(codec, "Failed to write compressed frame");
@@ -142,22 +143,22 @@ static int encode_frame(vpx_codec_ctx_t *codec, vpx_image_t *img,
   return got_pkts;
 }
 
+// TODO(tomfinegan): Improve command line parsing and add args for bitrate/fps.
 int main(int argc, char **argv) {
   FILE *infile = NULL;
-  vpx_codec_ctx_t codec;
-  vpx_codec_enc_cfg_t cfg;
+  aom_codec_ctx_t codec;
+  aom_codec_enc_cfg_t cfg;
   int frame_count = 0;
-  vpx_image_t raw;
-  vpx_codec_err_t res;
-  VpxVideoInfo info = { 0 };
-  VpxVideoWriter *writer = NULL;
-  const VpxInterface *encoder = NULL;
-  const int fps = 30;       // TODO(dkovalev) add command line argument
-  const int bitrate = 200;  // kbit/s TODO(dkovalev) add command line argument
+  aom_image_t raw;
+  aom_codec_err_t res;
+  AvxVideoInfo info = { 0 };
+  AvxVideoWriter *writer = NULL;
+  const AvxInterface *encoder = NULL;
+  const int fps = 30;
+  const int bitrate = 200;
   int keyframe_interval = 0;
-
-  // TODO(dkovalev): Add some simple command line parsing code to make the
-  // command line more flexible.
+  int max_frames = 0;
+  int frames_encoded = 0;
   const char *codec_arg = NULL;
   const char *width_arg = NULL;
   const char *height_arg = NULL;
@@ -167,7 +168,7 @@ int main(int argc, char **argv) {
 
   exec_name = argv[0];
 
-  if (argc < 7) die("Invalid number of arguments");
+  if (argc != 9) die("Invalid number of arguments");
 
   codec_arg = argv[1];
   width_arg = argv[2];
@@ -175,8 +176,9 @@ int main(int argc, char **argv) {
   infile_arg = argv[4];
   outfile_arg = argv[5];
   keyframe_interval_arg = argv[6];
+  max_frames = strtol(argv[8], NULL, 0);
 
-  encoder = get_vpx_encoder_by_name(codec_arg);
+  encoder = get_aom_encoder_by_name(codec_arg);
   if (!encoder) die("Unsupported codec.");
 
   info.codec_fourcc = encoder->fourcc;
@@ -190,7 +192,7 @@ int main(int argc, char **argv) {
     die("Invalid frame size: %dx%d", info.frame_width, info.frame_height);
   }
 
-  if (!vpx_img_alloc(&raw, VPX_IMG_FMT_I420, info.frame_width,
+  if (!aom_img_alloc(&raw, AOM_IMG_FMT_I420, info.frame_width,
                      info.frame_height, 1)) {
     die("Failed to allocate image.");
   }
@@ -198,9 +200,9 @@ int main(int argc, char **argv) {
   keyframe_interval = strtol(keyframe_interval_arg, NULL, 0);
   if (keyframe_interval < 0) die("Invalid keyframe interval value.");
 
-  printf("Using %s\n", vpx_codec_iface_name(encoder->codec_interface()));
+  printf("Using %s\n", aom_codec_iface_name(encoder->codec_interface()));
 
-  res = vpx_codec_enc_config_default(encoder->codec_interface(), &cfg, 0);
+  res = aom_codec_enc_config_default(encoder->codec_interface(), &cfg, 0);
   if (res) die_codec(&codec, "Failed to get default codec config.");
 
   cfg.g_w = info.frame_width;
@@ -208,23 +210,25 @@ int main(int argc, char **argv) {
   cfg.g_timebase.num = info.time_base.numerator;
   cfg.g_timebase.den = info.time_base.denominator;
   cfg.rc_target_bitrate = bitrate;
-  cfg.g_error_resilient = argc > 7 ? strtol(argv[7], NULL, 0) : 0;
+  cfg.g_error_resilient = strtol(argv[7], NULL, 0);
 
-  writer = vpx_video_writer_open(outfile_arg, kContainerIVF, &info);
+  writer = aom_video_writer_open(outfile_arg, kContainerIVF, &info);
   if (!writer) die("Failed to open %s for writing.", outfile_arg);
 
   if (!(infile = fopen(infile_arg, "rb")))
     die("Failed to open %s for reading.", infile_arg);
 
-  if (vpx_codec_enc_init(&codec, encoder->codec_interface(), &cfg, 0))
+  if (aom_codec_enc_init(&codec, encoder->codec_interface(), &cfg, 0))
     die_codec(&codec, "Failed to initialize encoder");
 
   // Encode frames.
-  while (vpx_img_read(&raw, infile)) {
+  while (aom_img_read(&raw, infile)) {
     int flags = 0;
     if (keyframe_interval > 0 && frame_count % keyframe_interval == 0)
-      flags |= VPX_EFLAG_FORCE_KF;
+      flags |= AOM_EFLAG_FORCE_KF;
     encode_frame(&codec, &raw, frame_count++, flags, writer);
+    frames_encoded++;
+    if (max_frames > 0 && frames_encoded >= max_frames) break;
   }
 
   // Flush encoder.
@@ -234,10 +238,10 @@ int main(int argc, char **argv) {
   fclose(infile);
   printf("Processed %d frames.\n", frame_count);
 
-  vpx_img_free(&raw);
-  if (vpx_codec_destroy(&codec)) die_codec(&codec, "Failed to destroy codec.");
+  aom_img_free(&raw);
+  if (aom_codec_destroy(&codec)) die_codec(&codec, "Failed to destroy codec.");
 
-  vpx_video_writer_close(writer);
+  aom_video_writer_close(writer);
 
   return EXIT_SUCCESS;
 }

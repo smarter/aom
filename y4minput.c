@@ -1,20 +1,21 @@
 /*
- *  Copyright (c) 2010 The WebM project authors. All Rights Reserved.
+ * Copyright (c) 2016, Alliance for Open Media. All rights reserved
  *
- *  Use of this source code is governed by a BSD-style license
- *  that can be found in the LICENSE file in the root of the source
- *  tree. An additional intellectual property rights grant can be found
- *  in the file PATENTS.  All contributing project authors may
- *  be found in the AUTHORS file in the root of the source tree.
+ * This source code is subject to the terms of the BSD 2 Clause License and
+ * the Alliance for Open Media Patent License 1.0. If the BSD 2 Clause License
+ * was not distributed with this source code in the LICENSE file, you can
+ * obtain it at www.aomedia.org/license/software. If the Alliance for Open
+ * Media Patent License 1.0 was not distributed with this source code in the
+ * PATENTS file, you can obtain it at www.aomedia.org/license/patent.
  *
- *  Based on code from the OggTheora software codec source code,
- *  Copyright (C) 2002-2010 The Xiph.Org Foundation and contributors.
+ * Based on code from the OggTheora software codec source code,
+ * Copyright (C) 2002-2010 The Xiph.Org Foundation and contributors.
  */
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include "vpx/vpx_integer.h"
+#include "aom/aom_integer.h"
 #include "y4minput.h"
 
 // Reads 'size' bytes from 'file' into 'buf' with some fault tolerance.
@@ -805,7 +806,7 @@ int y4m_input_open(y4m_input *_y4m, FILE *_fin, char *_skip, int _nskip,
             "Only progressive scan handled.\n");
     return -1;
   }
-  _y4m->vpx_fmt = VPX_IMG_FMT_I420;
+  _y4m->aom_fmt = AOM_IMG_FMT_I420;
   _y4m->bps = 12;
   _y4m->bit_depth = 8;
   if (strcmp(_y4m->chroma_type, "420") == 0 ||
@@ -831,7 +832,7 @@ int y4m_input_open(y4m_input *_y4m, FILE *_fin, char *_skip, int _nskip,
     _y4m->convert = y4m_convert_null;
     _y4m->bit_depth = 10;
     _y4m->bps = 15;
-    _y4m->vpx_fmt = VPX_IMG_FMT_I42016;
+    _y4m->aom_fmt = AOM_IMG_FMT_I42016;
     if (only_420) {
       fprintf(stderr, "Unsupported conversion from 420p10 to 420jpeg\n");
       return -1;
@@ -849,7 +850,7 @@ int y4m_input_open(y4m_input *_y4m, FILE *_fin, char *_skip, int _nskip,
     _y4m->convert = y4m_convert_null;
     _y4m->bit_depth = 12;
     _y4m->bps = 18;
-    _y4m->vpx_fmt = VPX_IMG_FMT_I42016;
+    _y4m->aom_fmt = AOM_IMG_FMT_I42016;
     if (only_420) {
       fprintf(stderr, "Unsupported conversion from 420p12 to 420jpeg\n");
       return -1;
@@ -897,7 +898,7 @@ int y4m_input_open(y4m_input *_y4m, FILE *_fin, char *_skip, int _nskip,
           _y4m->aux_buf_read_sz + ((_y4m->pic_w + 1) / 2) * _y4m->pic_h;
       _y4m->convert = y4m_convert_422_420jpeg;
     } else {
-      _y4m->vpx_fmt = VPX_IMG_FMT_I422;
+      _y4m->aom_fmt = AOM_IMG_FMT_I422;
       _y4m->bps = 16;
       _y4m->dst_c_dec_h = _y4m->src_c_dec_h;
       _y4m->dst_c_dec_v = _y4m->src_c_dec_v;
@@ -910,7 +911,7 @@ int y4m_input_open(y4m_input *_y4m, FILE *_fin, char *_skip, int _nskip,
   } else if (strcmp(_y4m->chroma_type, "422p10") == 0) {
     _y4m->src_c_dec_h = 2;
     _y4m->src_c_dec_v = 1;
-    _y4m->vpx_fmt = VPX_IMG_FMT_I42216;
+    _y4m->aom_fmt = AOM_IMG_FMT_I42216;
     _y4m->bps = 20;
     _y4m->bit_depth = 10;
     _y4m->dst_c_dec_h = _y4m->src_c_dec_h;
@@ -926,7 +927,7 @@ int y4m_input_open(y4m_input *_y4m, FILE *_fin, char *_skip, int _nskip,
   } else if (strcmp(_y4m->chroma_type, "422p12") == 0) {
     _y4m->src_c_dec_h = 2;
     _y4m->src_c_dec_v = 1;
-    _y4m->vpx_fmt = VPX_IMG_FMT_I42216;
+    _y4m->aom_fmt = AOM_IMG_FMT_I42216;
     _y4m->bps = 24;
     _y4m->bit_depth = 12;
     _y4m->dst_c_dec_h = _y4m->src_c_dec_h;
@@ -967,7 +968,7 @@ int y4m_input_open(y4m_input *_y4m, FILE *_fin, char *_skip, int _nskip,
           _y4m->aux_buf_read_sz + ((_y4m->pic_w + 1) / 2) * _y4m->pic_h;
       _y4m->convert = y4m_convert_444_420jpeg;
     } else {
-      _y4m->vpx_fmt = VPX_IMG_FMT_I444;
+      _y4m->aom_fmt = AOM_IMG_FMT_I444;
       _y4m->bps = 24;
       _y4m->dst_c_dec_h = _y4m->src_c_dec_h;
       _y4m->dst_c_dec_v = _y4m->src_c_dec_v;
@@ -979,7 +980,7 @@ int y4m_input_open(y4m_input *_y4m, FILE *_fin, char *_skip, int _nskip,
   } else if (strcmp(_y4m->chroma_type, "444p10") == 0) {
     _y4m->src_c_dec_h = 1;
     _y4m->src_c_dec_v = 1;
-    _y4m->vpx_fmt = VPX_IMG_FMT_I44416;
+    _y4m->aom_fmt = AOM_IMG_FMT_I44416;
     _y4m->bps = 30;
     _y4m->bit_depth = 10;
     _y4m->dst_c_dec_h = _y4m->src_c_dec_h;
@@ -994,7 +995,7 @@ int y4m_input_open(y4m_input *_y4m, FILE *_fin, char *_skip, int _nskip,
   } else if (strcmp(_y4m->chroma_type, "444p12") == 0) {
     _y4m->src_c_dec_h = 1;
     _y4m->src_c_dec_v = 1;
-    _y4m->vpx_fmt = VPX_IMG_FMT_I44416;
+    _y4m->aom_fmt = AOM_IMG_FMT_I44416;
     _y4m->bps = 36;
     _y4m->bit_depth = 12;
     _y4m->dst_c_dec_h = _y4m->src_c_dec_h;
@@ -1021,7 +1022,7 @@ int y4m_input_open(y4m_input *_y4m, FILE *_fin, char *_skip, int _nskip,
       _y4m->aux_buf_sz = _y4m->aux_buf_read_sz = 3 * _y4m->pic_w * _y4m->pic_h;
       _y4m->convert = y4m_convert_444_420jpeg;
     } else {
-      _y4m->vpx_fmt = VPX_IMG_FMT_444A;
+      _y4m->aom_fmt = AOM_IMG_FMT_444A;
       _y4m->bps = 32;
       _y4m->dst_c_dec_h = _y4m->src_c_dec_h;
       _y4m->dst_c_dec_v = _y4m->src_c_dec_v;
@@ -1062,7 +1063,7 @@ void y4m_input_close(y4m_input *_y4m) {
   free(_y4m->aux_buf);
 }
 
-int y4m_input_fetch_frame(y4m_input *_y4m, FILE *_fin, vpx_image_t *_img) {
+int y4m_input_fetch_frame(y4m_input *_y4m, FILE *_fin, aom_image_t *_img) {
   char frame[6];
   int pic_sz;
   int c_w;
@@ -1098,11 +1099,11 @@ int y4m_input_fetch_frame(y4m_input *_y4m, FILE *_fin, vpx_image_t *_img) {
   /*Now convert the just read frame.*/
   (*_y4m->convert)(_y4m, _y4m->dst_buf, _y4m->aux_buf);
   /*Fill in the frame buffer pointers.
-    We don't use vpx_img_wrap() because it forces padding for odd picture
+    We don't use aom_img_wrap() because it forces padding for odd picture
      sizes, which would require a separate fread call for every row.*/
   memset(_img, 0, sizeof(*_img));
-  /*Y4M has the planes in Y'CbCr order, which libvpx calls Y, U, and V.*/
-  _img->fmt = _y4m->vpx_fmt;
+  /*Y4M has the planes in Y'CbCr order, which libaom calls Y, U, and V.*/
+  _img->fmt = _y4m->aom_fmt;
   _img->w = _img->d_w = _y4m->pic_w;
   _img->h = _img->d_h = _y4m->pic_h;
   _img->x_chroma_shift = _y4m->dst_c_dec_h >> 1;
@@ -1115,12 +1116,12 @@ int y4m_input_fetch_frame(y4m_input *_y4m, FILE *_fin, vpx_image_t *_img) {
   c_w *= bytes_per_sample;
   c_h = (_y4m->pic_h + _y4m->dst_c_dec_v - 1) / _y4m->dst_c_dec_v;
   c_sz = c_w * c_h;
-  _img->stride[VPX_PLANE_Y] = _img->stride[VPX_PLANE_ALPHA] =
+  _img->stride[AOM_PLANE_Y] = _img->stride[AOM_PLANE_ALPHA] =
       _y4m->pic_w * bytes_per_sample;
-  _img->stride[VPX_PLANE_U] = _img->stride[VPX_PLANE_V] = c_w;
-  _img->planes[VPX_PLANE_Y] = _y4m->dst_buf;
-  _img->planes[VPX_PLANE_U] = _y4m->dst_buf + pic_sz;
-  _img->planes[VPX_PLANE_V] = _y4m->dst_buf + pic_sz + c_sz;
-  _img->planes[VPX_PLANE_ALPHA] = _y4m->dst_buf + pic_sz + 2 * c_sz;
+  _img->stride[AOM_PLANE_U] = _img->stride[AOM_PLANE_V] = c_w;
+  _img->planes[AOM_PLANE_Y] = _y4m->dst_buf;
+  _img->planes[AOM_PLANE_U] = _y4m->dst_buf + pic_sz;
+  _img->planes[AOM_PLANE_V] = _y4m->dst_buf + pic_sz + c_sz;
+  _img->planes[AOM_PLANE_ALPHA] = _y4m->dst_buf + pic_sz + 2 * c_sz;
   return 1;
 }

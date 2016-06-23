@@ -1,12 +1,13 @@
 /*
- *  Copyright (c) 2014 The WebM project authors. All Rights Reserved.
+ * Copyright (c) 2016, Alliance for Open Media. All rights reserved
  *
- *  Use of this source code is governed by a BSD-style license
- *  that can be found in the LICENSE file in the root of the source
- *  tree. An additional intellectual property rights grant can be found
- *  in the file PATENTS.  All contributing project authors may
- *  be found in the AUTHORS file in the root of the source tree.
- */
+ * This source code is subject to the terms of the BSD 2 Clause License and
+ * the Alliance for Open Media Patent License 1.0. If the BSD 2 Clause License
+ * was not distributed with this source code in the LICENSE file, you can
+ * obtain it at www.aomedia.org/license/software. If the Alliance for Open
+ * Media Patent License 1.0 was not distributed with this source code in the
+ * PATENTS file, you can obtain it at www.aomedia.org/license/patent.
+*/
 
 #include <math.h>
 #include <stdlib.h>
@@ -14,22 +15,22 @@
 
 #include "third_party/googletest/src/include/gtest/gtest.h"
 
-#include "./vpx_config.h"
-#include "./vpx_dsp_rtcd.h"
+#include "./aom_config.h"
+#include "./aom_dsp_rtcd.h"
 #include "test/acm_random.h"
 #include "test/clear_system_state.h"
 #include "test/register_state_check.h"
 #include "test/util.h"
-#include "vp10/common/entropy.h"
-#include "vp10/common/scan.h"
-#include "vpx/vpx_codec.h"
-#include "vpx/vpx_integer.h"
+#include "av1/common/entropy.h"
+#include "av1/common/scan.h"
+#include "aom/aom_codec.h"
+#include "aom/aom_integer.h"
 
-using libvpx_test::ACMRandom;
+using libaom_test::ACMRandom;
 
 namespace {
 #if !CONFIG_AOM_QM
-#if CONFIG_VPX_HIGHBITDEPTH
+#if CONFIG_AOM_HIGHBITDEPTH
 const int number_of_iterations = 100;
 
 typedef void (*QuantizeFunc)(const tran_low_t *coeff, intptr_t count,
@@ -39,12 +40,12 @@ typedef void (*QuantizeFunc)(const tran_low_t *coeff, intptr_t count,
                              tran_low_t *dqcoeff, const int16_t *dequant,
                              uint16_t *eob, const int16_t *scan,
                              const int16_t *iscan);
-typedef std::tr1::tuple<QuantizeFunc, QuantizeFunc, vpx_bit_depth_t>
+typedef std::tr1::tuple<QuantizeFunc, QuantizeFunc, aom_bit_depth_t>
     QuantizeParam;
 
-class VP9QuantizeTest : public ::testing::TestWithParam<QuantizeParam> {
+class AV1QuantizeTest : public ::testing::TestWithParam<QuantizeParam> {
  public:
-  virtual ~VP9QuantizeTest() {}
+  virtual ~AV1QuantizeTest() {}
   virtual void SetUp() {
     quantize_op_ = GET_PARAM(0);
     ref_quantize_op_ = GET_PARAM(1);
@@ -52,18 +53,18 @@ class VP9QuantizeTest : public ::testing::TestWithParam<QuantizeParam> {
     mask_ = (1 << bit_depth_) - 1;
   }
 
-  virtual void TearDown() { libvpx_test::ClearSystemState(); }
+  virtual void TearDown() { libaom_test::ClearSystemState(); }
 
  protected:
-  vpx_bit_depth_t bit_depth_;
+  aom_bit_depth_t bit_depth_;
   int mask_;
   QuantizeFunc quantize_op_;
   QuantizeFunc ref_quantize_op_;
 };
 
-class VP9Quantize32Test : public ::testing::TestWithParam<QuantizeParam> {
+class AV1Quantize32Test : public ::testing::TestWithParam<QuantizeParam> {
  public:
-  virtual ~VP9Quantize32Test() {}
+  virtual ~AV1Quantize32Test() {}
   virtual void SetUp() {
     quantize_op_ = GET_PARAM(0);
     ref_quantize_op_ = GET_PARAM(1);
@@ -71,16 +72,16 @@ class VP9Quantize32Test : public ::testing::TestWithParam<QuantizeParam> {
     mask_ = (1 << bit_depth_) - 1;
   }
 
-  virtual void TearDown() { libvpx_test::ClearSystemState(); }
+  virtual void TearDown() { libaom_test::ClearSystemState(); }
 
  protected:
-  vpx_bit_depth_t bit_depth_;
+  aom_bit_depth_t bit_depth_;
   int mask_;
   QuantizeFunc quantize_op_;
   QuantizeFunc ref_quantize_op_;
 };
 
-TEST_P(VP9QuantizeTest, OperationCheck) {
+TEST_P(AV1QuantizeTest, OperationCheck) {
   ACMRandom rnd(ACMRandom::DeterministicSeed());
   DECLARE_ALIGNED(16, tran_low_t, coeff_ptr[256]);
   DECLARE_ALIGNED(16, int16_t, zbin_ptr[2]);
@@ -100,7 +101,7 @@ TEST_P(VP9QuantizeTest, OperationCheck) {
     const int skip_block = i == 0;
     const TX_SIZE sz = (TX_SIZE)(i % 3);  // TX_4X4, TX_8X8 TX_16X16
     const TX_TYPE tx_type = (TX_TYPE)((i >> 2) % 3);
-    const scan_order *scan_order = &vp10_scan_orders[sz][tx_type];
+    const scan_order *scan_order = &av1_scan_orders[sz][tx_type];
     const int count = (4 << sz) * (4 << sz);  // 16, 64, 256
     int err_count = 0;
     *eob_ptr = rnd.Rand16();
@@ -138,7 +139,7 @@ TEST_P(VP9QuantizeTest, OperationCheck) {
       << "First failed at test case " << first_failure;
 }
 
-TEST_P(VP9Quantize32Test, OperationCheck) {
+TEST_P(AV1Quantize32Test, OperationCheck) {
   ACMRandom rnd(ACMRandom::DeterministicSeed());
   DECLARE_ALIGNED(16, tran_low_t, coeff_ptr[1024]);
   DECLARE_ALIGNED(16, int16_t, zbin_ptr[2]);
@@ -158,7 +159,7 @@ TEST_P(VP9Quantize32Test, OperationCheck) {
     const int skip_block = i == 0;
     const TX_SIZE sz = TX_32X32;
     const TX_TYPE tx_type = (TX_TYPE)(i % 4);
-    const scan_order *scan_order = &vp10_scan_orders[sz][tx_type];
+    const scan_order *scan_order = &av1_scan_orders[sz][tx_type];
     const int count = (4 << sz) * (4 << sz);  // 1024
     int err_count = 0;
     *eob_ptr = rnd.Rand16();
@@ -196,7 +197,7 @@ TEST_P(VP9Quantize32Test, OperationCheck) {
       << "First failed at test case " << first_failure;
 }
 
-TEST_P(VP9QuantizeTest, EOBCheck) {
+TEST_P(AV1QuantizeTest, EOBCheck) {
   ACMRandom rnd(ACMRandom::DeterministicSeed());
   DECLARE_ALIGNED(16, tran_low_t, coeff_ptr[256]);
   DECLARE_ALIGNED(16, int16_t, zbin_ptr[2]);
@@ -216,7 +217,7 @@ TEST_P(VP9QuantizeTest, EOBCheck) {
     int skip_block = i == 0;
     TX_SIZE sz = (TX_SIZE)(i % 3);  // TX_4X4, TX_8X8 TX_16X16
     TX_TYPE tx_type = (TX_TYPE)((i >> 2) % 3);
-    const scan_order *scan_order = &vp10_scan_orders[sz][tx_type];
+    const scan_order *scan_order = &av1_scan_orders[sz][tx_type];
     int count = (4 << sz) * (4 << sz);  // 16, 64, 256
     int err_count = 0;
     *eob_ptr = rnd.Rand16();
@@ -259,7 +260,7 @@ TEST_P(VP9QuantizeTest, EOBCheck) {
       << "First failed at test case " << first_failure;
 }
 
-TEST_P(VP9Quantize32Test, EOBCheck) {
+TEST_P(AV1Quantize32Test, EOBCheck) {
   ACMRandom rnd(ACMRandom::DeterministicSeed());
   DECLARE_ALIGNED(16, tran_low_t, coeff_ptr[1024]);
   DECLARE_ALIGNED(16, int16_t, zbin_ptr[2]);
@@ -279,7 +280,7 @@ TEST_P(VP9Quantize32Test, EOBCheck) {
     int skip_block = i == 0;
     TX_SIZE sz = TX_32X32;
     TX_TYPE tx_type = (TX_TYPE)(i % 4);
-    const scan_order *scan_order = &vp10_scan_orders[sz][tx_type];
+    const scan_order *scan_order = &av1_scan_orders[sz][tx_type];
     int count = (4 << sz) * (4 << sz);  // 1024
     int err_count = 0;
     *eob_ptr = rnd.Rand16();
@@ -325,22 +326,22 @@ using std::tr1::make_tuple;
 
 #if HAVE_SSE2
 INSTANTIATE_TEST_CASE_P(
-    SSE2, VP9QuantizeTest,
-    ::testing::Values(make_tuple(&vpx_highbd_quantize_b_sse2,
-                                 &vpx_highbd_quantize_b_c, VPX_BITS_8),
-                      make_tuple(&vpx_highbd_quantize_b_sse2,
-                                 &vpx_highbd_quantize_b_c, VPX_BITS_10),
-                      make_tuple(&vpx_highbd_quantize_b_sse2,
-                                 &vpx_highbd_quantize_b_c, VPX_BITS_12)));
+    SSE2, AV1QuantizeTest,
+    ::testing::Values(make_tuple(&aom_highbd_quantize_b_sse2,
+                                 &aom_highbd_quantize_b_c, AOM_BITS_8),
+                      make_tuple(&aom_highbd_quantize_b_sse2,
+                                 &aom_highbd_quantize_b_c, AOM_BITS_10),
+                      make_tuple(&aom_highbd_quantize_b_sse2,
+                                 &aom_highbd_quantize_b_c, AOM_BITS_12)));
 INSTANTIATE_TEST_CASE_P(
-    SSE2, VP9Quantize32Test,
-    ::testing::Values(make_tuple(&vpx_highbd_quantize_b_32x32_sse2,
-                                 &vpx_highbd_quantize_b_32x32_c, VPX_BITS_8),
-                      make_tuple(&vpx_highbd_quantize_b_32x32_sse2,
-                                 &vpx_highbd_quantize_b_32x32_c, VPX_BITS_10),
-                      make_tuple(&vpx_highbd_quantize_b_32x32_sse2,
-                                 &vpx_highbd_quantize_b_32x32_c, VPX_BITS_12)));
+    SSE2, AV1Quantize32Test,
+    ::testing::Values(make_tuple(&aom_highbd_quantize_b_32x32_sse2,
+                                 &aom_highbd_quantize_b_32x32_c, AOM_BITS_8),
+                      make_tuple(&aom_highbd_quantize_b_32x32_sse2,
+                                 &aom_highbd_quantize_b_32x32_c, AOM_BITS_10),
+                      make_tuple(&aom_highbd_quantize_b_32x32_sse2,
+                                 &aom_highbd_quantize_b_32x32_c, AOM_BITS_12)));
 #endif  // HAVE_SSE2
-#endif  // CONFIG_VPX_HIGHBITDEPTH
+#endif  // CONFIG_AOM_HIGHBITDEPTH
 #endif  // CONFIG_AOM_QM
 }  // namespace

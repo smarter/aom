@@ -1,13 +1,12 @@
+## Copyright (c) 2016, Alliance for Open Media. All rights reserved
 ##
-##  Copyright (c) 2010 The WebM project authors. All Rights Reserved.
+## This source code is subject to the terms of the BSD 2 Clause License and
+## the Alliance for Open Media Patent License 1.0. If the BSD 2 Clause License
+## was not distributed with this source code in the LICENSE file, you can
+## obtain it at www.aomedia.org/license/software. If the Alliance for Open
+## Media Patent License 1.0 was not distributed with this source code in the
+## PATENTS file, you can obtain it at www.aomedia.org/license/patent.
 ##
-##  Use of this source code is governed by a BSD-style license
-##  that can be found in the LICENSE file in the root of the source
-##  tree. An additional intellectual property rights grant can be found
-##  in the file PATENTS.  All contributing project authors may
-##  be found in the AUTHORS file in the root of the source tree.
-##
-
 
 include config.mk
 quiet?=true
@@ -98,7 +97,7 @@ distclean: clean
 	if [ -z "$(target)" ]; then \
       rm -f Makefile; \
       rm -f config.log config.mk; \
-      rm -f vpx_config.[hc] vpx_config.asm; \
+      rm -f aom_config.[hc] aom_config.asm; \
     else \
       rm -f $(target)-$(TOOLCHAIN).mk; \
     fi
@@ -140,8 +139,8 @@ $(BUILD_PFX)%_avx.c.d: CFLAGS += -mavx $(STACKREALIGN)
 $(BUILD_PFX)%_avx.c.o: CFLAGS += -mavx $(STACKREALIGN)
 $(BUILD_PFX)%_avx2.c.d: CFLAGS += -mavx2 $(STACKREALIGN)
 $(BUILD_PFX)%_avx2.c.o: CFLAGS += -mavx2 $(STACKREALIGN)
-$(BUILD_PFX)%vp9_reconintra.c.d: CFLAGS += $(STACKREALIGN)
-$(BUILD_PFX)%vp9_reconintra.c.o: CFLAGS += $(STACKREALIGN)
+$(BUILD_PFX)%av1_reconintra.c.d: CFLAGS += $(STACKREALIGN)
+$(BUILD_PFX)%av1_reconintra.c.o: CFLAGS += $(STACKREALIGN)
 
 $(BUILD_PFX)%.c.d: %.c
 	$(if $(quiet),@echo "    [DEP] $@")
@@ -215,7 +214,7 @@ ifeq ($(HAVE_GNU_STRIP),yes)
 # Older binutils strip global symbols not needed for relocation processing
 # when given --strip-unneeded. Using nm and awk to identify globals and
 # keep them caused command line length issues under mingw and segfaults in
-# test_libvpx were observed under OS/2: simply use --strip-debug.
+# test_libaom were observed under OS/2: simply use --strip-debug.
 %.a: %_g.a
 	$(if $(quiet),@echo "    [STRIP] $@ < $<")
 	$(qexec)$(STRIP) --strip-debug \

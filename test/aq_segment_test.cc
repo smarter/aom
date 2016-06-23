@@ -1,12 +1,14 @@
 /*
- *  Copyright (c) 2012 The WebM project authors. All Rights Reserved.
+ * Copyright (c) 2016, Alliance for Open Media. All rights reserved
  *
- *  Use of this source code is governed by a BSD-style license
- *  that can be found in the LICENSE file in the root of the source
- *  tree. An additional intellectual property rights grant can be found
- *  in the file PATENTS.  All contributing project authors may
- *  be found in the AUTHORS file in the root of the source tree.
- */
+ * This source code is subject to the terms of the BSD 2 Clause License and
+ * the Alliance for Open Media Patent License 1.0. If the BSD 2 Clause License
+ * was not distributed with this source code in the LICENSE file, you can
+ * obtain it at www.aomedia.org/license/software. If the Alliance for Open
+ * Media Patent License 1.0 was not distributed with this source code in the
+ * PATENTS file, you can obtain it at www.aomedia.org/license/patent.
+*/
+
 #include "third_party/googletest/src/include/gtest/gtest.h"
 #include "test/codec_factory.h"
 #include "test/encode_test_driver.h"
@@ -16,8 +18,8 @@
 namespace {
 
 class AqSegmentTest
-    : public ::libvpx_test::EncoderTest,
-      public ::libvpx_test::CodecTestWith2Params<libvpx_test::TestMode, int> {
+    : public ::libaom_test::EncoderTest,
+      public ::libaom_test::CodecTestWith2Params<libaom_test::TestMode, int> {
  protected:
   AqSegmentTest() : EncoderTest(GET_PARAM(0)) {}
   virtual ~AqSegmentTest() {}
@@ -29,12 +31,12 @@ class AqSegmentTest
     aq_mode_ = 0;
   }
 
-  virtual void PreEncodeFrameHook(::libvpx_test::VideoSource *video,
-                                  ::libvpx_test::Encoder *encoder) {
+  virtual void PreEncodeFrameHook(::libaom_test::VideoSource *video,
+                                  ::libaom_test::Encoder *encoder) {
     if (video->frame() == 1) {
-      encoder->Control(VP8E_SET_CPUUSED, set_cpu_used_);
-      encoder->Control(VP9E_SET_AQ_MODE, aq_mode_);
-      encoder->Control(VP8E_SET_MAX_INTRA_BITRATE_PCT, 100);
+      encoder->Control(AOME_SET_CPUUSED, set_cpu_used_);
+      encoder->Control(AV1E_SET_AQ_MODE, aq_mode_);
+      encoder->Control(AOME_SET_MAX_INTRA_BITRATE_PCT, 100);
     }
   }
 
@@ -47,7 +49,7 @@ class AqSegmentTest
 TEST_P(AqSegmentTest, TestNoMisMatchAQ1) {
   cfg_.rc_min_quantizer = 8;
   cfg_.rc_max_quantizer = 56;
-  cfg_.rc_end_usage = VPX_CBR;
+  cfg_.rc_end_usage = AOM_CBR;
   cfg_.g_lag_in_frames = 0;
   cfg_.rc_buf_initial_sz = 500;
   cfg_.rc_buf_optimal_sz = 500;
@@ -56,7 +58,7 @@ TEST_P(AqSegmentTest, TestNoMisMatchAQ1) {
 
   aq_mode_ = 1;
 
-  ::libvpx_test::I420VideoSource video("hantro_collage_w352h288.yuv", 352, 288,
+  ::libaom_test::I420VideoSource video("hantro_collage_w352h288.yuv", 352, 288,
                                        30, 1, 0, 100);
 
   ASSERT_NO_FATAL_FAILURE(RunLoop(&video));
@@ -67,7 +69,7 @@ TEST_P(AqSegmentTest, TestNoMisMatchAQ1) {
 TEST_P(AqSegmentTest, TestNoMisMatchAQ2) {
   cfg_.rc_min_quantizer = 8;
   cfg_.rc_max_quantizer = 56;
-  cfg_.rc_end_usage = VPX_CBR;
+  cfg_.rc_end_usage = AOM_CBR;
   cfg_.g_lag_in_frames = 0;
   cfg_.rc_buf_initial_sz = 500;
   cfg_.rc_buf_optimal_sz = 500;
@@ -76,7 +78,7 @@ TEST_P(AqSegmentTest, TestNoMisMatchAQ2) {
 
   aq_mode_ = 2;
 
-  ::libvpx_test::I420VideoSource video("hantro_collage_w352h288.yuv", 352, 288,
+  ::libaom_test::I420VideoSource video("hantro_collage_w352h288.yuv", 352, 288,
                                        30, 1, 0, 100);
 
   ASSERT_NO_FATAL_FAILURE(RunLoop(&video));
@@ -87,7 +89,7 @@ TEST_P(AqSegmentTest, TestNoMisMatchAQ2) {
 TEST_P(AqSegmentTest, TestNoMisMatchAQ3) {
   cfg_.rc_min_quantizer = 8;
   cfg_.rc_max_quantizer = 56;
-  cfg_.rc_end_usage = VPX_CBR;
+  cfg_.rc_end_usage = AOM_CBR;
   cfg_.g_lag_in_frames = 0;
   cfg_.rc_buf_initial_sz = 500;
   cfg_.rc_buf_optimal_sz = 500;
@@ -96,14 +98,14 @@ TEST_P(AqSegmentTest, TestNoMisMatchAQ3) {
 
   aq_mode_ = 3;
 
-  ::libvpx_test::I420VideoSource video("hantro_collage_w352h288.yuv", 352, 288,
+  ::libaom_test::I420VideoSource video("hantro_collage_w352h288.yuv", 352, 288,
                                        30, 1, 0, 100);
 
   ASSERT_NO_FATAL_FAILURE(RunLoop(&video));
 }
 
-VP10_INSTANTIATE_TEST_CASE(AqSegmentTest,
-                           ::testing::Values(::libvpx_test::kRealTime,
-                                             ::libvpx_test::kOnePassGood),
-                           ::testing::Range(3, 9));
+AV1_INSTANTIATE_TEST_CASE(AqSegmentTest,
+                          ::testing::Values(::libaom_test::kRealTime,
+                                            ::libaom_test::kOnePassGood),
+                          ::testing::Range(3, 9));
 }  // namespace

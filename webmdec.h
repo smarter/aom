@@ -1,11 +1,12 @@
 /*
- *  Copyright (c) 2013 The WebM project authors. All Rights Reserved.
+ * Copyright (c) 2016, Alliance for Open Media. All rights reserved
  *
- *  Use of this source code is governed by a BSD-style license
- *  that can be found in the LICENSE file in the root of the source
- *  tree. An additional intellectual property rights grant can be found
- *  in the file PATENTS.  All contributing project authors may
- *  be found in the AUTHORS file in the root of the source tree.
+ * This source code is subject to the terms of the BSD 2 Clause License and
+ * the Alliance for Open Media Patent License 1.0. If the BSD 2 Clause License
+ * was not distributed with this source code in the LICENSE file, you can
+ * obtain it at www.aomedia.org/license/software. If the Alliance for Open
+ * Media Patent License 1.0 was not distributed with this source code in the
+ * PATENTS file, you can obtain it at www.aomedia.org/license/patent.
  */
 #ifndef WEBMDEC_H_
 #define WEBMDEC_H_
@@ -16,7 +17,7 @@
 extern "C" {
 #endif
 
-struct VpxInputContext;
+struct AvxInputContext;
 
 struct WebmInputContext {
   void *reader;
@@ -38,7 +39,7 @@ struct WebmInputContext {
 // TODO(vigneshv): Refactor this function into two smaller functions specific
 // to their task.
 int file_is_webm(struct WebmInputContext *webm_ctx,
-                 struct VpxInputContext *vpx_ctx);
+                 struct AvxInputContext *aom_ctx);
 
 // Reads a WebM Video Frame. Memory for the buffer is created, owned and managed
 // by this function. For the first call, |buffer| should be NULL and
@@ -60,7 +61,7 @@ int webm_read_frame(struct WebmInputContext *webm_ctx, uint8_t **buffer,
 
 // Guesses the frame rate of the input file based on the container timestamps.
 int webm_guess_framerate(struct WebmInputContext *webm_ctx,
-                         struct VpxInputContext *vpx_ctx);
+                         struct AvxInputContext *aom_ctx);
 
 // Resets the WebMInputContext.
 void webm_free(struct WebmInputContext *webm_ctx);

@@ -1,12 +1,13 @@
 /*
- *  Copyright (c) 2014 The WebM project authors. All Rights Reserved.
+ * Copyright (c) 2016, Alliance for Open Media. All rights reserved
  *
- *  Use of this source code is governed by a BSD-style license
- *  that can be found in the LICENSE file in the root of the source
- *  tree. An additional intellectual property rights grant can be found
- *  in the file PATENTS.  All contributing project authors may
- *  be found in the AUTHORS file in the root of the source tree.
- */
+ * This source code is subject to the terms of the BSD 2 Clause License and
+ * the Alliance for Open Media Patent License 1.0. If the BSD 2 Clause License
+ * was not distributed with this source code in the LICENSE file, you can
+ * obtain it at www.aomedia.org/license/software. If the Alliance for Open
+ * Media Patent License 1.0 was not distributed with this source code in the
+ * PATENTS file, you can obtain it at www.aomedia.org/license/patent.
+*/
 
 #include "third_party/googletest/src/include/gtest/gtest.h"
 
@@ -34,32 +35,32 @@ const double kPsnrThreshold[][5] = {
 typedef struct {
   const char *filename;
   unsigned int input_bit_depth;
-  vpx_img_fmt fmt;
-  vpx_bit_depth_t bit_depth;
+  aom_img_fmt fmt;
+  aom_bit_depth_t bit_depth;
   unsigned int profile;
 } TestVideoParam;
 
 const TestVideoParam kTestVectors[] = {
-  { "park_joy_90p_8_420.y4m", 8, VPX_IMG_FMT_I420, VPX_BITS_8, 0 },
-  { "park_joy_90p_8_422.y4m", 8, VPX_IMG_FMT_I422, VPX_BITS_8, 1 },
-  { "park_joy_90p_8_444.y4m", 8, VPX_IMG_FMT_I444, VPX_BITS_8, 1 },
-  { "park_joy_90p_8_440.yuv", 8, VPX_IMG_FMT_I440, VPX_BITS_8, 1 },
-#if CONFIG_VPX_HIGHBITDEPTH
-  { "park_joy_90p_10_420.y4m", 10, VPX_IMG_FMT_I42016, VPX_BITS_10, 2 },
-  { "park_joy_90p_10_422.y4m", 10, VPX_IMG_FMT_I42216, VPX_BITS_10, 3 },
-  { "park_joy_90p_10_444.y4m", 10, VPX_IMG_FMT_I44416, VPX_BITS_10, 3 },
-  { "park_joy_90p_10_440.yuv", 10, VPX_IMG_FMT_I44016, VPX_BITS_10, 3 },
-  { "park_joy_90p_12_420.y4m", 12, VPX_IMG_FMT_I42016, VPX_BITS_12, 2 },
-  { "park_joy_90p_12_422.y4m", 12, VPX_IMG_FMT_I42216, VPX_BITS_12, 3 },
-  { "park_joy_90p_12_444.y4m", 12, VPX_IMG_FMT_I44416, VPX_BITS_12, 3 },
-  { "park_joy_90p_12_440.yuv", 12, VPX_IMG_FMT_I44016, VPX_BITS_12, 3 },
-#endif  // CONFIG_VPX_HIGHBITDEPTH
+  { "park_joy_90p_8_420.y4m", 8, AOM_IMG_FMT_I420, AOM_BITS_8, 0 },
+  { "park_joy_90p_8_422.y4m", 8, AOM_IMG_FMT_I422, AOM_BITS_8, 1 },
+  { "park_joy_90p_8_444.y4m", 8, AOM_IMG_FMT_I444, AOM_BITS_8, 1 },
+  { "park_joy_90p_8_440.yuv", 8, AOM_IMG_FMT_I440, AOM_BITS_8, 1 },
+#if CONFIG_AOM_HIGHBITDEPTH
+  { "park_joy_90p_10_420.y4m", 10, AOM_IMG_FMT_I42016, AOM_BITS_10, 2 },
+  { "park_joy_90p_10_422.y4m", 10, AOM_IMG_FMT_I42216, AOM_BITS_10, 3 },
+  { "park_joy_90p_10_444.y4m", 10, AOM_IMG_FMT_I44416, AOM_BITS_10, 3 },
+  { "park_joy_90p_10_440.yuv", 10, AOM_IMG_FMT_I44016, AOM_BITS_10, 3 },
+  { "park_joy_90p_12_420.y4m", 12, AOM_IMG_FMT_I42016, AOM_BITS_12, 2 },
+  { "park_joy_90p_12_422.y4m", 12, AOM_IMG_FMT_I42216, AOM_BITS_12, 3 },
+  { "park_joy_90p_12_444.y4m", 12, AOM_IMG_FMT_I44416, AOM_BITS_12, 3 },
+  { "park_joy_90p_12_440.yuv", 12, AOM_IMG_FMT_I44016, AOM_BITS_12, 3 },
+#endif  // CONFIG_AOM_HIGHBITDEPTH
 };
 
 // Encoding modes tested
-const libvpx_test::TestMode kEncodingModeVectors[] = {
-  ::libvpx_test::kTwoPassGood, ::libvpx_test::kOnePassGood,
-  ::libvpx_test::kRealTime,
+const libaom_test::TestMode kEncodingModeVectors[] = {
+  ::libaom_test::kTwoPassGood, ::libaom_test::kOnePassGood,
+  ::libaom_test::kRealTime,
 };
 
 // Speed settings tested
@@ -74,8 +75,8 @@ int is_extension_y4m(const char *filename) {
 }
 
 class EndToEndTestLarge
-    : public ::libvpx_test::EncoderTest,
-      public ::libvpx_test::CodecTestWith3Params<libvpx_test::TestMode,
+    : public ::libaom_test::EncoderTest,
+      public ::libaom_test::CodecTestWith3Params<libaom_test::TestMode,
                                                  TestVideoParam, int> {
  protected:
   EndToEndTestLarge()
@@ -88,12 +89,12 @@ class EndToEndTestLarge
   virtual void SetUp() {
     InitializeConfig();
     SetMode(encoding_mode_);
-    if (encoding_mode_ != ::libvpx_test::kRealTime) {
+    if (encoding_mode_ != ::libaom_test::kRealTime) {
       cfg_.g_lag_in_frames = 5;
-      cfg_.rc_end_usage = VPX_VBR;
+      cfg_.rc_end_usage = AOM_VBR;
     } else {
       cfg_.g_lag_in_frames = 0;
-      cfg_.rc_end_usage = VPX_CBR;
+      cfg_.rc_end_usage = AOM_CBR;
       cfg_.rc_buf_sz = 1000;
       cfg_.rc_buf_initial_sz = 500;
       cfg_.rc_buf_optimal_sz = 600;
@@ -106,22 +107,22 @@ class EndToEndTestLarge
     nframes_ = 0;
   }
 
-  virtual void PSNRPktHook(const vpx_codec_cx_pkt_t *pkt) {
+  virtual void PSNRPktHook(const aom_codec_cx_pkt_t *pkt) {
     psnr_ += pkt->data.psnr.psnr[0];
     nframes_++;
   }
 
-  virtual void PreEncodeFrameHook(::libvpx_test::VideoSource *video,
-                                  ::libvpx_test::Encoder *encoder) {
+  virtual void PreEncodeFrameHook(::libaom_test::VideoSource *video,
+                                  ::libaom_test::Encoder *encoder) {
     if (video->frame() == 1) {
-      encoder->Control(VP9E_SET_FRAME_PARALLEL_DECODING, 1);
-      encoder->Control(VP9E_SET_TILE_COLUMNS, 4);
-      encoder->Control(VP8E_SET_CPUUSED, cpu_used_);
-      if (encoding_mode_ != ::libvpx_test::kRealTime) {
-        encoder->Control(VP8E_SET_ENABLEAUTOALTREF, 1);
-        encoder->Control(VP8E_SET_ARNR_MAXFRAMES, 7);
-        encoder->Control(VP8E_SET_ARNR_STRENGTH, 5);
-        encoder->Control(VP8E_SET_ARNR_TYPE, 3);
+      encoder->Control(AV1E_SET_FRAME_PARALLEL_DECODING, 1);
+      encoder->Control(AV1E_SET_TILE_COLUMNS, 4);
+      encoder->Control(AOME_SET_CPUUSED, cpu_used_);
+      if (encoding_mode_ != ::libaom_test::kRealTime) {
+        encoder->Control(AOME_SET_ENABLEAUTOALTREF, 1);
+        encoder->Control(AOME_SET_ARNR_MAXFRAMES, 7);
+        encoder->Control(AOME_SET_ARNR_STRENGTH, 5);
+        encoder->Control(AOME_SET_ARNR_TYPE, 3);
       }
     }
   }
@@ -141,7 +142,7 @@ class EndToEndTestLarge
  private:
   double psnr_;
   unsigned int nframes_;
-  libvpx_test::TestMode encoding_mode_;
+  libaom_test::TestMode encoding_mode_;
 };
 
 TEST_P(EndToEndTestLarge, EndtoEndPSNRTest) {
@@ -150,15 +151,15 @@ TEST_P(EndToEndTestLarge, EndtoEndPSNRTest) {
   cfg_.g_profile = test_video_param_.profile;
   cfg_.g_input_bit_depth = test_video_param_.input_bit_depth;
   cfg_.g_bit_depth = test_video_param_.bit_depth;
-  init_flags_ = VPX_CODEC_USE_PSNR;
-  if (cfg_.g_bit_depth > 8) init_flags_ |= VPX_CODEC_USE_HIGHBITDEPTH;
+  init_flags_ = AOM_CODEC_USE_PSNR;
+  if (cfg_.g_bit_depth > 8) init_flags_ |= AOM_CODEC_USE_HIGHBITDEPTH;
 
-  libvpx_test::VideoSource *video;
+  libaom_test::VideoSource *video;
   if (is_extension_y4m(test_video_param_.filename)) {
     video =
-        new libvpx_test::Y4mVideoSource(test_video_param_.filename, 0, kFrames);
+        new libaom_test::Y4mVideoSource(test_video_param_.filename, 0, kFrames);
   } else {
-    video = new libvpx_test::YUVVideoSource(test_video_param_.filename,
+    video = new libaom_test::YUVVideoSource(test_video_param_.filename,
                                             test_video_param_.fmt, kWidth,
                                             kHeight, kFramerate, 1, 0, kFrames);
   }
@@ -169,22 +170,22 @@ TEST_P(EndToEndTestLarge, EndtoEndPSNRTest) {
   delete (video);
 }
 
-#if CONFIG_VPX_HIGHBITDEPTH
-#if CONFIG_VP10_ENCODER
+#if CONFIG_AOM_HIGHBITDEPTH
+#if CONFIG_AV1_ENCODER
 // TODO(angiebird): many fail in high bitdepth mode.
 INSTANTIATE_TEST_CASE_P(
-    DISABLED_VP10, EndToEndTestLarge,
+    DISABLED_AV1, EndToEndTestLarge,
     ::testing::Combine(
-        ::testing::Values(static_cast<const libvpx_test::CodecFactory *>(
-            &libvpx_test::kVP10)),
+        ::testing::Values(
+            static_cast<const libaom_test::CodecFactory *>(&libaom_test::kAV1)),
         ::testing::ValuesIn(kEncodingModeVectors),
         ::testing::ValuesIn(kTestVectors),
         ::testing::ValuesIn(kCpuUsedVectors)));
-#endif  // CONFIG_VP10_ENCODER
+#endif  // CONFIG_AV1_ENCODER
 #else
-VP10_INSTANTIATE_TEST_CASE(EndToEndTestLarge,
-                           ::testing::ValuesIn(kEncodingModeVectors),
-                           ::testing::ValuesIn(kTestVectors),
-                           ::testing::ValuesIn(kCpuUsedVectors));
-#endif  // CONFIG_VPX_HIGHBITDEPTH
+AV1_INSTANTIATE_TEST_CASE(EndToEndTestLarge,
+                          ::testing::ValuesIn(kEncodingModeVectors),
+                          ::testing::ValuesIn(kTestVectors),
+                          ::testing::ValuesIn(kCpuUsedVectors));
+#endif  // CONFIG_AOM_HIGHBITDEPTH
 }  // namespace

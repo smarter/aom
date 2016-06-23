@@ -1,19 +1,20 @@
 /*
- *  Copyright (c) 2012 The WebM project authors. All Rights Reserved.
+ * Copyright (c) 2016, Alliance for Open Media. All rights reserved
  *
- *  Use of this source code is governed by a BSD-style license
- *  that can be found in the LICENSE file in the root of the source
- *  tree. An additional intellectual property rights grant can be found
- *  in the file PATENTS.  All contributing project authors may
- *  be found in the AUTHORS file in the root of the source tree.
+ * This source code is subject to the terms of the BSD 2 Clause License and
+ * the Alliance for Open Media Patent License 1.0. If the BSD 2 Clause License
+ * was not distributed with this source code in the LICENSE file, you can
+ * obtain it at www.aomedia.org/license/software. If the Alliance for Open
+ * Media Patent License 1.0 was not distributed with this source code in the
+ * PATENTS file, you can obtain it at www.aomedia.org/license/patent.
  */
 
 #ifndef TEST_REGISTER_STATE_CHECK_H_
 #define TEST_REGISTER_STATE_CHECK_H_
 
 #include "third_party/googletest/src/include/gtest/gtest.h"
-#include "./vpx_config.h"
-#include "vpx/vpx_integer.h"
+#include "./aom_config.h"
+#include "aom/aom_integer.h"
 
 // ASM_REGISTER_STATE_CHECK(asm_function)
 //   Minimally validates the environment pre & post function execution. This
@@ -46,7 +47,7 @@ inline bool operator==(const M128A& lhs, const M128A& rhs) {
 }  // namespace internal
 }  // namespace testing
 
-namespace libvpx_test {
+namespace libaom_test {
 
 // Compares the state of xmm[6-15] at construction with their state at
 // destruction. These registers should be preserved by the callee on
@@ -88,21 +89,21 @@ class RegisterStateCheck {
 
 #define ASM_REGISTER_STATE_CHECK(statement)    \
   do {                                         \
-    libvpx_test::RegisterStateCheck reg_check; \
+    libaom_test::RegisterStateCheck reg_check; \
     statement;                                 \
   } while (false)
 
-}  // namespace libvpx_test
+}  // namespace libaom_test
 
 #elif defined(CONFIG_SHARED) && defined(HAVE_NEON_ASM) && !CONFIG_SHARED && \
-    HAVE_NEON_ASM && CONFIG_VP10
+    HAVE_NEON_ASM && CONFIG_AV1
 
 extern "C" {
 // Save the d8-d15 registers into store.
-void vpx_push_neon(int64_t *store);
+void aom_push_neon(int64_t *store);
 }
 
-namespace libvpx_test {
+namespace libaom_test {
 
 // Compares the state of d8-d15 at construction with their state at
 // destruction. These registers should be preserved by the callee on
@@ -114,7 +115,7 @@ class RegisterStateCheck {
 
  private:
   static bool StoreRegisters(int64_t store[8]) {
-    vpx_push_neon(store);
+    aom_push_neon(store);
     return true;
   }
 
@@ -122,7 +123,7 @@ class RegisterStateCheck {
   bool Check() const {
     if (!initialized_) return false;
     int64_t post_store[8];
-    vpx_push_neon(post_store);
+    aom_push_neon(post_store);
     for (int i = 0; i < 8; ++i) {
       EXPECT_EQ(pre_store_[i], post_store[i]) << "d" << i + 8
                                               << " has been modified";
@@ -136,27 +137,27 @@ class RegisterStateCheck {
 
 #define ASM_REGISTER_STATE_CHECK(statement)    \
   do {                                         \
-    libvpx_test::RegisterStateCheck reg_check; \
+    libaom_test::RegisterStateCheck reg_check; \
     statement;                                 \
   } while (false)
 
-}  // namespace libvpx_test
+}  // namespace libaom_test
 
 #else
 
-namespace libvpx_test {
+namespace libaom_test {
 
 class RegisterStateCheck {};
 #define ASM_REGISTER_STATE_CHECK(statement) statement
 
-}  // namespace libvpx_test
+}  // namespace libaom_test
 
 #endif  // _WIN64
 
 #if ARCH_X86 || ARCH_X86_64
 #if defined(__GNUC__)
 
-namespace libvpx_test {
+namespace libaom_test {
 
 // Checks the FPU tag word pre/post execution to ensure emms has been called.
 class RegisterStateCheckMMX {
@@ -185,11 +186,11 @@ class RegisterStateCheckMMX {
 
 #define API_REGISTER_STATE_CHECK(statement)       \
   do {                                            \
-    libvpx_test::RegisterStateCheckMMX reg_check; \
+    libaom_test::RegisterStateCheckMMX reg_check; \
     ASM_REGISTER_STATE_CHECK(statement);          \
   } while (false)
 
-}  // namespace libvpx_test
+}  // namespace libaom_test
 
 #endif  // __GNUC__
 #endif  // ARCH_X86 || ARCH_X86_64

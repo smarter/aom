@@ -1,12 +1,13 @@
 /*
- *  Copyright (c) 2014 The WebM project authors. All Rights Reserved.
+ * Copyright (c) 2016, Alliance for Open Media. All rights reserved
  *
- *  Use of this source code is governed by a BSD-style license
- *  that can be found in the LICENSE file in the root of the source
- *  tree. An additional intellectual property rights grant can be found
- *  in the file PATENTS.  All contributing project authors may
- *  be found in the AUTHORS file in the root of the source tree.
- */
+ * This source code is subject to the terms of the BSD 2 Clause License and
+ * the Alliance for Open Media Patent License 1.0. If the BSD 2 Clause License
+ * was not distributed with this source code in the LICENSE file, you can
+ * obtain it at www.aomedia.org/license/software. If the Alliance for Open
+ * Media Patent License 1.0 was not distributed with this source code in the
+ * PATENTS file, you can obtain it at www.aomedia.org/license/patent.
+*/
 
 #include <cmath>
 #include <cstdlib>
@@ -14,27 +15,27 @@
 
 #include "third_party/googletest/src/include/gtest/gtest.h"
 
-#include "./vpx_config.h"
-#include "./vp10_rtcd.h"
+#include "./aom_config.h"
+#include "./av1_rtcd.h"
 #include "test/acm_random.h"
 #include "test/clear_system_state.h"
 #include "test/register_state_check.h"
 #include "test/util.h"
-#include "vp10/common/entropy.h"
-#include "vpx/vpx_codec.h"
-#include "vpx/vpx_integer.h"
+#include "av1/common/entropy.h"
+#include "aom/aom_codec.h"
+#include "aom/aom_integer.h"
 
-using libvpx_test::ACMRandom;
+using libaom_test::ACMRandom;
 
 namespace {
-#if CONFIG_VPX_HIGHBITDEPTH
+#if CONFIG_AOM_HIGHBITDEPTH
 const int kNumIterations = 1000;
 
 typedef int64_t (*ErrorBlockFunc)(const tran_low_t *coeff,
                                   const tran_low_t *dqcoeff,
                                   intptr_t block_size, int64_t *ssz, int bps);
 
-typedef std::tr1::tuple<ErrorBlockFunc, ErrorBlockFunc, vpx_bit_depth_t>
+typedef std::tr1::tuple<ErrorBlockFunc, ErrorBlockFunc, aom_bit_depth_t>
     ErrorBlockParam;
 
 class ErrorBlockTest : public ::testing::TestWithParam<ErrorBlockParam> {
@@ -46,10 +47,10 @@ class ErrorBlockTest : public ::testing::TestWithParam<ErrorBlockParam> {
     bit_depth_ = GET_PARAM(2);
   }
 
-  virtual void TearDown() { libvpx_test::ClearSystemState(); }
+  virtual void TearDown() { libaom_test::ClearSystemState(); }
 
  protected:
-  vpx_bit_depth_t bit_depth_;
+  aom_bit_depth_t bit_depth_;
   ErrorBlockFunc error_block_op_;
   ErrorBlockFunc ref_error_block_op_;
 };
@@ -158,51 +159,51 @@ TEST_P(ErrorBlockTest, ExtremeValues) {
 using std::tr1::make_tuple;
 
 #if CONFIG_USE_X86INC
-int64_t wrap_vp10_highbd_block_error_8bit_c(const tran_low_t *coeff,
-                                            const tran_low_t *dqcoeff,
-                                            intptr_t block_size, int64_t *ssz,
-                                            int bps) {
+int64_t wrap_av1_highbd_block_error_8bit_c(const tran_low_t *coeff,
+                                           const tran_low_t *dqcoeff,
+                                           intptr_t block_size, int64_t *ssz,
+                                           int bps) {
   assert(bps == 8);
-  return vp10_highbd_block_error_8bit_c(coeff, dqcoeff, block_size, ssz);
+  return av1_highbd_block_error_8bit_c(coeff, dqcoeff, block_size, ssz);
 }
 
 #if HAVE_SSE2
-int64_t wrap_vp10_highbd_block_error_8bit_sse2(const tran_low_t *coeff,
-                                               const tran_low_t *dqcoeff,
-                                               intptr_t block_size,
-                                               int64_t *ssz, int bps) {
-  assert(bps == 8);
-  return vp10_highbd_block_error_8bit_sse2(coeff, dqcoeff, block_size, ssz);
-}
-
-INSTANTIATE_TEST_CASE_P(
-    SSE2, ErrorBlockTest,
-    ::testing::Values(make_tuple(&vp10_highbd_block_error_sse2,
-                                 &vp10_highbd_block_error_c, VPX_BITS_10),
-                      make_tuple(&vp10_highbd_block_error_sse2,
-                                 &vp10_highbd_block_error_c, VPX_BITS_12),
-                      make_tuple(&vp10_highbd_block_error_sse2,
-                                 &vp10_highbd_block_error_c, VPX_BITS_8),
-                      make_tuple(&wrap_vp10_highbd_block_error_8bit_sse2,
-                                 &wrap_vp10_highbd_block_error_8bit_c,
-                                 VPX_BITS_8)));
-#endif  // HAVE_SSE2
-
-#if HAVE_AVX
-int64_t wrap_vp10_highbd_block_error_8bit_avx(const tran_low_t *coeff,
+int64_t wrap_av1_highbd_block_error_8bit_sse2(const tran_low_t *coeff,
                                               const tran_low_t *dqcoeff,
                                               intptr_t block_size, int64_t *ssz,
                                               int bps) {
   assert(bps == 8);
-  return vp10_highbd_block_error_8bit_avx(coeff, dqcoeff, block_size, ssz);
+  return av1_highbd_block_error_8bit_sse2(coeff, dqcoeff, block_size, ssz);
+}
+
+INSTANTIATE_TEST_CASE_P(
+    SSE2, ErrorBlockTest,
+    ::testing::Values(make_tuple(&av1_highbd_block_error_sse2,
+                                 &av1_highbd_block_error_c, AOM_BITS_10),
+                      make_tuple(&av1_highbd_block_error_sse2,
+                                 &av1_highbd_block_error_c, AOM_BITS_12),
+                      make_tuple(&av1_highbd_block_error_sse2,
+                                 &av1_highbd_block_error_c, AOM_BITS_8),
+                      make_tuple(&wrap_av1_highbd_block_error_8bit_sse2,
+                                 &wrap_av1_highbd_block_error_8bit_c,
+                                 AOM_BITS_8)));
+#endif  // HAVE_SSE2
+
+#if HAVE_AVX
+int64_t wrap_av1_highbd_block_error_8bit_avx(const tran_low_t *coeff,
+                                             const tran_low_t *dqcoeff,
+                                             intptr_t block_size, int64_t *ssz,
+                                             int bps) {
+  assert(bps == 8);
+  return av1_highbd_block_error_8bit_avx(coeff, dqcoeff, block_size, ssz);
 }
 
 INSTANTIATE_TEST_CASE_P(AVX, ErrorBlockTest,
                         ::testing::Values(make_tuple(
-                            &wrap_vp10_highbd_block_error_8bit_avx,
-                            &wrap_vp10_highbd_block_error_8bit_c, VPX_BITS_8)));
+                            &wrap_av1_highbd_block_error_8bit_avx,
+                            &wrap_av1_highbd_block_error_8bit_c, AOM_BITS_8)));
 #endif  // HAVE_AVX
 
 #endif  // CONFIG_USE_X86INC
-#endif  // CONFIG_VPX_HIGHBITDEPTH
+#endif  // CONFIG_AOM_HIGHBITDEPTH
 }  // namespace

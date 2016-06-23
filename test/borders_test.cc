@@ -1,12 +1,14 @@
 /*
- *  Copyright (c) 2012 The WebM project authors. All Rights Reserved.
+ * Copyright (c) 2016, Alliance for Open Media. All rights reserved
  *
- *  Use of this source code is governed by a BSD-style license
- *  that can be found in the LICENSE file in the root of the source
- *  tree. An additional intellectual property rights grant can be found
- *  in the file PATENTS.  All contributing project authors may
- *  be found in the AUTHORS file in the root of the source tree.
- */
+ * This source code is subject to the terms of the BSD 2 Clause License and
+ * the Alliance for Open Media Patent License 1.0. If the BSD 2 Clause License
+ * was not distributed with this source code in the LICENSE file, you can
+ * obtain it at www.aomedia.org/license/software. If the Alliance for Open
+ * Media Patent License 1.0 was not distributed with this source code in the
+ * PATENTS file, you can obtain it at www.aomedia.org/license/patent.
+*/
+
 #include <climits>
 #include <vector>
 #include "third_party/googletest/src/include/gtest/gtest.h"
@@ -18,8 +20,8 @@
 namespace {
 
 class BordersTest
-    : public ::libvpx_test::EncoderTest,
-      public ::libvpx_test::CodecTestWithParam<libvpx_test::TestMode> {
+    : public ::libaom_test::EncoderTest,
+      public ::libaom_test::CodecTestWithParam<libaom_test::TestMode> {
  protected:
   BordersTest() : EncoderTest(GET_PARAM(0)) {}
   virtual ~BordersTest() {}
@@ -29,19 +31,19 @@ class BordersTest
     SetMode(GET_PARAM(1));
   }
 
-  virtual void PreEncodeFrameHook(::libvpx_test::VideoSource *video,
-                                  ::libvpx_test::Encoder *encoder) {
+  virtual void PreEncodeFrameHook(::libaom_test::VideoSource *video,
+                                  ::libaom_test::Encoder *encoder) {
     if (video->frame() == 1) {
-      encoder->Control(VP8E_SET_CPUUSED, 1);
-      encoder->Control(VP8E_SET_ENABLEAUTOALTREF, 1);
-      encoder->Control(VP8E_SET_ARNR_MAXFRAMES, 7);
-      encoder->Control(VP8E_SET_ARNR_STRENGTH, 5);
-      encoder->Control(VP8E_SET_ARNR_TYPE, 3);
+      encoder->Control(AOME_SET_CPUUSED, 1);
+      encoder->Control(AOME_SET_ENABLEAUTOALTREF, 1);
+      encoder->Control(AOME_SET_ARNR_MAXFRAMES, 7);
+      encoder->Control(AOME_SET_ARNR_STRENGTH, 5);
+      encoder->Control(AOME_SET_ARNR_TYPE, 3);
     }
   }
 
-  virtual void FramePktHook(const vpx_codec_cx_pkt_t *pkt) {
-    if (pkt->data.frame.flags & VPX_FRAME_IS_KEY) {
+  virtual void FramePktHook(const aom_codec_cx_pkt_t *pkt) {
+    if (pkt->data.frame.flags & AOM_FRAME_IS_KEY) {
     }
   }
 };
@@ -57,7 +59,7 @@ TEST_P(BordersTest, TestEncodeHighBitrate) {
   cfg_.rc_target_bitrate = 2000;
   cfg_.rc_max_quantizer = 10;
 
-  ::libvpx_test::I420VideoSource video("hantro_odd.yuv", 208, 144, 30, 1, 0,
+  ::libaom_test::I420VideoSource video("hantro_odd.yuv", 208, 144, 30, 1, 0,
                                        40);
 
   ASSERT_NO_FATAL_FAILURE(RunLoop(&video));
@@ -73,12 +75,12 @@ TEST_P(BordersTest, TestLowBitrate) {
   cfg_.rc_target_bitrate = 200;
   cfg_.rc_min_quantizer = 40;
 
-  ::libvpx_test::I420VideoSource video("hantro_odd.yuv", 208, 144, 30, 1, 0,
+  ::libaom_test::I420VideoSource video("hantro_odd.yuv", 208, 144, 30, 1, 0,
                                        40);
 
   ASSERT_NO_FATAL_FAILURE(RunLoop(&video));
 }
 
-VP10_INSTANTIATE_TEST_CASE(BordersTest,
-                           ::testing::Values(::libvpx_test::kTwoPassGood));
+AV1_INSTANTIATE_TEST_CASE(BordersTest,
+                          ::testing::Values(::libaom_test::kTwoPassGood));
 }  // namespace

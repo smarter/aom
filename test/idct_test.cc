@@ -1,21 +1,22 @@
 /*
- *  Copyright (c) 2010 The WebM project authors. All Rights Reserved.
+ * Copyright (c) 2016, Alliance for Open Media. All rights reserved
  *
- *  Use of this source code is governed by a BSD-style license
- *  that can be found in the LICENSE file in the root of the source
- *  tree. An additional intellectual property rights grant can be found
- *  in the file PATENTS.  All contributing project authors may
- *  be found in the AUTHORS file in the root of the source tree.
- */
+ * This source code is subject to the terms of the BSD 2 Clause License and
+ * the Alliance for Open Media Patent License 1.0. If the BSD 2 Clause License
+ * was not distributed with this source code in the LICENSE file, you can
+ * obtain it at www.aomedia.org/license/software. If the Alliance for Open
+ * Media Patent License 1.0 was not distributed with this source code in the
+ * PATENTS file, you can obtain it at www.aomedia.org/license/patent.
+*/
 
-#include "./vpx_config.h"
-#include "./vp8_rtcd.h"
+#include "./aom_config.h"
+#include "./aom_rtcd.h"
 
 #include "third_party/googletest/src/include/gtest/gtest.h"
 
 #include "test/clear_system_state.h"
 #include "test/register_state_check.h"
-#include "vpx/vpx_integer.h"
+#include "aom/aom_integer.h"
 
 typedef void (*IdctFunc)(int16_t *input, unsigned char *pred_ptr,
                          int pred_stride, unsigned char *dst_ptr,
@@ -32,7 +33,7 @@ class IDCTTest : public ::testing::TestWithParam<IdctFunc> {
     for (i = 0; i < 256; i++) output[i] = ((i & 0xF) < 4 && (i < 64)) ? 0 : -1;
   }
 
-  virtual void TearDown() { libvpx_test::ClearSystemState(); }
+  virtual void TearDown() { libaom_test::ClearSystemState(); }
 
   IdctFunc UUT;
   int16_t input[16];
@@ -109,13 +110,13 @@ TEST_P(IDCTTest, TestWithData) {
       EXPECT_EQ(0, output[i]) << "i==" << i;
 }
 
-INSTANTIATE_TEST_CASE_P(C, IDCTTest, ::testing::Values(vp8_short_idct4x4llm_c));
+INSTANTIATE_TEST_CASE_P(C, IDCTTest, ::testing::Values(aom_short_idct4x4llm_c));
 #if HAVE_MMX
 INSTANTIATE_TEST_CASE_P(MMX, IDCTTest,
-                        ::testing::Values(vp8_short_idct4x4llm_mmx));
+                        ::testing::Values(aom_short_idct4x4llm_mmx));
 #endif
 #if HAVE_MSA
 INSTANTIATE_TEST_CASE_P(MSA, IDCTTest,
-                        ::testing::Values(vp8_short_idct4x4llm_msa));
+                        ::testing::Values(aom_short_idct4x4llm_msa));
 #endif
 }

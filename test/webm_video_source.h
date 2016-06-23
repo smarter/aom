@@ -1,11 +1,12 @@
 /*
- *  Copyright (c) 2012 The WebM project authors. All Rights Reserved.
+ * Copyright (c) 2016, Alliance for Open Media. All rights reserved
  *
- *  Use of this source code is governed by a BSD-style license
- *  that can be found in the LICENSE file in the root of the source
- *  tree. An additional intellectual property rights grant can be found
- *  in the file PATENTS.  All contributing project authors may
- *  be found in the AUTHORS file in the root of the source tree.
+ * This source code is subject to the terms of the BSD 2 Clause License and
+ * the Alliance for Open Media Patent License 1.0. If the BSD 2 Clause License
+ * was not distributed with this source code in the LICENSE file, you can
+ * obtain it at www.aomedia.org/license/software. If the Alliance for Open
+ * Media Patent License 1.0 was not distributed with this source code in the
+ * PATENTS file, you can obtain it at www.aomedia.org/license/patent.
  */
 #ifndef TEST_WEBM_VIDEO_SOURCE_H_
 #define TEST_WEBM_VIDEO_SOURCE_H_
@@ -18,32 +19,32 @@
 #include "../webmdec.h"
 #include "test/video_source.h"
 
-namespace libvpx_test {
+namespace libaom_test {
 
 // This class extends VideoSource to allow parsing of WebM files,
 // so that we can do actual file decodes.
 class WebMVideoSource : public CompressedVideoSource {
  public:
   explicit WebMVideoSource(const std::string &file_name)
-      : file_name_(file_name), vpx_ctx_(new VpxInputContext()),
+      : file_name_(file_name), aom_ctx_(new AvxInputContext()),
         webm_ctx_(new WebmInputContext()), buf_(NULL), buf_sz_(0), frame_(0),
         end_of_file_(false) {}
 
   virtual ~WebMVideoSource() {
-    if (vpx_ctx_->file != NULL) fclose(vpx_ctx_->file);
+    if (aom_ctx_->file != NULL) fclose(aom_ctx_->file);
     webm_free(webm_ctx_);
-    delete vpx_ctx_;
+    delete aom_ctx_;
     delete webm_ctx_;
   }
 
   virtual void Init() {}
 
   virtual void Begin() {
-    vpx_ctx_->file = OpenTestDataFile(file_name_);
-    ASSERT_TRUE(vpx_ctx_->file != NULL) << "Input file open failed. Filename: "
+    aom_ctx_->file = OpenTestDataFile(file_name_);
+    ASSERT_TRUE(aom_ctx_->file != NULL) << "Input file open failed. Filename: "
                                         << file_name_;
 
-    ASSERT_EQ(file_is_webm(webm_ctx_, vpx_ctx_), 1) << "file is not WebM";
+    ASSERT_EQ(file_is_webm(webm_ctx_, aom_ctx_), 1) << "file is not WebM";
 
     FillFrame();
   }
@@ -54,7 +55,7 @@ class WebMVideoSource : public CompressedVideoSource {
   }
 
   void FillFrame() {
-    ASSERT_TRUE(vpx_ctx_->file != NULL);
+    ASSERT_TRUE(aom_ctx_->file != NULL);
     const int status = webm_read_frame(webm_ctx_, &buf_, &buf_sz_, &buf_sz_);
     ASSERT_GE(status, 0) << "webm_read_frame failed";
     if (status == 1) {
@@ -63,7 +64,7 @@ class WebMVideoSource : public CompressedVideoSource {
   }
 
   void SeekToNextKeyFrame() {
-    ASSERT_TRUE(vpx_ctx_->file != NULL);
+    ASSERT_TRUE(aom_ctx_->file != NULL);
     do {
       const int status = webm_read_frame(webm_ctx_, &buf_, &buf_sz_, &buf_sz_);
       ASSERT_GE(status, 0) << "webm_read_frame failed";
@@ -80,7 +81,7 @@ class WebMVideoSource : public CompressedVideoSource {
 
  protected:
   std::string file_name_;
-  VpxInputContext *vpx_ctx_;
+  AvxInputContext *aom_ctx_;
   WebmInputContext *webm_ctx_;
   uint8_t *buf_;
   size_t buf_sz_;
@@ -88,6 +89,6 @@ class WebMVideoSource : public CompressedVideoSource {
   bool end_of_file_;
 };
 
-}  // namespace libvpx_test
+}  // namespace libaom_test
 
 #endif  // TEST_WEBM_VIDEO_SOURCE_H_

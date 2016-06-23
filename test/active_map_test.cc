@@ -1,12 +1,14 @@
 /*
- *  Copyright (c) 2014 The WebM project authors. All Rights Reserved.
+ * Copyright (c) 2016, Alliance for Open Media. All rights reserved
  *
- *  Use of this source code is governed by a BSD-style license
- *  that can be found in the LICENSE file in the root of the source
- *  tree. An additional intellectual property rights grant can be found
- *  in the file PATENTS.  All contributing project authors may
- *  be found in the AUTHORS file in the root of the source tree.
- */
+ * This source code is subject to the terms of the BSD 2 Clause License and
+ * the Alliance for Open Media Patent License 1.0. If the BSD 2 Clause License
+ * was not distributed with this source code in the LICENSE file, you can
+ * obtain it at www.aomedia.org/license/software. If the Alliance for Open
+ * Media Patent License 1.0 was not distributed with this source code in the
+ * PATENTS file, you can obtain it at www.aomedia.org/license/patent.
+*/
+
 #include <climits>
 #include <vector>
 #include "third_party/googletest/src/include/gtest/gtest.h"
@@ -18,8 +20,8 @@
 namespace {
 
 class ActiveMapTest
-    : public ::libvpx_test::EncoderTest,
-      public ::libvpx_test::CodecTestWith2Params<libvpx_test::TestMode, int> {
+    : public ::libaom_test::EncoderTest,
+      public ::libaom_test::CodecTestWith2Params<libaom_test::TestMode, int> {
  protected:
   static const int kWidth = 208;
   static const int kHeight = 144;
@@ -33,12 +35,12 @@ class ActiveMapTest
     cpu_used_ = GET_PARAM(2);
   }
 
-  virtual void PreEncodeFrameHook(::libvpx_test::VideoSource *video,
-                                  ::libvpx_test::Encoder *encoder) {
+  virtual void PreEncodeFrameHook(::libaom_test::VideoSource *video,
+                                  ::libaom_test::Encoder *encoder) {
     if (video->frame() == 1) {
-      encoder->Control(VP8E_SET_CPUUSED, cpu_used_);
+      encoder->Control(AOME_SET_CPUUSED, cpu_used_);
     } else if (video->frame() == 3) {
-      vpx_active_map_t map = vpx_active_map_t();
+      aom_active_map_t map = aom_active_map_t();
       uint8_t active_map[9 * 13] = {
         1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 0,
         0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1,
@@ -51,13 +53,13 @@ class ActiveMapTest
       ASSERT_EQ(map.cols, 13u);
       ASSERT_EQ(map.rows, 9u);
       map.active_map = active_map;
-      encoder->Control(VP8E_SET_ACTIVEMAP, &map);
+      encoder->Control(AOME_SET_ACTIVEMAP, &map);
     } else if (video->frame() == 15) {
-      vpx_active_map_t map = vpx_active_map_t();
+      aom_active_map_t map = aom_active_map_t();
       map.cols = (kWidth + 15) / 16;
       map.rows = (kHeight + 15) / 16;
       map.active_map = NULL;
-      encoder->Control(VP8E_SET_ACTIVEMAP, &map);
+      encoder->Control(AOME_SET_ACTIVEMAP, &map);
     }
   }
 
@@ -69,17 +71,17 @@ TEST_P(ActiveMapTest, Test) {
   cfg_.g_lag_in_frames = 0;
   cfg_.rc_target_bitrate = 400;
   cfg_.rc_resize_allowed = 0;
-  cfg_.g_pass = VPX_RC_ONE_PASS;
-  cfg_.rc_end_usage = VPX_CBR;
+  cfg_.g_pass = AOM_RC_ONE_PASS;
+  cfg_.rc_end_usage = AOM_CBR;
   cfg_.kf_max_dist = 90000;
 
-  ::libvpx_test::I420VideoSource video("hantro_odd.yuv", kWidth, kHeight, 30, 1,
+  ::libaom_test::I420VideoSource video("hantro_odd.yuv", kWidth, kHeight, 30, 1,
                                        0, 20);
 
   ASSERT_NO_FATAL_FAILURE(RunLoop(&video));
 }
 
-VP10_INSTANTIATE_TEST_CASE(ActiveMapTest,
-                           ::testing::Values(::libvpx_test::kRealTime),
-                           ::testing::Range(0, 6));
+AV1_INSTANTIATE_TEST_CASE(ActiveMapTest,
+                          ::testing::Values(::libaom_test::kRealTime),
+                          ::testing::Range(0, 6));
 }  // namespace

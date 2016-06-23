@@ -1,12 +1,12 @@
 #!/bin/bash
+## Copyright (c) 2016, Alliance for Open Media. All rights reserved
 ##
-##  Copyright (c) 2010 The WebM project authors. All Rights Reserved.
-##
-##  Use of this source code is governed by a BSD-style license
-##  that can be found in the LICENSE file in the root of the source
-##  tree. An additional intellectual property rights grant can be found
-##  in the file PATENTS.  All contributing project authors may
-##  be found in the AUTHORS file in the root of the source tree.
+## This source code is subject to the terms of the BSD 2 Clause License and
+## the Alliance for Open Media Patent License 1.0. If the BSD 2 Clause License
+## was not distributed with this source code in the LICENSE file, you can
+## obtain it at www.aomedia.org/license/software. If the Alliance for Open
+## Media Patent License 1.0 was not distributed with this source code in the
+## PATENTS file, you can obtain it at www.aomedia.org/license/patent.
 ##
 
 self=$0
@@ -73,8 +73,8 @@ generate_filter() {
                 open_tag File RelativePath="$f"
 
                 if [ "$pat" == "asm" ] && $asm_use_custom_step; then
-                    # Avoid object file name collisions, i.e. vpx_config.c and
-                    # vpx_config.asm produce the same object file without
+                    # Avoid object file name collisions, i.e. aom_config.c and
+                    # aom_config.asm produce the same object file without
                     # this additional suffix.
                     objf=${objf%.obj}_asm.obj
                     for plat in "${platforms[@]}"; do
@@ -299,7 +299,7 @@ generate_vcproj() {
         case "$target" in
             x86*)
                 case "$name" in
-                    vpx)
+                    aom)
                         tag Tool \
                             Name="VCCLCompilerTool" \
                             Optimization="0" \
@@ -384,7 +384,7 @@ generate_vcproj() {
         case "$target" in
             x86*)
                 case "$name" in
-                    vpx)
+                    aom)
                         tag Tool \
                             Name="VCCLCompilerTool" \
                             Optimization="2" \
