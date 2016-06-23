@@ -1424,57 +1424,52 @@ void av1_encode_block_intra(int plane, int block, int blk_row, int blk_col,
   // transform block size in pixels
   tx_blk_size = 1 << (tx_size + 2);
 
-  if (!x->skip_recode) {
-    // copy uint8 orig and predicted block to int16 buffer
-    // in order to use existing VP10 transform functions
-    for (j = 0; j < tx_blk_size; j++)
-      for (i = 0; i < tx_blk_size; i++) {
-        src_int16[diff_stride * j + i] = src[src_stride * j + i];
-        pred[diff_stride * j + i] = dst[dst_stride * j + i];
-      }
-
-    switch (tx_size) {
-      case TX_32X32:
-        //forward transform of predicted image.
-        fwd_txfm_32x32(0, pred, ref_coeff, diff_stride,
-                       tx_type);
-        //forward transform of original image.
-        fwd_txfm_32x32(0, src_int16, coeff, diff_stride,
-                       tx_type);
-        break;
-      case TX_16X16:
-        fwd_txfm_16x16(pred, ref_coeff, diff_stride, tx_type);
-        fwd_txfm_16x16(src_int16, coeff, diff_stride, tx_type);
-        break;
-      case TX_8X8:
-        fwd_txfm_8x8(pred, ref_coeff, diff_stride, tx_type);
-        fwd_txfm_8x8(src_int16, coeff, diff_stride, tx_type);
-        break;
-      case TX_4X4:
-        av1_fwd_txfm_4x4(pred, ref_coeff, diff_stride, tx_type,
-                          xd->lossless[seg_id]);
-        av1_fwd_txfm_4x4(src_int16, coeff, diff_stride, tx_type,
-                          xd->lossless[seg_id]);
-        break;
-      default: assert(0); break;
+  // copy uint8 orig and predicted block to int16 buffer
+  // in order to use existing VP10 transform functions
+  for (j = 0; j < tx_blk_size; j++)
+    for (i = 0; i < tx_blk_size; i++) {
+      src_int16[diff_stride * j + i] = src[src_stride * j + i];
+      pred[diff_stride * j + i] = dst[dst_stride * j + i];
     }
 
-    // PVQ for intra mode block
-    if (!x->skip_block)
-      skip = pvq_encode_helper(&x->daala_enc,
-                               coeff,          // target original vector
-                               ref_coeff,      // reference vector
-                               dqcoeff,        // de-quantized vector
-                               eob,            // End of Block marker
-                               pd->dequant,    // aom's quantizers
-                               plane,          // image plane
-                               tx_size,        // block size in log_2 - 2
-                               &x->rate,       // rate measured
-                               pvq_info);       // PVQ info for a block
-  }//if (!x->skip_recode) {
-  else {
-    skip = !pvq_info->ac_dc_coded;
+  switch (tx_size) {
+    case TX_32X32:
+      //forward transform of predicted image.
+      fwd_txfm_32x32(0, pred, ref_coeff, diff_stride,
+                     tx_type);
+      //forward transform of original image.
+      fwd_txfm_32x32(0, src_int16, coeff, diff_stride,
+                     tx_type);
+      break;
+    case TX_16X16:
+      fwd_txfm_16x16(pred, ref_coeff, diff_stride, tx_type);
+      fwd_txfm_16x16(src_int16, coeff, diff_stride, tx_type);
+      break;
+    case TX_8X8:
+      fwd_txfm_8x8(pred, ref_coeff, diff_stride, tx_type);
+      fwd_txfm_8x8(src_int16, coeff, diff_stride, tx_type);
+      break;
+    case TX_4X4:
+      av1_fwd_txfm_4x4(pred, ref_coeff, diff_stride, tx_type,
+                        xd->lossless[seg_id]);
+      av1_fwd_txfm_4x4(src_int16, coeff, diff_stride, tx_type,
+                        xd->lossless[seg_id]);
+      break;
+    default: assert(0); break;
   }
+
+  // PVQ for intra mode block
+  if (!x->skip_block)
+    skip = pvq_encode_helper(&x->daala_enc,
+                             coeff,          // target original vector
+                             ref_coeff,      // reference vector
+                             dqcoeff,        // de-quantized vector
+                             eob,            // End of Block marker
+                             pd->dequant,    // aom's quantizers
+                             plane,          // image plane
+                             tx_size,        // block size in log_2 - 2
+                             &x->rate,       // rate measured
+                             pvq_info);       // PVQ info for a block
 
   if (!skip)
     mbmi->skip = 0;
