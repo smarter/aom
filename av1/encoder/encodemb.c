@@ -1021,7 +1021,6 @@ static void encode_block(int plane, int block, int blk_row, int blk_col,
   uint8_t *dst;
   ENTROPY_CONTEXT *a, *l;
   TX_TYPE tx_type = get_tx_type(pd->plane_type, xd, block);
-  int seg_id = xd->mi[0]->mbmi.segment_id;
 #if CONFIG_PVQ
   int tx_blk_size;
   int i, j;
