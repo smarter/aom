@@ -160,7 +160,7 @@ static void swap_block_ptr(MACROBLOCK *x, PICK_MODE_CONTEXT *ctx, int m, int n,
     ctx->qcoeff_pbuf[i][n] = p->qcoeff;
     ctx->dqcoeff_pbuf[i][n] = pd->dqcoeff;
 #if CONFIG_PVQ
-    ctx->pvq_ref_coeff_pbuf[i][m] = pd->pvq_ref_coeff;
+    ctx->pvq_ref_coeff_pbuf[i][n] = pd->pvq_ref_coeff;
 #endif
     ctx->eobs_pbuf[i][n] = p->eobs;
   }
