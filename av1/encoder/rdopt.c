@@ -493,7 +493,11 @@ static void block_rd_txfm(int plane, int block, int blk_row, int blk_col,
                          tx_size);
       sse = x->bsse[(plane << 2) + (block >> (tx_size << 1))] << 4;
       dist = sse;
+#if !CONFIG_PVQ
       if (x->plane[plane].eobs[block]) {
+#else
+      if (pvq_info->ac_dc_coded) {
+#endif
         const int64_t orig_sse = (int64_t)coeff[0] * coeff[0];
         const int64_t resd_sse = coeff[0] - dqcoeff[0];
         int64_t dc_correct = orig_sse - resd_sse * resd_sse;
@@ -508,6 +512,9 @@ static void block_rd_txfm(int plane, int block, int blk_row, int blk_col,
       // SKIP_TXFM_AC_DC
       // skip forward transform
       x->plane[plane].eobs[block] = 0;
+#if CONFIG_PVQ
+      pvq_info->ac_dc_coded = 0;
+#endif
       sse = x->bsse[(plane << 2) + (block >> (tx_size << 1))] << 4;
       dist = sse;
     }
