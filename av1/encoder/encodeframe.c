@@ -2599,9 +2599,6 @@ static void encode_rd_sb_row(AV1_COMP *cpi, ThreadData *td,
     }
 
     x->source_variance = UINT_MAX;
-#if CONFIG_PVQ
-    x->rdo = 1;
-#endif
     if (sf->partition_search_type == FIXED_PARTITION || seg_skip) {
       const BLOCK_SIZE bsize =
           seg_skip ? BLOCK_64X64 : sf->always_this_block_size;

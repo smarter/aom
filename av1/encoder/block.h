@@ -157,7 +157,6 @@ struct macroblock {
   MV pred_mv[MAX_REF_FRAMES];
 
 #if CONFIG_PVQ
-  int rdo;  // rdo search mode? 0: no, 1: yes
   int rate;
   int64_t dist;
   PVQ_QUEUE *pvq_q;
