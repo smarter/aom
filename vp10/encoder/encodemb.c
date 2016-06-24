@@ -732,8 +732,8 @@ void vp10_xform_quant_dc(MACROBLOCK *x, int plane, int block, int blk_row,
   const struct macroblock_plane *const p = &x->plane[plane];
   const struct macroblockd_plane *const pd = &xd->plane[plane];
 #else
-  const struct macroblock_plane *const p = &x->plane[plane];
-  const struct macroblockd_plane *const pd = &xd->plane[plane];
+  struct macroblock_plane *const p = &x->plane[plane];
+  struct macroblockd_plane *const pd = &xd->plane[plane];
 #endif
   PLANE_TYPE plane_type = (plane == 0) ? PLANE_TYPE_Y : PLANE_TYPE_UV;
   TX_TYPE tx_type = get_tx_type(plane_type, xd, block);
@@ -918,17 +918,17 @@ void vp10_xform_quant_dc(MACROBLOCK *x, int plane, int block, int blk_row,
   {
   int pvq_dc_quant = OD_MAXI(1, pd->dequant[0]);
   tran_low_t dc;
+  int tell = od_ec_enc_tell(&x->daala_enc.ec);
+  uint16_t *skip_cdf;
 
-  if (abs(src_int16[0] - ref_coeff[0]) < pvq_dc_quant * 141/256) { /* 0.55 */
+  if (abs(coeff[0] - ref_coeff[0]) < pvq_dc_quant * 141/256) { /* 0.55 */
     dc = 0;
   }
   else {
-    dc = OD_DIV_R0(src_int16[0] - ref_coeff[0], pvq_dc_quant);
+    dc = OD_DIV_R0(coeff[0] - ref_coeff[0], pvq_dc_quant);
   }
 
-  int tell = od_ec_enc_tell(&x->daala_enc.ec);
-  uint16_t *skip_cdf =
-    x->daala_enc.state.adapt.skip_cdf[2*tx_size + (plane != 0)];
+  skip_cdf = x->daala_enc.state.adapt.skip_cdf[2*tx_size + (plane != 0)];
 
   od_encode_cdf_adapt(&x->daala_enc.ec, dc != 0, skip_cdf,
    4, x->daala_enc.state.adapt.skip_increment);

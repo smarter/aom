@@ -507,6 +507,9 @@ static void block_rd_txfm(int plane, int block, int blk_row, int blk_col,
       // SKIP_TXFM_AC_DC
       // skip forward transform
       x->plane[plane].eobs[block] = 0;
+#if CONFIG_PVQ
+      pvq_info->ac_dc_coded = 0;
+#endif
       sse = x->bsse[(plane << 2) + (block >> (tx_size << 1))] << 4;
       dist = sse;
     }
