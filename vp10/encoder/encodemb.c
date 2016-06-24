@@ -955,7 +955,7 @@ void vp10_xform_quant_dc(MACROBLOCK *x, int plane, int block, int blk_row,
   for (i=1; i < tx_blk_size * tx_blk_size; i++)
     dqcoeff[i] = ref_coeff[i];
 
-  *eob = tx_blk_size * tx_blk_size;
+  *eob = 1;
 
   x->rate = (od_ec_enc_tell(&x->daala_enc.ec) - tell) << VP9_PROB_COST_SHIFT;
   assert(x->rate >= 0);
