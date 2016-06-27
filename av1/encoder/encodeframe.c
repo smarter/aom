@@ -2064,8 +2064,8 @@ static void rd_pick_partition(AV1_COMP *cpi, ThreadData *td,
   int i, pl;
   BLOCK_SIZE subsize;
   RD_COST this_rdc, sum_rdc, best_rdc;
-  int do_split = bsize >= BLOCK_8X8;
-  int do_rect = 1;
+  int do_split = bsize > BLOCK_8X8;
+  int do_rect = bsize > BLOCK_8X8;
 
   // Override skipping rectangular partition operations for edge blocks
   const int force_horz_split = (mi_row + mi_step >= cm->mi_rows);

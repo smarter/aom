@@ -471,9 +471,9 @@ void av1_set_speed_features_framesize_independent(AV1_COMP *cpi) {
   sf->less_rectangular_check = 0;
   sf->use_square_partition_only = 0;
   sf->auto_min_max_partition_size = NOT_IN_USE;
-  sf->rd_auto_partition_min_limit = BLOCK_4X4;
+  sf->rd_auto_partition_min_limit = BLOCK_8X8;
   sf->default_max_partition_size = BLOCK_64X64;
-  sf->default_min_partition_size = BLOCK_4X4;
+  sf->default_min_partition_size = BLOCK_8X8;
   sf->adjust_partitioning_from_last_frame = 0;
   sf->last_partitioning_redo_frequency = 4;
   sf->disable_split_mask = 0;
