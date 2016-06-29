@@ -589,12 +589,22 @@ static void read_ref_frames(AV1_COMMON *const cm, MACROBLOCKD *const xd,
 static INLINE InterpFilter read_switchable_interp_filter(AV1_COMMON *const cm,
                                                          MACROBLOCKD *const xd,
                                                          aom_reader *r) {
-  const int ctx = av1_get_pred_context_switchable_interp(xd);
-  const InterpFilter type = (InterpFilter)aom_read_tree(
-      r, av1_switchable_interp_tree, cm->fc->switchable_interp_prob[ctx]);
-  FRAME_COUNTS *counts = xd->counts;
-  if (counts) ++counts->switchable_interp[ctx][type];
-  return type;
+  if (cm->interp_filter == SWITCHABLE) {
+#if CONFIG_EXT_INTERP
+    if (is_interp_needed(xd))
+#endif
+    {
+      const int ctx = av1_get_pred_context_switchable_interp(xd);
+      const InterpFilter type = (InterpFilter)aom_read_tree(
+          r, av1_switchable_interp_tree, cm->fc->switchable_interp_prob[ctx]);
+      FRAME_COUNTS *counts = xd->counts;
+      if (counts) ++counts->switchable_interp[ctx][type];
+      return type;
+    }
+    return EIGHTTAP;
+  } else {
+    return cm->interp_filter;
+  }
 }
 
 static void read_intra_block_mode_info(AV1_COMMON *const cm,
@@ -746,7 +756,6 @@ static void read_inter_block_mode_info(AV1Decoder *const pbi,
   int ref, is_compound;
   int16_t inter_mode_ctx[MODE_CTX_REF_FRAMES];
   int16_t mode_ctx = 0;
-  MV_REFERENCE_FRAME ref_frame;
 
   read_ref_frames(cm, xd, r, mbmi->segment_id, mbmi->ref_frame);
   is_compound = has_second_ref(mbmi);
@@ -760,19 +769,19 @@ static void read_inter_block_mode_info(AV1Decoder *const pbi,
       aom_internal_error(xd->error_info, AOM_CODEC_UNSUP_BITSTREAM,
                          "Reference frame has invalid dimensions");
     av1_setup_pre_planes(xd, ref, ref_buf->buf, mi_row, mi_col, &ref_buf->sf);
-  }
 
-  for (ref_frame = LAST_FRAME; ref_frame <= ALTREF_FRAME; ++ref_frame) {
-    av1_find_mv_refs(cm, xd, mi, ref_frame,
+    av1_find_mv_refs(cm, xd, mi, frame,
 #if CONFIG_REF_MV
-                     &xd->ref_mv_count[ref_frame], xd->ref_mv_stack[ref_frame],
+                     &xd->ref_mv_count[frame], xd->ref_mv_stack[frame],
 #endif
-                     ref_mvs[ref_frame], mi_row, mi_col, fpm_sync, (void *)pbi,
+                     ref_mvs[frame], mi_row, mi_col, fpm_sync, (void *)pbi,
                      inter_mode_ctx);
   }
 
 #if CONFIG_REF_MV
-  for (; ref_frame < MODE_CTX_REF_FRAMES; ++ref_frame) {
+  if (is_compound) {
+    MV_REFERENCE_FRAME ref_frame;
+    ref_frame = av1_ref_frame_type(mbmi->ref_frame);
     av1_find_mv_refs(cm, xd, mi, ref_frame, &xd->ref_mv_count[ref_frame],
                      xd->ref_mv_stack[ref_frame], ref_mvs[ref_frame], mi_row,
                      mi_col, fpm_sync, (void *)pbi, inter_mode_ctx);
@@ -790,6 +799,7 @@ static void read_inter_block_mode_info(AV1Decoder *const pbi,
         inter_mode_ctx[ref_frame] &= ~(1 << ALL_ZERO_FLAG_OFFSET);
     }
   }
+
   mode_ctx =
       av1_mode_context_analyzer(inter_mode_ctx, mbmi->ref_frame, bsize, -1);
   mbmi->ref_mv_idx = 0;
@@ -857,9 +867,9 @@ static void read_inter_block_mode_info(AV1Decoder *const pbi,
   }
 #endif
 
-  mbmi->interp_filter = (cm->interp_filter == SWITCHABLE)
-                            ? read_switchable_interp_filter(cm, xd, r)
-                            : cm->interp_filter;
+#if !CONFIG_EXT_INTERP
+  mbmi->interp_filter = read_switchable_interp_filter(cm, xd, r);
+#endif  // CONFIG_EXT_INTERP
 
   if (bsize < BLOCK_8X8) {
     const int num_4x4_w = 1 << xd->bmode_blocks_wl;
@@ -928,6 +938,9 @@ static void read_inter_block_mode_info(AV1Decoder *const pbi,
 #if CONFIG_MOTION_VAR
   mbmi->motion_mode = read_motion_mode(cm, xd, mbmi, r);
 #endif  // CONFIG_MOTION_VAR
+#if CONFIG_EXT_INTERP
+  mbmi->interp_filter = read_switchable_interp_filter(cm, xd, r);
+#endif  // CONFIG_EXT_INTERP
 }
 
 static void read_inter_frame_mode_info(AV1Decoder *const pbi,

@@ -31,6 +31,7 @@
 #include "av1/common/entropymv.h"
 #include "av1/common/mvref_common.h"
 #include "av1/common/pred_common.h"
+#include "av1/common/reconinter.h"
 #include "av1/common/seg_common.h"
 #include "av1/common/tile_common.h"
 
@@ -495,6 +496,28 @@ static void write_intra_angle_info(const MB_MODE_INFO *const mbmi,
 }
 #endif  // CONFIG_EXT_INTRA
 
+static void write_switchable_interp_filter(AV1_COMP *const cpi,
+                                           const MACROBLOCKD *const xd,
+                                           aom_writer *w) {
+  const AV1_COMMON *const cm = &cpi->common;
+  const MB_MODE_INFO *const mbmi = &xd->mi[0]->mbmi;
+  if (cm->interp_filter == SWITCHABLE) {
+#if CONFIG_EXT_INTERP
+    if (is_interp_needed(xd)) {
+#endif
+      const int ctx = av1_get_pred_context_switchable_interp(xd);
+      av1_write_token(w, av1_switchable_interp_tree,
+                      cm->fc->switchable_interp_prob[ctx],
+                      &switchable_interp_encodings[mbmi->interp_filter]);
+      ++cpi->interp_filter_selected[0][mbmi->interp_filter];
+#if CONFIG_EXT_INTERP
+    } else {
+      assert(mbmi->interp_filter == EIGHTTAP);
+    }
+#endif
+  }
+}
+
 static void pack_inter_mode_mvs(AV1_COMP *cpi, const MODE_INFO *mi,
                                 aom_writer *w) {
   AV1_COMMON *const cm = &cpi->common;
@@ -579,15 +602,9 @@ static void pack_inter_mode_mvs(AV1_COMP *cpi, const MODE_INFO *mi,
       }
     }
 
-    if (cm->interp_filter == SWITCHABLE) {
-      const int ctx = av1_get_pred_context_switchable_interp(xd);
-      av1_write_token(w, av1_switchable_interp_tree,
-                      cm->fc->switchable_interp_prob[ctx],
-                      &switchable_interp_encodings[mbmi->interp_filter]);
-      ++cpi->interp_filter_selected[0][mbmi->interp_filter];
-    } else {
-      assert(mbmi->interp_filter == cm->interp_filter);
-    }
+#if !CONFIG_EXT_INTERP
+    write_switchable_interp_filter(cpi, xd, w);
+#endif  // CONFIG_EXT_INTERP
 
     if (bsize < BLOCK_8X8) {
       const int num_4x4_w = num_4x4_blocks_wide_lookup[bsize];
@@ -638,6 +655,9 @@ static void pack_inter_mode_mvs(AV1_COMP *cpi, const MODE_INFO *mi,
 #if CONFIG_MOTION_VAR
     write_motion_mode(cm, mbmi, w);
 #endif  // CONFIG_MOTION_VAR
+#if CONFIG_EXT_INTERP
+    write_switchable_interp_filter(cpi, xd, w);
+#endif  // CONFIG_EXT_INTERP
   }
 
   if (mbmi->tx_size < TX_32X32 && cm->base_qindex > 0 && !mbmi->skip &&
@@ -1442,6 +1462,24 @@ static void write_tile_info(const AV1_COMMON *const cm,
 }
 
 static int get_refresh_mask(AV1_COMP *cpi) {
+  int refresh_mask = 0;
+
+#if CONFIG_EXT_REFS
+  // NOTE: When LAST_FRAME is to get refreshed, the decoder will be
+  // notified to get LAST3_FRAME refreshed and then the virtual indexes for all
+  // the 3 LAST reference frames will be updated accordingly, i.e.:
+  // (1) The original virtual index for LAST3_FRAME will become the new virtual
+  //     index for LAST_FRAME; and
+  // (2) The original virtual indexes for LAST_FRAME and LAST2_FRAME will be
+  //     shifted and become the new virtual indexes for LAST2_FRAME and
+  //     LAST3_FRAME.
+  refresh_mask |=
+      (cpi->refresh_last_frame << cpi->lst_fb_idxes[LAST_REF_FRAMES - 1]);
+  refresh_mask |= (cpi->refresh_bwd_ref_frame << cpi->bwd_fb_idx);
+#else
+  refresh_mask |= (cpi->refresh_last_frame << cpi->lst_fb_idx);
+#endif  // CONFIG_EXT_REFS
+
   if (av1_preserve_existing_gf(cpi)) {
     // We have decided to preserve the previously existing golden frame as our
     // new ARF frame. However, in the short term we leave it in the GF slot and,
@@ -1453,16 +1491,14 @@ static int get_refresh_mask(AV1_COMP *cpi) {
     // Note: This is highly specific to the use of ARF as a forward reference,
     // and this needs to be generalized as other uses are implemented
     // (like RTC/temporal scalability).
-    return (cpi->refresh_last_frame << cpi->lst_fb_idx) |
-           (cpi->refresh_golden_frame << cpi->alt_fb_idx);
+    return refresh_mask | (cpi->refresh_golden_frame << cpi->alt_fb_idx);
   } else {
     int arf_idx = cpi->alt_fb_idx;
     if ((cpi->oxcf.pass == 2) && cpi->multi_arf_allowed) {
       const GF_GROUP *const gf_group = &cpi->twopass.gf_group;
       arf_idx = gf_group->arf_update_idx[gf_group->index];
     }
-    return (cpi->refresh_last_frame << cpi->lst_fb_idx) |
-           (cpi->refresh_golden_frame << cpi->gld_fb_idx) |
+    return refresh_mask | (cpi->refresh_golden_frame << cpi->gld_fb_idx) |
            (cpi->refresh_alt_ref_frame << arf_idx);
   }
 }
@@ -1470,7 +1506,12 @@ static int get_refresh_mask(AV1_COMP *cpi) {
 static size_t encode_tiles(AV1_COMP *cpi, uint8_t *data_ptr,
                            unsigned int *max_tile_sz) {
   AV1_COMMON *const cm = &cpi->common;
+#if CONFIG_ANS
+  struct AnsCoder ans;
+  struct BufAnsCoder *buf_ans = &cpi->buf_ans;
+#else
   aom_writer residual_bc;
+#endif  // CONFIG_ANS
   int tile_row, tile_col;
   TOKENEXTRA *tok_end;
   size_t total_size = 0;
@@ -1483,42 +1524,49 @@ static size_t encode_tiles(AV1_COMP *cpi, uint8_t *data_ptr,
 
   for (tile_row = 0; tile_row < tile_rows; tile_row++) {
     for (tile_col = 0; tile_col < tile_cols; tile_col++) {
-      int tile_idx = tile_row * tile_cols + tile_col;
+      const int tile_idx = tile_row * tile_cols + tile_col;
+      const int is_last_tile = tile_idx == tile_rows * tile_cols - 1;
+      unsigned int tile_size;
       TileDataEnc *this_tile = &cpi->tile_data[tile_idx];
       TOKENEXTRA *tok = cpi->tile_tok[tile_row][tile_col];
 
       tok_end = cpi->tile_tok[tile_row][tile_col] +
                 cpi->tok_count[tile_row][tile_col];
 
-      if (tile_col < tile_cols - 1 || tile_row < tile_rows - 1)
-        aom_start_encode(&residual_bc, data_ptr + total_size + 4);
-      else
-        aom_start_encode(&residual_bc, data_ptr + total_size);
+#if CONFIG_ANS
+      buf_ans_write_reset(buf_ans);
+      write_modes(cpi, &cpi->tile_data[tile_idx].tile_info, buf_ans, &tok,
+                  tok_end);
+      assert(tok == tok_end);
+      ans_write_init(&ans, data_ptr + total_size + 4 * !is_last_tile);
+      buf_ans_flush(buf_ans, &ans);
+      tile_size = ans_write_end(&ans) - CONFIG_MISC_FIXES;
+#else
+      aom_start_encode(&residual_bc, data_ptr + total_size + 4 * !is_last_tile);
+
 #if CONFIG_PVQ
+      //NOTE: This will not work with CONFIG_ANS turned on.
       od_adapt_ctx_reset(&cpi->td.mb.daala_enc.state.adapt, 0);
       cpi->td.mb.pvq_q = &this_tile->pvq_q;
 #endif
-      write_modes(cpi, &this_tile->tile_info, &residual_bc, &tok,
+      write_modes(cpi, &cpi->tile_data[tile_idx].tile_info, &residual_bc, &tok,
                   tok_end);
       assert(tok == tok_end);
       aom_stop_encode(&residual_bc);
-
+      tile_size = residual_bc.pos - CONFIG_MISC_FIXES;
+#endif
 #if CONFIG_PVQ
       cpi->td.mb.pvq_q = NULL;
 #endif
-
-      if (tile_col < tile_cols - 1 || tile_row < tile_rows - 1) {
-        unsigned int tile_sz;
-
+      assert(tile_size > 0);
+      if (!is_last_tile) {
         // size of this tile
-        assert(residual_bc.pos > 0);
-        tile_sz = residual_bc.pos - CONFIG_MISC_FIXES;
-        mem_put_le32(data_ptr + total_size, tile_sz);
-        max_tile = max_tile > tile_sz ? max_tile : tile_sz;
+        mem_put_le32(data_ptr + total_size, tile_size);
+        max_tile = max_tile > tile_size ? max_tile : tile_size;
         total_size += 4;
       }
 
-      total_size += residual_bc.pos;
+      total_size += tile_size;
     }
   }
   *max_tile_sz = max_tile;
@@ -1632,7 +1680,43 @@ static void write_uncompressed_header(AV1_COMP *cpi,
 
   write_profile(cm->profile, wb);
 
-  aom_wb_write_bit(wb, 0);  // show_existing_frame
+#if CONFIG_EXT_REFS
+  // NOTE: By default all coded frames to be used as a reference
+  cm->is_reference_frame = 1;
+
+  if (cm->show_existing_frame) {
+    MV_REFERENCE_FRAME ref_frame;
+    RefCntBuffer *const frame_bufs = cm->buffer_pool->frame_bufs;
+    const int frame_to_show = cm->ref_frame_map[cpi->existing_fb_idx_to_show];
+
+    if (frame_to_show < 0 || frame_bufs[frame_to_show].ref_count < 1) {
+      aom_internal_error(&cm->error, AOM_CODEC_UNSUP_BITSTREAM,
+                         "Buffer %d does not contain a reconstructed frame",
+                         frame_to_show);
+    }
+    ref_cnt_fb(frame_bufs, &cm->new_fb_idx, frame_to_show);
+
+    aom_wb_write_bit(wb, 1);  // show_existing_frame
+    aom_wb_write_literal(wb, cpi->existing_fb_idx_to_show, 3);
+
+    cpi->refresh_frame_mask = get_refresh_mask(cpi);
+    aom_wb_write_literal(wb, cpi->refresh_frame_mask, REF_FRAMES);
+
+    for (ref_frame = LAST_FRAME; ref_frame <= ALTREF_FRAME; ++ref_frame) {
+      assert(get_ref_frame_map_idx(cpi, ref_frame) != INVALID_IDX);
+      aom_wb_write_literal(wb, get_ref_frame_map_idx(cpi, ref_frame),
+                           REF_FRAMES_LOG2);
+      aom_wb_write_bit(wb, cm->ref_frame_sign_bias[ref_frame]);
+    }
+
+    return;
+  } else {
+#endif                        // CONFIG_EXT_REFS
+    aom_wb_write_bit(wb, 0);  // show_existing_frame
+#if CONFIG_EXT_REFS
+  }
+#endif  // CONFIG_EXT_REFS
+
   aom_wb_write_bit(wb, cm->frame_type);
   aom_wb_write_bit(wb, cm->show_frame);
   aom_wb_write_bit(wb, cm->error_resilient_mode);
@@ -1664,6 +1748,10 @@ static void write_uncompressed_header(AV1_COMP *cpi,
 #endif
     }
 
+#if CONFIG_EXT_REFS
+    cpi->refresh_frame_mask = get_refresh_mask(cpi);
+#endif  // CONFIG_EXT_REFS
+
     if (cm->intra_only) {
       write_sync_code(wb);
 
@@ -1676,11 +1764,29 @@ static void write_uncompressed_header(AV1_COMP *cpi,
       }
 #endif
 
+#if CONFIG_EXT_REFS
+      aom_wb_write_literal(wb, cpi->refresh_frame_mask, REF_FRAMES);
+#else
       aom_wb_write_literal(wb, get_refresh_mask(cpi), REF_FRAMES);
+#endif  // CONFIG_EXT_REFS
       write_frame_size(cm, wb);
     } else {
       MV_REFERENCE_FRAME ref_frame;
+
+#if CONFIG_EXT_REFS
+      aom_wb_write_literal(wb, cpi->refresh_frame_mask, REF_FRAMES);
+#else
       aom_wb_write_literal(wb, get_refresh_mask(cpi), REF_FRAMES);
+#endif  // CONFIG_EXT_REFS
+
+#if CONFIG_EXT_REFS
+      if (!cpi->refresh_frame_mask) {
+        // NOTE: "cpi->refresh_frame_mask == 0" indicates that the coded frame
+        //       will not be used as a reference
+        cm->is_reference_frame = 0;
+      }
+#endif  // CONFIG_EXT_REFS
+
       for (ref_frame = LAST_FRAME; ref_frame <= ALTREF_FRAME; ++ref_frame) {
         assert(get_ref_frame_map_idx(cpi, ref_frame) != INVALID_IDX);
         aom_wb_write_literal(wb, get_ref_frame_map_idx(cpi, ref_frame),
@@ -1739,35 +1845,45 @@ static size_t write_compressed_header(AV1_COMP *cpi, uint8_t *data) {
   AV1_COMMON *const cm = &cpi->common;
   FRAME_CONTEXT *const fc = cm->fc;
   FRAME_COUNTS *counts = cpi->td.counts;
-  aom_writer header_bc;
+  aom_writer *header_bc;
   int i, j;
 
-  aom_start_encode(&header_bc, data);
+#if CONFIG_ANS
+  struct AnsCoder header_ans;
+  int header_size;
+  header_bc = &cpi->buf_ans;
+  buf_ans_write_reset(header_bc);
+#else
+  aom_writer real_header_bc;
+  header_bc = &real_header_bc;
+  aom_start_encode(header_bc, data);
+#endif
 
 #if !CONFIG_MISC_FIXES
   if (cpi->td.mb.e_mbd.lossless[0]) {
     cm->tx_mode = TX_4X4;
   } else {
-    write_txfm_mode(cm->tx_mode, &header_bc);
-    update_txfm_probs(cm, &header_bc, counts);
+    write_txfm_mode(cm->tx_mode, header_bc);
+    update_txfm_probs(cm, header_bc, counts);
   }
 #else
-  update_txfm_probs(cm, &header_bc, counts);
+  update_txfm_probs(cm, header_bc, counts);
 #endif
+
 #if !CONFIG_PVQ
-  update_coef_probs(cpi, &header_bc);
+  update_coef_probs(cpi, header_bc);
 #endif
-  update_skip_probs(cm, &header_bc, counts);
+  update_skip_probs(cm, header_bc, counts);
 #if CONFIG_MISC_FIXES
-  update_seg_probs(cpi, &header_bc);
+  update_seg_probs(cpi, header_bc);
 
   for (i = 0; i < INTRA_MODES; ++i)
     prob_diff_update(av1_intra_mode_tree, fc->uv_mode_prob[i],
-                     counts->uv_mode[i], INTRA_MODES, &header_bc);
+                     counts->uv_mode[i], INTRA_MODES, header_bc);
 
   for (i = 0; i < PARTITION_CONTEXTS; ++i)
     prob_diff_update(av1_partition_tree, fc->partition_prob[i],
-                     counts->partition[i], PARTITION_TYPES, &header_bc);
+                     counts->partition[i], PARTITION_TYPES, header_bc);
 #endif
 
   if (frame_is_intra_only(cm)) {
@@ -1776,27 +1892,27 @@ static size_t write_compressed_header(AV1_COMP *cpi, uint8_t *data) {
     for (i = 0; i < INTRA_MODES; ++i)
       for (j = 0; j < INTRA_MODES; ++j)
         prob_diff_update(av1_intra_mode_tree, cm->kf_y_prob[i][j],
-                         counts->kf_y_mode[i][j], INTRA_MODES, &header_bc);
+                         counts->kf_y_mode[i][j], INTRA_MODES, header_bc);
 #endif
   } else {
 #if CONFIG_REF_MV
-    update_inter_mode_probs(cm, &header_bc, counts);
+    update_inter_mode_probs(cm, header_bc, counts);
 #else
     for (i = 0; i < INTER_MODE_CONTEXTS; ++i)
       prob_diff_update(av1_inter_mode_tree, cm->fc->inter_mode_probs[i],
-                       counts->inter_mode[i], INTER_MODES, &header_bc);
+                       counts->inter_mode[i], INTER_MODES, header_bc);
 #endif
 #if CONFIG_MOTION_VAR
     for (i = 0; i < BLOCK_SIZES; ++i)
       if (is_motion_variation_allowed_bsize(i))
         prob_diff_update(av1_motion_mode_tree, cm->fc->motion_mode_prob[i],
-                         counts->motion_mode[i], MOTION_MODES, &header_bc);
+                         counts->motion_mode[i], MOTION_MODES, header_bc);
 #endif  // CONFIG_MOTION_VAR
     if (cm->interp_filter == SWITCHABLE)
-      update_switchable_interp_probs(cm, &header_bc, counts);
+      update_switchable_interp_probs(cm, header_bc, counts);
 
     for (i = 0; i < INTRA_INTER_CONTEXTS; i++)
-      av1_cond_prob_diff_update(&header_bc, &fc->intra_inter_prob[i],
+      av1_cond_prob_diff_update(header_bc, &fc->intra_inter_prob[i],
                                 counts->intra_inter[i]);
 
     if (cpi->allow_comp_inter_inter) {
@@ -1804,18 +1920,18 @@ static size_t write_compressed_header(AV1_COMP *cpi, uint8_t *data) {
 #if !CONFIG_MISC_FIXES
       const int use_compound_pred = cm->reference_mode != SINGLE_REFERENCE;
 
-      aom_write_bit(&header_bc, use_compound_pred);
+      aom_write_bit(header_bc, use_compound_pred);
       if (use_compound_pred) {
-        aom_write_bit(&header_bc, use_hybrid_pred);
+        aom_write_bit(header_bc, use_hybrid_pred);
         if (use_hybrid_pred)
           for (i = 0; i < COMP_INTER_CONTEXTS; i++)
-            av1_cond_prob_diff_update(&header_bc, &fc->comp_inter_prob[i],
+            av1_cond_prob_diff_update(header_bc, &fc->comp_inter_prob[i],
                                       counts->comp_inter[i]);
       }
 #else
       if (use_hybrid_pred)
         for (i = 0; i < COMP_INTER_CONTEXTS; i++)
-          av1_cond_prob_diff_update(&header_bc, &fc->comp_inter_prob[i],
+          av1_cond_prob_diff_update(header_bc, &fc->comp_inter_prob[i],
                                     counts->comp_inter[i]);
 #endif
     }
@@ -1823,48 +1939,55 @@ static size_t write_compressed_header(AV1_COMP *cpi, uint8_t *data) {
     if (cm->reference_mode != COMPOUND_REFERENCE)
       for (i = 0; i < REF_CONTEXTS; i++)
         for (j = 0; j < (SINGLE_REFS - 1); j++)
-          av1_cond_prob_diff_update(&header_bc, &fc->single_ref_prob[i][j],
+          av1_cond_prob_diff_update(header_bc, &fc->single_ref_prob[i][j],
                                     counts->single_ref[i][j]);
 
     if (cm->reference_mode != SINGLE_REFERENCE)
 #if CONFIG_EXT_REFS
       for (i = 0; i < REF_CONTEXTS; i++) {
         for (j = 0; j < (FWD_REFS - 1); j++)
-          av1_cond_prob_diff_update(&header_bc, &fc->comp_fwdref_prob[i][j],
+          av1_cond_prob_diff_update(header_bc, &fc->comp_fwdref_prob[i][j],
                                     counts->comp_fwdref[i][j]);
         for (j = 0; j < (BWD_REFS - 1); j++)
-          av1_cond_prob_diff_update(&header_bc, &fc->comp_bwdref_prob[i][j],
+          av1_cond_prob_diff_update(header_bc, &fc->comp_bwdref_prob[i][j],
                                     counts->comp_bwdref[i][j]);
       }
 #else
       for (i = 0; i < REF_CONTEXTS; i++)
-        av1_cond_prob_diff_update(&header_bc, &fc->comp_ref_prob[i],
+        av1_cond_prob_diff_update(header_bc, &fc->comp_ref_prob[i],
                                   counts->comp_ref[i]);
 #endif  // CONFIG_EXT_REFS
 
     for (i = 0; i < BLOCK_SIZE_GROUPS; ++i)
       prob_diff_update(av1_intra_mode_tree, cm->fc->y_mode_prob[i],
-                       counts->y_mode[i], INTRA_MODES, &header_bc);
+                       counts->y_mode[i], INTRA_MODES, header_bc);
 
 #if !CONFIG_MISC_FIXES
     for (i = 0; i < PARTITION_CONTEXTS; ++i)
       prob_diff_update(av1_partition_tree, fc->partition_prob[i],
-                       counts->partition[i], PARTITION_TYPES, &header_bc);
+                       counts->partition[i], PARTITION_TYPES, header_bc);
 #endif
 
-    av1_write_nmv_probs(cm, cm->allow_high_precision_mv, &header_bc,
+    av1_write_nmv_probs(cm, cm->allow_high_precision_mv, header_bc,
 #if CONFIG_REF_MV
                         counts->mv);
 #else
                         &counts->mv);
 #endif
-    update_ext_tx_probs(cm, &header_bc);
+    update_ext_tx_probs(cm, header_bc);
   }
 
-  aom_stop_encode(&header_bc);
-  assert(header_bc.pos <= 0xffff);
-
-  return header_bc.pos;
+#if CONFIG_ANS
+  ans_write_init(&header_ans, data);
+  buf_ans_flush(header_bc, &header_ans);
+  header_size = ans_write_end(&header_ans);
+  assert(header_size <= 0xffff);
+  return header_size;
+#else
+  aom_stop_encode(header_bc);
+  assert(header_bc->pos <= 0xffff);
+  return header_bc->pos;
+#endif  // CONFIG_ANS
 }
 
 #if CONFIG_MISC_FIXES
@@ -1908,8 +2031,10 @@ void av1_pack_bitstream(AV1_COMP *const cpi, uint8_t *dest, size_t *size) {
   struct aom_write_bit_buffer wb = { data, 0 };
   struct aom_write_bit_buffer saved_wb;
   unsigned int max_tile;
-#if CONFIG_MISC_FIXES
+#if CONFIG_MISC_FIXES || CONFIG_EXT_REFS
   AV1_COMMON *const cm = &cpi->common;
+#endif  // CONFIG_MISC_FIXES || CONFIG_EXT_REFS
+#if CONFIG_MISC_FIXES
   const int n_log2_tiles = cm->log2_tile_rows + cm->log2_tile_cols;
   const int have_tiles = n_log2_tiles > 0;
 #else
@@ -1918,6 +2043,14 @@ void av1_pack_bitstream(AV1_COMP *const cpi, uint8_t *dest, size_t *size) {
 #endif
 
   write_uncompressed_header(cpi, &wb);
+
+#if CONFIG_EXT_REFS
+  if (cm->show_existing_frame) {
+    *size = aom_wb_bytes_written(&wb);
+    return;
+  }
+#endif  // CONFIG_EXT_REFS
+
   saved_wb = wb;
   // don't know in advance first part. size
   aom_wb_write_literal(&wb, 0, 16 + have_tiles * 2);

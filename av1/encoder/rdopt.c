@@ -3016,12 +3016,12 @@ static void store_coding_context(const MACROBLOCK *x, PICK_MODE_CONTEXT *ctx,
   ctx->hybrid_pred_diff = (int)comp_pred_diff[REFERENCE_MODE_SELECT];
 }
 
-static void setup_buffer_inter(AV1_COMP *cpi, MACROBLOCK *x,
-                               MV_REFERENCE_FRAME ref_frame,
-                               BLOCK_SIZE block_size, int mi_row, int mi_col,
-                               int_mv frame_nearest_mv[MAX_REF_FRAMES],
-                               int_mv frame_near_mv[MAX_REF_FRAMES],
-                               struct buf_2d yv12_mb[4][MAX_MB_PLANE]) {
+static void setup_buffer_inter(
+    AV1_COMP *cpi, MACROBLOCK *x, MV_REFERENCE_FRAME ref_frame,
+    BLOCK_SIZE block_size, int mi_row, int mi_col,
+    int_mv frame_nearest_mv[MAX_REF_FRAMES],
+    int_mv frame_near_mv[MAX_REF_FRAMES],
+    struct buf_2d yv12_mb[MAX_REF_FRAMES][MAX_MB_PLANE]) {
   const AV1_COMMON *cm = &cpi->common;
   const YV12_BUFFER_CONFIG *yv12 = get_ref_frame_buffer(cpi, ref_frame);
   MACROBLOCKD *const xd = &x->e_mbd;
@@ -3457,6 +3457,9 @@ static int64_t handle_inter_mode(
     if (x->source_variance < cpi->sf.disable_filter_search_var_thresh) {
       assign_filter = EIGHTTAP;
     }
+#if CONFIG_EXT_INTERP
+    if (!is_interp_needed(xd)) assign_filter = EIGHTTAP;
+#endif
   } else {
     assign_filter = cm->interp_filter;
   }
@@ -3514,6 +3517,7 @@ static int64_t handle_inter_mode(
       }
       mbmi->interp_filter = best_filter;
     } else {
+#if !CONFIG_EXT_INTERP
       int best_rs = av1_get_switchable_rate(cpi, xd);
       int tmp_rs;
       InterpFilter best_filter = mbmi->interp_filter;
@@ -3526,8 +3530,14 @@ static int64_t handle_inter_mode(
         }
       }
       mbmi->interp_filter = best_filter;
+#else
+      assert(0);
+#endif
     }
   }
+
+  if (cm->interp_filter != SWITCHABLE)
+    assert(cm->interp_filter == mbmi->interp_filter);
 
   if (!is_comp_pred) single_filter[this_mode][refs[0]] = mbmi->interp_filter;
 
@@ -3559,7 +3569,7 @@ static int64_t handle_inter_mode(
   memcpy(x->bsse, bsse, sizeof(bsse));
 
 #if CONFIG_MOTION_VAR
-  best_rd = INT64_MAX;
+  rd = INT64_MAX;
   for (mbmi->motion_mode = SIMPLE_TRANSLATION;
        mbmi->motion_mode < (allow_motion_variation ? MOTION_MODES : 1);
        mbmi->motion_mode++) {
@@ -3675,9 +3685,9 @@ static int64_t handle_inter_mode(
 
 #if CONFIG_MOTION_VAR
     tmp_rd = RDCOST(x->rdmult, x->rddiv, *rate2, *distortion);
-    if (mbmi->motion_mode == SIMPLE_TRANSLATION || (tmp_rd < best_rd)) {
+    if (mbmi->motion_mode == SIMPLE_TRANSLATION || (tmp_rd < rd)) {
       best_mbmi = *mbmi;
-      best_rd = tmp_rd;
+      rd = tmp_rd;
       best_rate2 = *rate2;
       best_distortion = *distortion;
       best_skippable = *skippable;
@@ -3686,7 +3696,7 @@ static int64_t handle_inter_mode(
     }
   }
 
-  if (best_rd == INT64_MAX) {
+  if (rd == INT64_MAX) {
     *rate2 = INT_MAX;
     *distortion = INT64_MAX;
     restore_dst_buf(xd, orig_dst, orig_dst_stride);
@@ -3895,7 +3905,7 @@ void av1_rd_pick_inter_mode_sb(AV1_COMP *cpi, TileDataEnc *tile_data,
   unsigned char segment_id = mbmi->segment_id;
   int comp_pred, i, k;
   int_mv frame_mv[MB_MODE_COUNT][MAX_REF_FRAMES];
-  struct buf_2d yv12_mb[4][MAX_MB_PLANE];
+  struct buf_2d yv12_mb[MAX_REF_FRAMES][MAX_MB_PLANE];
   int_mv single_newmv[MAX_REF_FRAMES] = { { 0 } };
   InterpFilter single_inter_filter[MB_MODE_COUNT][MAX_REF_FRAMES];
   int single_skippable[MB_MODE_COUNT][MAX_REF_FRAMES];
@@ -3972,8 +3982,6 @@ void av1_rd_pick_inter_mode_sb(AV1_COMP *cpi, TileDataEnc *tile_data,
   }
 #endif  // CONFIG_AOM_HIGHBITDEPTH
 #endif  // CONFIG_MOTION_VAR
-
-  av1_zero(best_mbmode);
 
 #if CONFIG_EXT_INTRA
   memset(directional_mode_skip_mask, 0,
@@ -4270,7 +4278,7 @@ void av1_rd_pick_inter_mode_sb(AV1_COMP *cpi, TileDataEnc *tile_data,
           const uint8_t *src = x->plane[0].src.buf;
           const int rows = 4 * num_4x4_blocks_high_lookup[bsize];
           const int cols = 4 * num_4x4_blocks_wide_lookup[bsize];
-#if CONFIGAOM_HIGHBITDEPTH
+#if CONFIG_AOM_HIGHBITDEPTH
           if (xd->cur_buf->flags & YV12_FLAG_HIGHBITDEPTH)
             highbd_angle_estimation(src, src_stride, rows, cols,
                                     directional_mode_skip_mask);
@@ -4844,16 +4852,20 @@ void av1_rd_pick_inter_mode_sb_seg_skip(AV1_COMP *cpi, TileDataEnc *tile_data,
 
   if (cm->interp_filter != BILINEAR) {
     best_filter = EIGHTTAP;
-    if (cm->interp_filter == SWITCHABLE &&
-        x->source_variance >= cpi->sf.disable_filter_search_var_thresh) {
-      int rs;
-      int best_rs = INT_MAX;
-      for (i = 0; i < SWITCHABLE_FILTERS; ++i) {
-        mbmi->interp_filter = i;
-        rs = av1_get_switchable_rate(cpi, xd);
-        if (rs < best_rs) {
-          best_rs = rs;
-          best_filter = mbmi->interp_filter;
+    if (cm->interp_filter == SWITCHABLE) {
+#if CONFIG_EXT_INTERP
+      if (is_interp_needed(xd))
+#endif
+      {
+        int rs;
+        int best_rs = INT_MAX;
+        for (i = 0; i < SWITCHABLE_FILTERS; ++i) {
+          mbmi->interp_filter = i;
+          rs = av1_get_switchable_rate(cpi, xd);
+          if (rs < best_rs) {
+            best_rs = rs;
+            best_filter = mbmi->interp_filter;
+          }
         }
       }
     }
@@ -4911,7 +4923,7 @@ void av1_rd_pick_inter_mode_sub8x8(AV1_COMP *cpi, TileDataEnc *tile_data,
   unsigned char segment_id = mbmi->segment_id;
   int comp_pred, i;
   int_mv frame_mv[MB_MODE_COUNT][MAX_REF_FRAMES];
-  struct buf_2d yv12_mb[4][MAX_MB_PLANE];
+  struct buf_2d yv12_mb[MAX_REF_FRAMES][MAX_MB_PLANE];
   static const int flag_list[REFS_PER_FRAME + 1] = {
     0, AOM_LAST_FLAG, AOM_GOLD_FLAG, AOM_ALT_FLAG
   };
@@ -5167,7 +5179,7 @@ void av1_rd_pick_inter_mode_sub8x8(AV1_COMP *cpi, TileDataEnc *tile_data,
             if (tmp_rd == INT64_MAX) continue;
             rs = av1_get_switchable_rate(cpi, xd);
             rs_rd = RDCOST(x->rdmult, x->rddiv, rs, 0);
-            if (cm->interp_filter == SWITCHABLE) tmp_rd += rs_rd;
+            tmp_rd += rs_rd;
 
             newbest = (tmp_rd < tmp_best_rd);
             if (newbest) {
@@ -5232,6 +5244,11 @@ void av1_rd_pick_inter_mode_sub8x8(AV1_COMP *cpi, TileDataEnc *tile_data,
         *mbmi = tmp_best_mbmode;
         for (i = 0; i < 4; i++) xd->mi[0]->bmi[i] = tmp_best_bmodes[i];
       }
+
+#if CONFIG_EXT_INTERP
+      if (cm->interp_filter == SWITCHABLE && !is_interp_needed(xd))
+        mbmi->interp_filter = EIGHTTAP;
+#endif
 
       rate2 += rate;
       distortion2 += distortion;
