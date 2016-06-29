@@ -1527,7 +1527,9 @@ static size_t encode_tiles(AV1_COMP *cpi, uint8_t *data_ptr,
       const int tile_idx = tile_row * tile_cols + tile_col;
       const int is_last_tile = tile_idx == tile_rows * tile_cols - 1;
       unsigned int tile_size;
+#if CONFIG_PVQ
       TileDataEnc *this_tile = &cpi->tile_data[tile_idx];
+#endif
       TOKENEXTRA *tok = cpi->tile_tok[tile_row][tile_col];
 
       tok_end = cpi->tile_tok[tile_row][tile_col] +
