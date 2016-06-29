@@ -277,6 +277,27 @@ static void model_rd_for_sb(AV1_COMP *cpi, BLOCK_SIZE bsize, MACROBLOCK *x,
   *out_dist_sum = dist_sum << 4;
 }
 
+#if CONFIG_PVQ
+int64_t av1_block_error2_c(const tran_low_t *coeff, const tran_low_t *dqcoeff,
+                           const tran_low_t *ref,
+                           intptr_t block_size, int64_t *ssz) {
+  int i;
+  int64_t error = 0;
+  int64_t pred_error = 0;
+
+  // Use the existing sse codes for calculating distortion of (orig - pred)
+  error = av1_block_error_fp(coeff, dqcoeff, block_size);
+
+  for (i = 0; i < block_size; i++) {
+    const int diff = coeff[i] - ref[i];
+    pred_error += diff * diff;
+  }
+
+  *ssz = pred_error;
+  return error;
+}
+#endif
+
 int64_t av1_block_error_c(const tran_low_t *coeff, const tran_low_t *dqcoeff,
                           intptr_t block_size, int64_t *ssz) {
   int i;
@@ -435,11 +456,17 @@ static void dist_block(MACROBLOCK *x, int plane, int block, TX_SIZE tx_size,
   int shift = tx_size == TX_32X32 ? 0 : 2;
   tran_low_t *const coeff = BLOCK_OFFSET(p->coeff, block);
   tran_low_t *const dqcoeff = BLOCK_OFFSET(pd->dqcoeff, block);
+#if CONFIG_PVQ
+  tran_low_t *ref_coeff = BLOCK_OFFSET(pd->pvq_ref_coeff, block);
+#endif
 #if CONFIG_AOM_HIGHBITDEPTH
   const int bd = (xd->cur_buf->flags & YV12_FLAG_HIGHBITDEPTH) ? xd->bd : 8;
   *out_dist = av1_highbd_block_error(coeff, dqcoeff, 16 << ss_txfrm_size,
                                      &this_sse, bd) >>
               shift;
+#elif CONFIG_PVQ
+  *out_dist =
+      av1_block_error2_c(coeff, dqcoeff, ref_coeff, 16 << ss_txfrm_size, &this_sse) >> shift;
 #else
   *out_dist =
       av1_block_error(coeff, dqcoeff, 16 << ss_txfrm_size, &this_sse) >> shift;
@@ -1090,6 +1117,7 @@ static int64_t rd_pick_intra4x4block(AV1_COMP *cpi, MACROBLOCK *x, int row,
               0, TX_4X4, &rate_pvq, pvq_info);
           ratey += rate_pvq;
 #endif
+          // No need for av1_block_error2_c because the ssz is unused
           distortion += av1_block_error(coeff, BLOCK_OFFSET(pd->dqcoeff, block),
                                         16, &unused) >> 2;
           if (RDCOST(x->rdmult, x->rddiv, ratey, distortion) >= best_rd)
@@ -2120,6 +2148,9 @@ static int64_t encode_inter_mb_segment(AV1_COMP *cpi, MACROBLOCK *x,
         thisdistortion +=
             av1_block_error(coeff, BLOCK_OFFSET(pd->dqcoeff, k), 16, &ssz);
       }
+#elif CONFIG_PVQ
+      thisdistortion +=
+          av1_block_error2_c(coeff, BLOCK_OFFSET(pd->dqcoeff, k), ref_coeff, 16, &ssz);
 #else
       thisdistortion +=
           av1_block_error(coeff, BLOCK_OFFSET(pd->dqcoeff, k), 16, &ssz);
