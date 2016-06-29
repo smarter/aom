@@ -3932,9 +3932,7 @@ void av1_rd_pick_inter_mode_sb(AV1_COMP *cpi, TileDataEnc *tile_data,
   int64_t mode_threshold[MAX_MODES];
   int *mode_map = tile_data->mode_map[bsize];
   const int mode_search_skip_flags = sf->mode_search_skip_flags;
-#if CONFIG_PVQ
-  od_rollback_buffer pre_rdo_buf;
-#endif
+
 #if CONFIG_EXT_INTRA
   int angle_stats_ready = 0;
   int8_t uv_angle_delta[TX_SIZES];
@@ -4127,10 +4125,6 @@ void av1_rd_pick_inter_mode_sb(AV1_COMP *cpi, TileDataEnc *tile_data,
     }
     midx = end_pos;
   }
-
-#if CONFIG_PVQ
-    od_encode_checkpoint(&x->daala_enc, &pre_rdo_buf);
-#endif
 
   for (midx = 0; midx < MAX_MODES; ++midx) {
     int mode_index = mode_map[midx];
@@ -4802,10 +4796,6 @@ void av1_rd_pick_inter_mode_sb(AV1_COMP *cpi, TileDataEnc *tile_data,
 
   store_coding_context(x, ctx, best_mode_index, best_pred_diff,
                        best_mode_skippable);
-
-#if CONFIG_PVQ
-  od_encode_rollback(&x->daala_enc, &pre_rdo_buf);
-#endif
 }
 
 void av1_rd_pick_inter_mode_sb_seg_skip(AV1_COMP *cpi, TileDataEnc *tile_data,

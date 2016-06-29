@@ -1080,10 +1080,6 @@ static void rd_pick_sb_modes(AV1_COMP *cpi, TileDataEnc *tile_data,
   struct macroblockd_plane *const pd = xd->plane;
   const AQ_MODE aq_mode = cpi->oxcf.aq_mode;
   int i, orig_rdmult;
-#if CONFIG_PVQ
-  uint32_t pre_rdo_offset = x->daala_enc.ec.offs;
-  od_rollback_buffer pre_rdo_buf;
-#endif
 
   aom_clear_system_state();
 
@@ -1152,10 +1148,6 @@ static void rd_pick_sb_modes(AV1_COMP *cpi, TileDataEnc *tile_data,
       x->rdmult = av1_cyclic_refresh_get_rdmult(cpi->cyclic_refresh);
   }
 
-#if CONFIG_PVQ
-  od_encode_checkpoint(&x->daala_enc, &pre_rdo_buf);
-#endif
-
   // Find best coding mode & reconstruct the MB so it is available
   // as a predictor for MBs that follow in the SB
   if (frame_is_intra_only(cm)) {
@@ -1173,15 +1165,6 @@ static void rd_pick_sb_modes(AV1_COMP *cpi, TileDataEnc *tile_data,
                                     bsize, ctx, best_rd);
     }
   }
-
-#if CONFIG_PVQ
-  od_encode_rollback(&x->daala_enc, &pre_rdo_buf);
-#endif
-
-#if CONFIG_PVQ
-  (void) pre_rdo_offset;
-  assert(pre_rdo_offset == x->daala_enc.ec.offs);
-#endif
 
   // Examine the resulting rate and for AQ mode 2 make a segment choice.
   if ((rd_cost->rate != INT_MAX) && (aq_mode == COMPLEXITY_AQ) &&
