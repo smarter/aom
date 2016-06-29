@@ -2879,8 +2879,9 @@ static void encode_frame_internal(AV1_COMP *cpi) {
       cm->use_prev_frame_mvs ? cm->prev_mip + cm->mi_stride + 1 : NULL;
 
   x->quant_fp = cpi->sf.use_quant_fp;
+#if !CONFIG_PVQ
   av1_zero(x->skip_txfm);
-
+#endif
   {
     struct aom_usec_timer emr_timer;
     aom_usec_timer_start(&emr_timer);
@@ -3093,8 +3094,9 @@ static void encode_superblock(AV1_COMP *cpi, ThreadData *td, TOKENEXTRA **t,
   const int mi_width = num_8x8_blocks_wide_lookup[bsize];
   const int mi_height = num_8x8_blocks_high_lookup[bsize];
 
+#if !CONFIG_PVQ
   memset(x->skip_txfm, 0, sizeof(x->skip_txfm));
-
+#endif
   ctx->is_coded = 1;
   x->use_lp32x32fdct = cpi->sf.use_lp32x32fdct;
 
