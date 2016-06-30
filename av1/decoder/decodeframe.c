@@ -399,6 +399,7 @@ static int pvq_decode_helper(
   int off;
   const int is_keyframe = 0;
   const int has_dc_skip = 1;
+  int quant_shift = bs == TX_32X32 ? 1 : 0;
   int pvq_dc_quant;
   int lossless = (quant[0] == 0);
   const int blk_size = 1 << (bs + 2);
@@ -422,7 +423,7 @@ static int pvq_decode_helper(
     // TODO: Enable this later, if pvq_qm_q4 is available in AOM.
     //pvq_dc_quant = OD_MAXI(1, quant*
     // dec->state.pvq_qm_q4[pli][od_qm_get_index(bs, 0)] >> 4);
-    pvq_dc_quant = OD_MAXI(1, quant[0]);
+    pvq_dc_quant = OD_MAXI(1, quant[0] >> quant_shift);
   }
 
   off = od_qm_offset(bs, xdec);
@@ -431,7 +432,7 @@ static int pvq_decode_helper(
   for (i=0; i < blk_size*blk_size; i++)
     ref_int32[i] = ref_coeff_pvq[i];
 
-  od_pvq_decode(dec, ref_int32, out_int32, (int)quant[1], pli, bs,
+  od_pvq_decode(dec, ref_int32, out_int32, (int)quant[1] >> quant_shift, pli, bs,
    OD_PVQ_BETA[use_activity_masking][pli][bs],
    1, //OD_ROBUST_STREAM
    is_keyframe,
