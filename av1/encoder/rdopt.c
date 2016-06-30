@@ -182,7 +182,9 @@ static void model_rd_for_sb(AV1_COMP *cpi, BLOCK_SIZE bsize, MACROBLOCK *x,
   unsigned int sum_sse = 0;
   int64_t total_sse = 0;
   int skip_flag = 1;
+#if !CONFIG_PVQ
   const int shift = 6;
+#endif
   int rate;
   int64_t dist;
   const int dequant_shift =
@@ -199,12 +201,14 @@ static void model_rd_for_sb(AV1_COMP *cpi, BLOCK_SIZE bsize, MACROBLOCK *x,
     const BLOCK_SIZE bs = get_plane_block_size(bsize, pd);
     const TX_SIZE max_tx_size = max_txsize_lookup[bs];
     const BLOCK_SIZE unit_size = txsize_to_bsize[max_tx_size];
+#if !CONFIG_PVQ
     const int64_t dc_thr = p->quant_thred[0] >> shift;
     const int64_t ac_thr = p->quant_thred[1] >> shift;
     // The low thresholds are used to measure if the prediction errors are
     // low enough so that we can skip the mode search.
     const int64_t low_dc_thr = AOMMIN(50, dc_thr >> 2);
     const int64_t low_ac_thr = AOMMIN(80, ac_thr >> 2);
+#endif
     int bw = 1 << (b_width_log2_lookup[bs] - b_width_log2_lookup[unit_size]);
     int bh = 1 << (b_height_log2_lookup[bs] - b_width_log2_lookup[unit_size]);
     int idx, idy;
@@ -226,6 +230,7 @@ static void model_rd_for_sb(AV1_COMP *cpi, BLOCK_SIZE bsize, MACROBLOCK *x,
         sum_sse += sse;
 
         x->skip_txfm[(i << 2) + block_idx] = SKIP_TXFM_NONE;
+#if !CONFIG_PVQ
         if (!x->select_tx_size) {
           // Check if all ac coefficients can be quantized to zero.
           if (var < ac_thr || var == 0) {
@@ -240,7 +245,9 @@ static void model_rd_for_sb(AV1_COMP *cpi, BLOCK_SIZE bsize, MACROBLOCK *x,
             }
           }
         }
-
+#else
+        (void) var;
+#endif
         if (skip_flag && !low_err_skip) skip_flag = 0;
 
         if (i == 0) x->pred_sse[ref] += sse;
@@ -456,7 +463,7 @@ static void dist_block(MACROBLOCK *x, int plane, int block, TX_SIZE tx_size,
   int shift = tx_size == TX_32X32 ? 0 : 2;
   tran_low_t *const coeff = BLOCK_OFFSET(p->coeff, block);
   tran_low_t *const dqcoeff = BLOCK_OFFSET(pd->dqcoeff, block);
-#if CONFIG_PVQ
+#if 0//CONFIG_PVQ
   tran_low_t *ref_coeff = BLOCK_OFFSET(pd->pvq_ref_coeff, block);
 #endif
 #if CONFIG_AOM_HIGHBITDEPTH
@@ -464,7 +471,7 @@ static void dist_block(MACROBLOCK *x, int plane, int block, TX_SIZE tx_size,
   *out_dist = av1_highbd_block_error(coeff, dqcoeff, 16 << ss_txfrm_size,
                                      &this_sse, bd) >>
               shift;
-#elif CONFIG_PVQ
+#elif 0//CONFIG_PVQ
   *out_dist =
       av1_block_error2_c(coeff, dqcoeff, ref_coeff, 16 << ss_txfrm_size, &this_sse) >> shift;
 #else
@@ -2148,7 +2155,7 @@ static int64_t encode_inter_mb_segment(AV1_COMP *cpi, MACROBLOCK *x,
         thisdistortion +=
             av1_block_error(coeff, BLOCK_OFFSET(pd->dqcoeff, k), 16, &ssz);
       }
-#elif CONFIG_PVQ
+#elif 0//CONFIG_PVQ
       thisdistortion +=
           av1_block_error2_c(coeff, BLOCK_OFFSET(pd->dqcoeff, k), ref_coeff, 16, &ssz);
 #else

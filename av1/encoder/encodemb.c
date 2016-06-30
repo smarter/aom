@@ -683,16 +683,8 @@ void av1_xform_quant_fp(MACROBLOCK *x, int plane, int block, int blk_row,
 void av1_xform_quant_dc(MACROBLOCK *x, int plane, int block, int blk_row,
                         int blk_col, BLOCK_SIZE plane_bsize, TX_SIZE tx_size) {
   MACROBLOCKD *const xd = &x->e_mbd;
-#if !CONFIG_PVQ
   const struct macroblock_plane *const p = &x->plane[plane];
   const struct macroblockd_plane *const pd = &xd->plane[plane];
-#else
-  struct macroblock_plane *const p = &x->plane[plane];
-  struct macroblockd_plane *const pd = &xd->plane[plane];
-#endif
-  PLANE_TYPE plane_type = (plane == 0) ? PLANE_TYPE_Y : PLANE_TYPE_UV;
-  TX_TYPE tx_type = get_tx_type(plane_type, xd, block);
-  const scan_order *const scan_order = get_scan(tx_size, tx_type);
   tran_low_t *const coeff = BLOCK_OFFSET(p->coeff, block);
   tran_low_t *const qcoeff = BLOCK_OFFSET(p->qcoeff, block);
   tran_low_t *const dqcoeff = BLOCK_OFFSET(pd->dqcoeff, block);
@@ -705,40 +697,8 @@ void av1_xform_quant_dc(MACROBLOCK *x, int plane, int block, int blk_row,
   const qm_val_t *iqmatrix = pd->seg_iqmatrix[seg_id][is_intra][tx_size];
 #endif
 
-#if !CONFIG_PVQ
   const int16_t *src_diff;
   src_diff = &p->src_diff[4 * (blk_row * diff_stride + blk_col)];
-#else
-  MB_MODE_INFO *mbmi = &xd->mi[0]->mbmi;
-  tran_low_t *ref_coeff = BLOCK_OFFSET(pd->pvq_ref_coeff, block);
-  uint8_t *src, *dst;
-  int16_t *src_int16, *pred;
-  const int src_stride = p->src.stride;
-  const int dst_stride = pd->dst.stride;
-  int tx_blk_size;
-  int i, j;
-  int skip = 1;
-  PVQ_INFO *pvq_info;
-
-  (void) scan_order;
-  (void) qcoeff;
-  pvq_info = &x->pvq[block][plane];
-  dst = &pd->dst.buf[4 * (blk_row * dst_stride + blk_col)];
-  src = &p->src.buf[4 * (blk_row * src_stride + blk_col)];
-  src_int16 = &p->src_int16[4 * (blk_row * diff_stride + blk_col)];
-  pred = &pd->pred[4 * (blk_row * diff_stride + blk_col)];
-
-  // transform block size in pixels
-  tx_blk_size = 1 << (tx_size + 2);
-
-  // copy uint8 orig and predicted block to int16 buffer
-  // in order to use existing VP10 transform functions
-  for (j = 0; j < tx_blk_size; j++)
-   for (i = 0; i < tx_blk_size; i++) {
-     src_int16[diff_stride * j + i] = src[src_stride * j + i];
-     pred[diff_stride * j + i] = dst[dst_stride * j + i];
-   }
-#endif
 
 #if CONFIG_AOM_HIGHBITDEPTH
   if (xd->cur_buf->flags & YV12_FLAG_HIGHBITDEPTH) {
@@ -794,7 +754,6 @@ void av1_xform_quant_dc(MACROBLOCK *x, int plane, int block, int blk_row,
   }
 #endif  // CONFIG_AOM_HIGHBITDEPTH
 
-#if !CONFIG_PVQ
   switch (tx_size) {
     case TX_32X32:
       aom_fdct32x32_1(src_diff, coeff, diff_stride);
@@ -842,79 +801,6 @@ void av1_xform_quant_dc(MACROBLOCK *x, int plane, int block, int blk_row,
       break;
     default: assert(0); break;
   }
-#else
-  switch (tx_size) {
-    case TX_32X32:
-      //forward transform of predicted image.
-      fwd_txfm_32x32(0, pred, ref_coeff, diff_stride, tx_type);
-      //forward transform of original image.
-      fwd_txfm_32x32(0, src_int16, coeff, diff_stride, tx_type);
-      break;
-    case TX_16X16:
-      fwd_txfm_16x16(pred, ref_coeff, diff_stride, tx_type);
-      fwd_txfm_16x16(src_int16, coeff, diff_stride, tx_type);
-      break;
-    case TX_8X8:
-      fwd_txfm_8x8(pred, ref_coeff, diff_stride, tx_type);
-      fwd_txfm_8x8(src_int16, coeff, diff_stride, tx_type);
-      break;
-    case TX_4X4:
-      av1_fwd_txfm_4x4(pred, ref_coeff, diff_stride, tx_type,
-                       xd->lossless[seg_id]);
-      av1_fwd_txfm_4x4(src_int16, coeff, diff_stride, tx_type,
-                       xd->lossless[seg_id]);
-      break;
-    default: assert(0); break;
-  }
-
-  {
-  int pvq_dc_quant = OD_MAXI(1, pd->dequant[0]);
-  tran_low_t dc;
-  int tell = od_ec_enc_tell(&x->daala_enc.ec);
-  uint16_t *skip_cdf;
-
-  if (abs(coeff[0] - ref_coeff[0]) < pvq_dc_quant * 141/256) { /* 0.55 */
-    dc = 0;
-  }
-  else {
-    dc = OD_DIV_R0(coeff[0] - ref_coeff[0], pvq_dc_quant);
-  }
-
-  skip_cdf = x->daala_enc.state.adapt.skip_cdf[2*tx_size + (plane != 0)];
-
-  od_encode_cdf_adapt(&x->daala_enc.ec, dc != 0, skip_cdf,
-   4, x->daala_enc.state.adapt.skip_increment);
-  pvq_info->ac_dc_coded = (dc != 0);
-
-  // Encode residue of DC coeff, if required.
-  if (dc) {
-    generic_encode(&x->daala_enc.ec, &x->daala_enc.state.adapt.model_dc[plane],
-     abs(dc) - 1, -1,
-     &x->daala_enc.state.adapt.ex_dc[plane][tx_size][0], 2);
-  }
-  if (dc) {
-    od_ec_enc_bits(&x->daala_enc.ec, dc < 0, 1);
-    skip = 0;
-  }
-
-  pvq_info->dq_dc_residue = dc;
-
-  dc = dc * pvq_dc_quant;
-  dc += ref_coeff[0];
-
-  dqcoeff[0] = dc;
-
-  for (i=1; i < tx_blk_size * tx_blk_size; i++)
-    dqcoeff[i] = ref_coeff[i];
-
-  *eob = 1;
-
-  x->rate = (od_ec_enc_tell(&x->daala_enc.ec) - tell) << AV1_PROB_COST_SHIFT;
-  assert(x->rate >= 0);
-  }
-  if (!skip)
-    mbmi->skip = 0;
-#endif
 }
 
 void av1_xform_quant(MACROBLOCK *x, int plane, int block, int blk_row,
