@@ -3787,6 +3787,10 @@ static void encode_frame_to_data_rate(AV1_COMP *cpi, size_t *size,
   if (cm->is_reference_frame)
 #endif  // CONFIG_EXT_REFS
     cm->prev_frame = cm->cur_frame;
+
+#ifdef OUTPUT_YUV_REC
+  vp10_write_yuv_rec_frame(cm);
+#endif
 }
 
 static void Pass0Encode(AV1_COMP *cpi, size_t *size, uint8_t *dest,
