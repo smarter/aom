@@ -915,7 +915,7 @@ static int64_t rd_pick_intra4x4block(AV1_COMP *cpi, MACROBLOCK *x, int row,
 
 #if CONFIG_AOM_HIGHBITDEPTH
   if (xd->cur_buf->flags & YV12_FLAG_HIGHBITDEPTH) {
-    for (mode = DC_PRED; mode <= TM_PRED; ++mode) {
+    for (mode = DC_PRED; mode <= DC_PRED; ++mode) {
       int64_t this_rd;
       int ratey = 0;
       int64_t distortion = 0;
@@ -1014,7 +1014,7 @@ static int64_t rd_pick_intra4x4block(AV1_COMP *cpi, MACROBLOCK *x, int row,
     od_encode_checkpoint(&x->daala_enc, &buf);
 #endif
 
-  for (mode = DC_PRED; mode <= TM_PRED; ++mode) {
+  for (mode = DC_PRED; mode <= DC_PRED; ++mode) {
     int64_t this_rd;
     int ratey = 0;
     int64_t distortion = 0;
@@ -1613,7 +1613,7 @@ static int64_t rd_pick_intra_sby_mode(AV1_COMP *cpi, MACROBLOCK *x, int *rate,
 #endif  // CONFIG_EXT_INTRA
 
   /* Y Search for intra prediction mode */
-  for (mode = DC_PRED; mode <= TM_PRED; mode++) {
+  for (mode = DC_PRED; mode <= DC_PRED; mode++) {
     mbmi->mode = mode;
 
 #if CONFIG_EXT_INTRA
@@ -1830,7 +1830,7 @@ static int64_t rd_pick_intra_sbuv_mode(AV1_COMP *cpi, MACROBLOCK *x,
 #if CONFIG_PVQ
     od_encode_checkpoint(&x->daala_enc, &buf);
 #endif
-  for (mode = DC_PRED; mode <= TM_PRED; ++mode) {
+  for (mode = DC_PRED; mode <= DC_PRED; ++mode) {
     if (!(cpi->sf.intra_uv_mode_mask[max_tx_size] & (1 << mode))) continue;
 
     mbmi->uv_mode = mode;
