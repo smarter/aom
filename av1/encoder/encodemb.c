@@ -1045,9 +1045,6 @@ static void encode_block(int plane, int block, int blk_row, int blk_col,
     if (x->skip_txfm[0] == SKIP_TXFM_AC_DC && plane == 0) {
       // skip forward transform
       p->eobs[block] = 0;
-#if CONFIG_PVQ
-      pvq_info->ac_dc_coded = 0;
-#endif
       *a = *l = 0;
       return;
     } else {
@@ -1068,9 +1065,6 @@ static void encode_block(int plane, int block, int blk_row, int blk_col,
       } else {
         // skip forward transform
         p->eobs[block] = 0;
-#if CONFIG_PVQ
-        pvq_info->ac_dc_coded = 0;
-#endif
         *a = *l = 0;
         return;
       }

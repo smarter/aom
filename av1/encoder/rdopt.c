@@ -527,11 +527,7 @@ static void block_rd_txfm(int plane, int block, int blk_row, int blk_col,
                          tx_size);
       sse = x->bsse[(plane << 2) + (block >> (tx_size << 1))] << 4;
       dist = sse;
-#if !CONFIG_PVQ
       if (x->plane[plane].eobs[block]) {
-#else
-      if (pvq_info->ac_dc_coded) {
-#endif
         const int64_t orig_sse = (int64_t)coeff[0] * coeff[0];
         const int64_t resd_sse = coeff[0] - dqcoeff[0];
         int64_t dc_correct = orig_sse - resd_sse * resd_sse;
@@ -546,9 +542,6 @@ static void block_rd_txfm(int plane, int block, int blk_row, int blk_col,
       // SKIP_TXFM_AC_DC
       // skip forward transform
       x->plane[plane].eobs[block] = 0;
-#if CONFIG_PVQ
-      pvq_info->ac_dc_coded = 0;
-#endif
       sse = x->bsse[(plane << 2) + (block >> (tx_size << 1))] << 4;
       dist = sse;
     }
@@ -3537,13 +3530,13 @@ static int64_t handle_inter_mode(
     assert(cm->interp_filter == mbmi->interp_filter);
 
   if (!is_comp_pred) single_filter[this_mode][refs[0]] = mbmi->interp_filter;
-
+#if !CONFIG_PVQ
   if (cpi->sf.adaptive_mode_search)
     if (is_comp_pred)
       if (single_skippable[this_mode][refs[0]] &&
           single_skippable[this_mode][refs[1]])
         memset(skip_txfm, SKIP_TXFM_AC_DC, sizeof(skip_txfm));
-
+#endif
   if (cpi->sf.use_rd_breakout && ref_best_rd < INT64_MAX) {
     // if current pred_error modeled rd is substantially more than the best
     // so far, do not bother doing full rd
