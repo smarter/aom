@@ -1038,11 +1038,11 @@ static int64_t rd_pick_intra4x4block(AV1_COMP *cpi, MACROBLOCK *x, int row,
         const uint8_t *const src = &src_init[idx * 4 + idy * 4 * src_stride];
         uint8_t *const dst = &dst_init[idx * 4 + idy * 4 * dst_stride];
         tran_low_t *const coeff = BLOCK_OFFSET(x->plane[0].coeff, block);
-        int lossless = xd->lossless[xd->mi[0]->mbmi.segment_id];
 #if !CONFIG_PVQ
         int16_t *const src_diff =
             av1_raster_block_offset_int16(BLOCK_8X8, block, p->src_diff);
 #else
+        int lossless = xd->lossless[xd->mi[0]->mbmi.segment_id];
         const int diff_stride = 8;
         tran_low_t *const dqcoeff = BLOCK_OFFSET(pd->dqcoeff, block);
         tran_low_t *ref_coeff = BLOCK_OFFSET(pd->pvq_ref_coeff, block);
@@ -1060,7 +1060,7 @@ static int64_t rd_pick_intra4x4block(AV1_COMP *cpi, MACROBLOCK *x, int row,
 #if !CONFIG_PVQ
         aom_subtract_block(4, 4, src_diff, 8, src, src_stride, dst, dst_stride);
 #else
-        if (xd->lossless[xd->mi[0]->mbmi.segment_id])
+        if (lossless)
           tx_type = DCT_DCT;
         // transform block size in pixels
         tx_blk_size = 4;
