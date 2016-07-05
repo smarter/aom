@@ -649,11 +649,13 @@ static void choose_largest_tx_size(AV1_COMP *cpi, MACROBLOCK *x, int *rate,
   od_rollback_buffer buf;
 #endif
 
+  mbmi->tx_size = AOMMIN(max_tx_size, largest_tx_size);
+
 #if CONFIG_PVQ
-  od_encode_checkpoint(&x->daala_enc, &buf);
+  if (mbmi->tx_size < TX_32X32 && !xd->lossless[mbmi->segment_id])
+    od_encode_checkpoint(&x->daala_enc, &buf);
 #endif
 
-  mbmi->tx_size = AOMMIN(max_tx_size, largest_tx_size);
   if (mbmi->tx_size < TX_32X32 && !xd->lossless[mbmi->segment_id]) {
     //for (tx_type = 0; tx_type < TX_TYPES; ++tx_type) {
     for (tx_type = 0; tx_type < 1; ++tx_type) {
@@ -757,7 +759,8 @@ static void choose_tx_size_from_rd(AV1_COMP *cpi, MACROBLOCK *x, int *rate,
   *psse = INT64_MAX;
 
 #if CONFIG_PVQ
-      od_encode_checkpoint(&x->daala_enc, &buf);
+  if (end_tx < TX_32X32)
+    od_encode_checkpoint(&x->daala_enc, &buf);
 #endif
 
   //for (tx_type = DCT_DCT; tx_type < TX_TYPES; ++tx_type) {
