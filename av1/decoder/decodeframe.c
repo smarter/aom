@@ -61,6 +61,7 @@
 
 #include "av1/decoder/decint.h"
 #include "av1/common/partition.h"
+#include "av1/encoder/hybrid_fwd_txfm.h"
 #include "aom_dsp/entdec.h"
 #endif
 

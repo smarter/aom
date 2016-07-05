@@ -37,6 +37,7 @@
 #include "av1/encoder/encodemb.h"
 #include "av1/encoder/encodemv.h"
 #include "av1/encoder/encoder.h"
+#include "av1/encoder/hybrid_fwd_txfm.h"
 #include "av1/encoder/mcomp.h"
 #include "av1/encoder/quantize.h"
 #include "av1/encoder/ratectrl.h"
@@ -3321,6 +3322,15 @@ static int64_t handle_inter_mode(
         joint_motion_search(cpi, x, bsize, frame_mv, mi_row, mi_col,
                             single_newmv, &rate_mv, 0);
       } else {
+#if CONFIG_REF_MV
+        for (i = 0; i < 2; ++i) {
+          if (!av1_use_mv_hp(&x->mbmi_ext->ref_mvs[refs[i]][0].as_mv)) {
+            MV *this_mv = &frame_mv[refs[i]].as_mv;
+            if (this_mv->row & 1) this_mv->row += (this_mv->row > 0 ? -1 : 1);
+            if (this_mv->col & 1) this_mv->col += (this_mv->col > 0 ? -1 : 1);
+          }
+        }
+#endif
         rate_mv = av1_mv_bit_cost(&frame_mv[refs[0]].as_mv,
                                   &x->mbmi_ext->ref_mvs[refs[0]][0].as_mv,
                                   x->nmvjointcost, x->mvcost, MV_COST_WEIGHT);
@@ -4422,11 +4432,8 @@ void av1_rd_pick_inter_mode_sb(AV1_COMP *cpi, TileDataEnc *tile_data,
           clamp_mv2(&cur_mv.as_mv, xd);
 
           if (!mv_check_bounds(x, &cur_mv.as_mv)) {
-            InterpFilter
-                dummy_single_inter_filter[MB_MODE_COUNT][MAX_REF_FRAMES];
             int dummy_single_skippable[MB_MODE_COUNT][MAX_REF_FRAMES];
             int_mv dummy_single_newmv[MAX_REF_FRAMES] = { { 0 } };
-
             frame_mv[NEARMV][ref_frame] = cur_mv;
             tmp_alt_rd = handle_inter_mode(
                 cpi, x, bsize, &tmp_rate, &tmp_dist, &tmp_skip, &tmp_rate_y,
@@ -4434,8 +4441,8 @@ void av1_rd_pick_inter_mode_sb(AV1_COMP *cpi, TileDataEnc *tile_data,
 #if CONFIG_MOTION_VAR
                 dst_buf1, dst_stride1, dst_buf2, dst_stride2,
 #endif  // CONFIG_MOTION_VAR
-                dummy_single_newmv, dummy_single_inter_filter,
-                dummy_single_skippable, &tmp_sse, best_rd);
+                dummy_single_newmv, single_inter_filter, dummy_single_skippable,
+                &tmp_sse, best_rd);
           }
 
           for (i = 0; i < mbmi->ref_mv_idx; ++i) {

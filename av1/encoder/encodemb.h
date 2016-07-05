@@ -40,9 +40,7 @@ void av1_encode_block_intra(int plane, int block, int blk_row, int blk_col,
 
 void av1_encode_intra_block_plane(MACROBLOCK *x, BLOCK_SIZE bsize, int plane);
 
-void av1_fwd_txfm_4x4(const int16_t *src_diff, tran_low_t *coeff,
-                      int diff_stride, TX_TYPE tx_type, int lossless);
-
+// TODO: pvq also needs to use re-factored fwd_txfm.
 void fwd_txfm_8x8(const int16_t *src_diff, tran_low_t *coeff,
                   int diff_stride, TX_TYPE tx_type);
 
@@ -72,11 +70,6 @@ void store_pvq_enc_info(PVQ_INFO *pvq_info,
                         int skip_dir,
                         int bs);
 #endif
-
-#if CONFIG_AOM_HIGHBITDEPTH
-void av1_highbd_fwd_txfm_4x4(const int16_t *src_diff, tran_low_t *coeff,
-                             int diff_stride, TX_TYPE tx_type, int lossless);
-#endif  // CONFIG_AOM_HIGHBITDEPTH
 
 #ifdef __cplusplus
 }  // extern "C"
