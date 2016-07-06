@@ -569,11 +569,9 @@ static void block_rd_txfm(int plane, int block, int blk_row, int blk_col,
   rd = AOMMIN(rd1, rd2);
   if (plane == 0)
     x->zcoeff_blk[tx_size][block] =
-#if 1//!CONFIG_PVQ
+#if !CONFIG_PVQ
         !x->plane[plane].eobs[block] ||
 #else
-        // FIXIME(yushin): This causes corrupted outputs from both enc and dec
-        // I don't know why....!
         !pvq_info->ac_dc_coded ||
 #endif
         (rd1 > rd2 && !xd->lossless[mbmi->segment_id]);
