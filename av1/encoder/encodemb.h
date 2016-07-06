@@ -40,16 +40,6 @@ void av1_encode_block_intra(int plane, int block, int blk_row, int blk_col,
 
 void av1_encode_intra_block_plane(MACROBLOCK *x, BLOCK_SIZE bsize, int plane);
 
-// TODO: pvq also needs to use re-factored fwd_txfm.
-void fwd_txfm_8x8(const int16_t *src_diff, tran_low_t *coeff,
-                  int diff_stride, TX_TYPE tx_type);
-
-void fwd_txfm_16x16(const int16_t *src_diff, tran_low_t *coeff,
-                    int diff_stride, TX_TYPE tx_type);
-
-void fwd_txfm_32x32(int rd_transform, const int16_t *src_diff,
-                    tran_low_t *coeff, int diff_stride, TX_TYPE tx_type);
-
 #if CONFIG_PVQ
 int pvq_encode_helper(daala_enc_ctx *daala_enc,
     tran_low_t *const coeff, tran_low_t *ref_coeff,

@@ -519,29 +519,20 @@ static void predict_and_reconstruct_intra_block(MACROBLOCKD *const xd,
       int xdec = pd->subsampling_x;
       int seg_id = mbmi->segment_id;
       int16_t *quant;
+      FWD_TXFM_PARAM fwd_txfm_param;
 
       for (j=0; j < tx_blk_size; j++)
         for (i=0; i < tx_blk_size; i++) {
           pred[diff_stride * j + i] = dst[pd->dst.stride * j + i];
         }
 
-      switch (tx_size) {
-        case TX_32X32:
-          //forward transform of predicted image.
-          fwd_txfm_32x32(0, pred, pvq_ref_coeff, diff_stride, tx_type);
-          break;
-        case TX_16X16:
-          fwd_txfm_16x16(pred, pvq_ref_coeff, diff_stride, tx_type);
-          break;
-        case TX_8X8:
-          fwd_txfm_8x8(pred, pvq_ref_coeff, diff_stride, tx_type);
-          break;
-        case TX_4X4:
-          av1_fwd_txfm_4x4(pred, pvq_ref_coeff, diff_stride, tx_type,
-                            xd->lossless[seg_id]);
-          break;
-        default: assert(0); break;
-      }
+      fwd_txfm_param.tx_type = tx_type;
+      fwd_txfm_param.tx_size = tx_size;
+      fwd_txfm_param.fwd_txfm_opt = FWD_TXFM_OPT_NORMAL;
+      fwd_txfm_param.rd_transform = 0;
+      fwd_txfm_param.lossless = xd->lossless[seg_id];
+
+      fwd_txfm(pred, pvq_ref_coeff, diff_stride, &fwd_txfm_param);
 
       quant = &pd->seg_dequant[seg_id][0]; //aom's quantizer
 
@@ -617,6 +608,7 @@ static int reconstruct_inter_block(MACROBLOCKD *const xd, aom_reader *r,
     int xdec = pd->subsampling_x;
     int seg_id = mbmi->segment_id;
     int16_t *quant;
+    FWD_TXFM_PARAM fwd_txfm_param;
 
     dst = &pd->dst.buf[4 * row * pd->dst.stride + 4 * col];
 
@@ -625,23 +617,13 @@ static int reconstruct_inter_block(MACROBLOCKD *const xd, aom_reader *r,
         pred[diff_stride * j + i] = dst[pd->dst.stride * j + i];
       }
 
-    switch (tx_size) {
-      case TX_32X32:
-        //forward transform of predicted image.
-        fwd_txfm_32x32(0, pred, pvq_ref_coeff, diff_stride, tx_type);
-        break;
-      case TX_16X16:
-        fwd_txfm_16x16(pred, pvq_ref_coeff, diff_stride, tx_type);
-        break;
-      case TX_8X8:
-        fwd_txfm_8x8(pred, pvq_ref_coeff, diff_stride, tx_type);
-        break;
-      case TX_4X4:
-        av1_fwd_txfm_4x4(pred, pvq_ref_coeff, diff_stride, tx_type,
-                          xd->lossless[seg_id]);
-        break;
-      default: assert(0); break;
-    }
+    fwd_txfm_param.tx_type = tx_type;
+    fwd_txfm_param.tx_size = tx_size;
+    fwd_txfm_param.fwd_txfm_opt = FWD_TXFM_OPT_NORMAL;
+    fwd_txfm_param.rd_transform = 0;
+    fwd_txfm_param.lossless = xd->lossless[seg_id];
+
+    fwd_txfm(pred, pvq_ref_coeff, diff_stride, &fwd_txfm_param);
 
     quant = &pd->seg_dequant[seg_id][0]; //aom's DC quantizer
 

@@ -341,40 +341,6 @@ static int optimize_b(MACROBLOCK *mb, int plane, int block, TX_SIZE tx_size,
 }
 #endif
 
-void fwd_txfm_8x8(const int16_t *src_diff, tran_low_t *coeff,
-                         int diff_stride, TX_TYPE tx_type) {
-  switch (tx_type) {
-    case DCT_DCT:
-    case ADST_DCT:
-    case DCT_ADST:
-    case ADST_ADST: av1_fht8x8(src_diff, coeff, diff_stride, tx_type); break;
-    default: assert(0); break;
-  }
-}
-
-void fwd_txfm_16x16(const int16_t *src_diff, tran_low_t *coeff,
-                           int diff_stride, TX_TYPE tx_type) {
-  switch (tx_type) {
-    case DCT_DCT:
-    case ADST_DCT:
-    case DCT_ADST:
-    case ADST_ADST: av1_fht16x16(src_diff, coeff, diff_stride, tx_type); break;
-    default: assert(0); break;
-  }
-}
-
-void fwd_txfm_32x32(int rd_transform, const int16_t *src_diff,
-                           tran_low_t *coeff, int diff_stride,
-                           TX_TYPE tx_type) {
-  switch (tx_type) {
-    case DCT_DCT: fdct32x32(rd_transform, src_diff, coeff, diff_stride); break;
-    case ADST_DCT:
-    case DCT_ADST:
-    case ADST_ADST: assert(0); break;
-    default: assert(0); break;
-  }
-}
-
 void av1_xform_quant_fp(MACROBLOCK *x, int plane, int block, int blk_row,
                         int blk_col, BLOCK_SIZE plane_bsize, TX_SIZE tx_size) {
   MACROBLOCKD *const xd = &x->e_mbd;
@@ -734,6 +700,8 @@ void av1_xform_quant(MACROBLOCK *x, int plane, int block, int blk_row,
   uint16_t *const eob = &p->eobs[block];
   const int diff_stride = 4 * num_4x4_blocks_wide_lookup[plane_bsize];
   int seg_id = xd->mi[0]->mbmi.segment_id;
+  FWD_TXFM_PARAM fwd_txfm_param;
+
 #if CONFIG_AOM_QM
   int is_intra = !is_inter_block(&xd->mi[0]->mbmi);
   const qm_val_t *qmatrix = pd->seg_qmatrix[seg_id][is_intra][tx_size];
@@ -742,13 +710,6 @@ void av1_xform_quant(MACROBLOCK *x, int plane, int block, int blk_row,
 
 #if !CONFIG_PVQ
   const int16_t *src_diff;
-
-  FWD_TXFM_PARAM fwd_txfm_param;
-  fwd_txfm_param.tx_type = tx_type;
-  fwd_txfm_param.tx_size = tx_size;
-  fwd_txfm_param.fwd_txfm_opt = FWD_TXFM_OPT_NORMAL;
-  fwd_txfm_param.rd_transform = x->use_lp32x32fdct;
-  fwd_txfm_param.lossless = xd->lossless[seg_id];
 
   src_diff = &p->src_diff[4 * (blk_row * diff_stride + blk_col)];
 #else
@@ -782,6 +743,12 @@ void av1_xform_quant(MACROBLOCK *x, int plane, int block, int blk_row,
       pred[diff_stride * j + i] = dst[dst_stride * j + i];
     }
 #endif
+
+  fwd_txfm_param.tx_type = tx_type;
+  fwd_txfm_param.tx_size = tx_size;
+  fwd_txfm_param.fwd_txfm_opt = FWD_TXFM_OPT_NORMAL;
+  fwd_txfm_param.rd_transform = x->use_lp32x32fdct;
+  fwd_txfm_param.lossless = xd->lossless[seg_id];
 
 #if CONFIG_AOM_HIGHBITDEPTH
   if (xd->cur_buf->flags & YV12_FLAG_HIGHBITDEPTH) {
@@ -879,29 +846,10 @@ void av1_xform_quant(MACROBLOCK *x, int plane, int block, int blk_row,
     default: assert(0); break;
   }
 #else//#if !CONFIG_PVQ
-  switch (tx_size) {
-    case TX_32X32:
-      //forward transform of predicted image.
-      fwd_txfm_32x32(0, pred, ref_coeff, diff_stride, tx_type);
-      //forward transform of original image.
-      fwd_txfm_32x32(0, src_int16, coeff, diff_stride, tx_type);
-      break;
-    case TX_16X16:
-      fwd_txfm_16x16(pred, ref_coeff, diff_stride, tx_type);
-      fwd_txfm_16x16(src_int16, coeff, diff_stride, tx_type);
-      break;
-    case TX_8X8:
-      fwd_txfm_8x8(pred, ref_coeff, diff_stride, tx_type);
-      fwd_txfm_8x8(src_int16, coeff, diff_stride, tx_type);
-      break;
-    case TX_4X4:
-      av1_fwd_txfm_4x4(pred, ref_coeff, diff_stride, tx_type,
-                        xd->lossless[seg_id]);
-      av1_fwd_txfm_4x4(src_int16, coeff, diff_stride, tx_type,
-                        xd->lossless[seg_id]);
-      break;
-    default: assert(0); break;
-  }
+  fwd_txfm_param.rd_transform = 0;
+
+  fwd_txfm(src_int16, coeff, diff_stride, &fwd_txfm_param);
+  fwd_txfm(pred, ref_coeff, diff_stride, &fwd_txfm_param);
 
   // PVQ for inter mode block
   if (!x->skip_block)
@@ -1162,19 +1110,14 @@ void av1_encode_block_intra(int plane, int block, int blk_row, int blk_col,
 #endif
   const int src_stride = p->src.stride;
   const int dst_stride = pd->dst.stride;
-
+  FWD_TXFM_PARAM fwd_txfm_param;
 
 #if !CONFIG_PVQ
   int16_t *src_diff;
+  int tx1d_size = get_tx1d_size(tx_size);
+
   src_diff = &p->src_diff[4 * (blk_row * diff_stride + blk_col)];
 
-  int tx1d_size = get_tx1d_size(tx_size);
-  FWD_TXFM_PARAM fwd_txfm_param;
-  fwd_txfm_param.tx_type = tx_type;
-  fwd_txfm_param.tx_size = tx_size;
-  fwd_txfm_param.fwd_txfm_opt = FWD_TXFM_OPT_NORMAL;
-  fwd_txfm_param.rd_transform = x->use_lp32x32fdct;
-  fwd_txfm_param.lossless = xd->lossless[seg_id];
 #else
    tran_low_t *ref_coeff = BLOCK_OFFSET(pd->pvq_ref_coeff, block);
   int16_t *src_int16;
@@ -1188,6 +1131,12 @@ void av1_encode_block_intra(int plane, int block, int blk_row, int blk_col,
   (void) qcoeff;
   src_int16 = &p->src_int16[4 * (blk_row * diff_stride + blk_col)];
 #endif
+
+  fwd_txfm_param.tx_type = tx_type;
+  fwd_txfm_param.tx_size = tx_size;
+  fwd_txfm_param.fwd_txfm_opt = FWD_TXFM_OPT_NORMAL;
+  fwd_txfm_param.rd_transform = x->use_lp32x32fdct;
+  fwd_txfm_param.lossless = xd->lossless[seg_id];
 
   dst = &pd->dst.buf[4 * (blk_row * dst_stride + blk_col)];
   src = &p->src.buf[4 * (blk_row * src_stride + blk_col)];
@@ -1334,31 +1283,11 @@ void av1_encode_block_intra(int plane, int block, int blk_row, int blk_col,
       pred[diff_stride * j + i] = dst[dst_stride * j + i];
     }
 
-  switch (tx_size) {
-    case TX_32X32:
-      //forward transform of predicted image.
-      fwd_txfm_32x32(0, pred, ref_coeff, diff_stride,
-                     tx_type);
-      //forward transform of original image.
-      fwd_txfm_32x32(0, src_int16, coeff, diff_stride,
-                     tx_type);
-      break;
-    case TX_16X16:
-      fwd_txfm_16x16(pred, ref_coeff, diff_stride, tx_type);
-      fwd_txfm_16x16(src_int16, coeff, diff_stride, tx_type);
-      break;
-    case TX_8X8:
-      fwd_txfm_8x8(pred, ref_coeff, diff_stride, tx_type);
-      fwd_txfm_8x8(src_int16, coeff, diff_stride, tx_type);
-      break;
-    case TX_4X4:
-      av1_fwd_txfm_4x4(pred, ref_coeff, diff_stride, tx_type,
-                        xd->lossless[seg_id]);
-      av1_fwd_txfm_4x4(src_int16, coeff, diff_stride, tx_type,
-                        xd->lossless[seg_id]);
-      break;
-    default: assert(0); break;
-  }
+  fwd_txfm_param.rd_transform = 0;
+
+  fwd_txfm(src_int16, coeff, diff_stride, &fwd_txfm_param);
+  fwd_txfm(pred, ref_coeff, diff_stride, &fwd_txfm_param);
+
 
   // PVQ for intra mode block
   if (!x->skip_block)
