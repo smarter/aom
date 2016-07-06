@@ -4977,10 +4977,6 @@ void av1_rd_pick_inter_mode_sub8x8(AV1_COMP *cpi, TileDataEnc *tile_data,
     frame_mv[ZEROMV][ref_frame].as_int = 0;
   }
 
-#if CONFIG_PVQ
-    od_encode_checkpoint(&x->daala_enc, &pre_rdo_buf);
-#endif
-
   for (ref_index = 0; ref_index < MAX_REFS; ++ref_index) {
     int mode_excluded = 0;
     int64_t this_rd = INT64_MAX;
@@ -5419,8 +5415,4 @@ void av1_rd_pick_inter_mode_sub8x8(AV1_COMP *cpi, TileDataEnc *tile_data,
   }
 
   store_coding_context(x, ctx, best_ref_index, best_pred_diff, 0);
-
-#if CONFIG_PVQ
-    od_encode_rollback(&x->daala_enc, &pre_rdo_buf);
-#endif
 }
