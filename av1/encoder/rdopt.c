@@ -4942,10 +4942,6 @@ void av1_rd_pick_inter_mode_sub8x8(AV1_COMP *cpi, TileDataEnc *tile_data,
   int internal_active_edge =
       av1_active_edge_sb(cpi, mi_row, mi_col) && av1_internal_image_edge(cpi);
 
-#if CONFIG_PVQ
-  od_rollback_buffer pre_rdo_buf;
-#endif
-
   memset(x->zcoeff_blk[TX_4X4], 0, 4);
   av1_zero(best_mbmode);
 

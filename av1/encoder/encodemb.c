@@ -521,6 +521,8 @@ void av1_xform_quant_fp(MACROBLOCK *x, int plane, int block, int blk_row,
 #else//#if !CONFIG_PVQ
   switch (tx_size) {
     case TX_32X32:
+      // NOTE: Using x->use_lp32x32fdct == 1 will makes enc and dec mismatched,
+      // because decoder always uses x->use_lp32x32fdct == 0,
       //forward transform of predicted image.
       fdct32x32(0, pred, ref_coeff, diff_stride);
       //forward transform of original image.
