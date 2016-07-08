@@ -950,6 +950,8 @@ static void encode_block(int plane, int block, int blk_row, int blk_col,
 
   if (p->eobs[block] == 0) return;
 #else
+  *a = *l = pvq_info->ac_dc_coded > 0;
+
   if (pvq_info->ac_dc_coded)
     *(args->skip) = 0;
 
