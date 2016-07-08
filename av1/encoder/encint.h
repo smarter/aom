@@ -41,6 +41,7 @@ struct daala_enc_ctx{
   /*Normalized PVQ lambda for use where we've already performed
      quantization.*/
   double pvq_norm_lambda;
+  double pvq_norm_lambda_dc;
 };
 
 // from daalaenc.h

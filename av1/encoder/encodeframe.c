@@ -2785,8 +2785,10 @@ void av1_encode_tile(AV1_COMP *cpi, ThreadData *td, int tile_row,
     int rdmult = set_segment_rdmult(cpi, &td->mb, segment_id);
     int qindex = av1_get_qindex(&cm->seg, segment_id, cm->base_qindex);
     int64_t q_ac = av1_ac_quant(qindex, 0, cpi->common.bit_depth);
+    int64_t q_dc = av1_dc_quant(qindex, 0, cpi->common.bit_depth);
     /* td->mb.daala_enc.pvq_norm_lambda = OD_PVQ_LAMBDA; */
     td->mb.daala_enc.pvq_norm_lambda = (double)rdmult * (64 / 16) / (q_ac*q_ac*(1 << RDDIV_BITS));
+    td->mb.daala_enc.pvq_norm_lambda_dc = (double)rdmult * (64 / 16) / (q_dc*q_dc*(1 << RDDIV_BITS));
     printf("%f\n", td->mb.daala_enc.pvq_norm_lambda);
   }
 
