@@ -264,6 +264,7 @@ EXPERIMENT_LIST="
     ans
     daala_ec
     pvq
+    parallel_deblocking
 "
 CONFIG_LIST="
     dependency_tracking
