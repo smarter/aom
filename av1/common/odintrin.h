@@ -28,6 +28,10 @@ extern "C" {
 #  define M_LOG2E (1.4426950408889634073599246810019)
 # endif
 
+# if !defined(M_LN2)
+#  define M_LN2 (0.69314718055994530941723212145818)
+# endif
+
 /*Smallest blocks are 4x4*/
 #define OD_LOG_BSIZE0 (2)
 /*There are 5 block sizes total (4x4, 8x8, 16x16, 32x32 and 64x64).*/
@@ -93,6 +97,7 @@ extern uint32_t OD_DIVU_SMALL_CONSTS[OD_DIVU_DMAX][2];
 #define OD_ILOG(x) ((x) ? OD_ILOG_NZ(x) : 0)
 
 #define OD_LOG2(x) (M_LOG2E*log(x))
+#define OD_EXP2(x) (exp(M_LN2*(x)))
 
 /*Enable special features for gcc and compatible compilers.*/
 #if defined(__GNUC__) && defined(__GNUC_MINOR__) && defined(__GNUC_PATCHLEVEL__)
