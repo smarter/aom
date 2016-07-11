@@ -839,7 +839,10 @@ static void choose_tx_size_from_rd(AV1_COMP *cpi, MACROBLOCK *x, int *rate,
   mbmi->tx_type = best_tx_type;
 
   if (mbmi->tx_size >= TX_32X32) assert(mbmi->tx_type == DCT_DCT);
-
+#if CONFIG_PVQ
+  txfm_rd_in_plane(x, &r, &d, &s, &sse, ref_best_rd, 0, bs, best_tx,
+                    cpi->sf.use_fast_coef_costing);
+#endif
   if (best_tx < TX_SIZES)
     memcpy(x->zcoeff_blk[best_tx], zcoeff_blk, num_4x4_blks);
 }
@@ -4334,7 +4337,9 @@ void av1_rd_pick_inter_mode_sb(AV1_COMP *cpi, TileDataEnc *tile_data,
       }
 #endif  // CONFIG_EXT_INTRA
       distortion2 = distortion_y + distortion_uv;
+#if !CONFIG_PVQ
       av1_encode_intra_block_plane(x, bsize, 0);
+#endif
     } else {
 #if CONFIG_REF_MV
       int_mv backup_ref_mv[2];
