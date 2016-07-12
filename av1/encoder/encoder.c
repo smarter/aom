@@ -356,6 +356,7 @@ static void dealloc_compressor_data(AV1_COMP *cpi) {
   cpi->mbmi_ext_base = NULL;
 
 #if CONFIG_PVQ
+  if (cpi->oxcf.pass != 1)
   {
   const int tile_cols = 1 << cm->log2_tile_cols;
   const int tile_rows = 1 << cm->log2_tile_rows;
