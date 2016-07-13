@@ -1366,7 +1366,10 @@ void av1_encode_block_intra(int plane, int block, int blk_row, int blk_col,
 
 void av1_encode_intra_block_plane(MACROBLOCK *x, BLOCK_SIZE bsize, int plane) {
   const MACROBLOCKD *const xd = &x->e_mbd;
-  struct encode_b_args arg = { x, NULL, &xd->mi[0]->mbmi.skip };
+
+  struct optimize_ctx ctx;
+  MB_MODE_INFO *mbmi = &xd->mi[0]->mbmi;
+  struct encode_b_args arg = { x, &ctx, &mbmi->skip };
 
   av1_foreach_transformed_block_in_plane(xd, bsize, plane,
                                          av1_encode_block_intra, &arg);

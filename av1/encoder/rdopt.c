@@ -594,6 +594,11 @@ static int rate_block(int plane, int block, int blk_row, int blk_col,
 }
 #endif
 
+struct optimize_ctx {
+  ENTROPY_CONTEXT ta[MAX_MB_PLANE][16];
+  ENTROPY_CONTEXT tl[MAX_MB_PLANE][16];
+};
+
 static void block_rd_txfm(int plane, int block, int blk_row, int blk_col,
                           BLOCK_SIZE plane_bsize, TX_SIZE tx_size, void *arg) {
   struct rdcost_block_args *args = arg;
@@ -612,7 +617,10 @@ static void block_rd_txfm(int plane, int block, int blk_row, int blk_col,
   if (args->exit_early) return;
 
   if (!is_inter_block(mbmi)) {
-    struct encode_b_args arg = { x, NULL, &mbmi->skip };
+    struct optimize_ctx ctx;
+    MB_MODE_INFO *mbmi = &xd->mi[0]->mbmi;
+    struct encode_b_args arg = { x, &ctx, &mbmi->skip };
+    //struct encode_b_args arg = { x, NULL, &mbmi->skip };
     av1_encode_block_intra(plane, block, blk_row, blk_col, plane_bsize, tx_size,
                            &arg);
     dist_block(x, plane, block, tx_size, &dist, &sse);
