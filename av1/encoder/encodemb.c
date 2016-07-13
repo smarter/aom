@@ -1270,6 +1270,18 @@ void av1_encode_block_intra(int plane, int block, int blk_row, int blk_col,
 #endif
 
       if (*eob) {
+        ENTROPY_CONTEXT *a, *l;
+        struct optimize_ctx *const ctx = args->ctx;
+
+        a = &ctx->ta[plane][blk_col];
+        l = &ctx->tl[plane][blk_row];
+
+        if (x->optimize) {
+         const int ctx = combine_entropy_contexts(*a, *l);
+         *a = *l = optimize_b(x, plane, block, tx_size, ctx) > 0;
+        } else {
+         *a = *l = p->eobs[block] > 0;
+        }
         // this is like av1_short_idct4x4 but has a special case around eob<=1
         // which is significant (not just an optimization) for the lossless
         // case.
