@@ -416,7 +416,7 @@ static int pvq_decode_helper(
   od_coeff out_int32[64*64];
 
   /*Safely initialize d since some coeffs are skipped by PVQ.*/
-  //od_init_skipped_coeffs(dqcoeff, ref_coeff, 0, 0, blk_size, blk_size);
+  od_init_skipped_coeffs(dqcoeff, ref_coeff, 0, 0, blk_size, blk_size);
   od_raster_to_coding_order(ref_coeff_pvq, blk_size, ref_coeff, blk_size);
 
   if (lossless) pvq_dc_quant = 1;
