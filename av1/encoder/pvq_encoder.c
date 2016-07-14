@@ -253,7 +253,7 @@ static double od_pvq_rate(int qg, int icgr, int theta, int ts,
     if (qg == icgr) rate -= .5;
   }
   if (qg == 0 && theta <= 0 && pli == 0) {
-    rate += 2;
+    rate += 4;
   }
   return rate;
 }
