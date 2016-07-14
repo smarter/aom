@@ -252,6 +252,7 @@ static double od_pvq_rate(int qg, int icgr, int theta, int ts,
     if (is_keyframe && pli == 0) rate += 6;
     if (qg == icgr) rate -= .5;
   }
+  if (qg == 0 && theta <= 0) rate += 10;
   return rate;
 }
 
