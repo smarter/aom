@@ -737,7 +737,7 @@ int od_pvq_compute_k(od_val32 qcg, int itheta, od_val32 theta, int noref, int n,
     if (n == 15 && qcg == OD_CGAIN_SCALE && beta > 1.25) return 1;
     else {
       return OD_MAXI(1, (int)floor(.5 + (qcg*OD_CGAIN_SCALE_1 - .2)*
-       sqrt((n + 3)/2)/beta));
+       sqrt((n)/2)/beta));
     }
   }
   else {
@@ -749,11 +749,11 @@ int od_pvq_compute_k(od_val32 qcg, int itheta, od_val32 theta, int noref, int n,
        distributed within a band so at low gain the number of dimensions that
        are likely to have a pulse is less than n. */
     if (nodesync) {
-      return OD_MAXI(1, (int)floor(.5 + (itheta - .2)*sqrt((n + 2)/2)));
+      return OD_MAXI(1, (int)floor(.5 + (itheta - .2)*sqrt((n)/2)));
     }
     else {
       return OD_MAXI(1, (int)floor(.5 + (qcg*OD_CGAIN_SCALE_1*
-       od_pvq_sin(theta)*OD_TRIG_SCALE_1 - .2)*sqrt((n + 2)/2)/beta));
+       od_pvq_sin(theta)*OD_TRIG_SCALE_1 - .2)*sqrt((n)/2)/beta));
     }
   }
 }
