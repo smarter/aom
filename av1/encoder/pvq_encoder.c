@@ -823,6 +823,7 @@ int od_pvq_encode(daala_enc_ctx *enc,
     if (encode_flip) cfl_encoded = 1;
   }
   tell = od_ec_enc_tell_frac(&enc->ec) - tell;
+#if 0
   /* Account for the rate of skipping the AC, based on the same DC decision
      we made when trying to not skip AC. */
   {
@@ -837,6 +838,7 @@ int od_pvq_encode(daala_enc_ctx *enc,
     }
     tell -= (int)floor(.5+8*skip_rate);
   }
+#endif
   if (nb_bands == 0 || skip_diff <= enc->pvq_norm_lambda/8*tell) {
     if (is_keyframe) out[0] = 0;
     else {
