@@ -252,7 +252,7 @@ static double od_pvq_rate(daala_enc_ctx *enc,
                           int cdf_ctx,
                           int is_keyframe,
                           int code_skip,
-                          int skip_rest,
+                          int possible_skip_rest,
                           int encode_flip,
                           int flip) {
   double rate;
@@ -266,6 +266,8 @@ static double od_pvq_rate(daala_enc_ctx *enc,
 #else
   od_rollback_buffer buf;
   int tell;
+  int skip_rest;
+  skip_rest = 0;
 
   od_encode_checkpoint(enc, &buf);
 
@@ -278,6 +280,25 @@ static double od_pvq_rate(daala_enc_ctx *enc,
   rate = (od_ec_enc_tell_frac(&enc->ec)-tell)/8.;
 
   od_encode_rollback(enc, &buf);
+
+  if (possible_skip_rest && (qg != 0 || theta != 0)) {
+    double rate2;
+    skip_rest = 1;
+
+    tell = od_ec_enc_tell_frac(&enc->ec);
+
+    pvq_encode_partition(&enc->ec, qg, theta, max_theta, y0, n, k,
+                         model, adapt, exg, ext, nodesync, cdf_ctx,
+                         is_keyframe, code_skip, skip_rest, encode_flip, flip);
+
+    rate2 = (od_ec_enc_tell_frac(&enc->ec)-tell)/8.;
+    if (rate2 < rate) {
+      rate = rate2;
+    }
+
+    od_encode_rollback(enc, &buf);
+  }
+
 #endif
   return rate;
 }
@@ -321,7 +342,7 @@ static int pvq_theta(daala_enc_ctx *enc,
                      int cdf_ctx,
                      /* int is_keyframe, */
                      int code_skip,
-                     int skip_rest,
+                     int possible_skip_rest,
                      int encode_flip,
                      int flip
                      ) {
@@ -408,7 +429,7 @@ static int pvq_theta(daala_enc_ctx *enc,
   best_cost = dist + pvq_norm_lambda*
       od_pvq_rate(enc, 0, -1, 0, y_tmp, n, 0,
                   model, adapt, exg, ext, nodesync, cdf_ctx, is_keyframe,
-                  code_skip, skip_rest, encode_flip, flip);
+                  code_skip, possible_skip_rest, encode_flip, flip);
   noref = 1;
   best_k = 0;
   *itheta = -1;
@@ -439,7 +460,7 @@ static int pvq_theta(daala_enc_ctx *enc,
       best_cost = best_dist + pvq_norm_lambda*
           od_pvq_rate(enc, coded_qg, 0, 0, y_tmp, n, 0,
                       model, adapt, exg, ext, nodesync, cdf_ctx, is_keyframe,
-                      code_skip, skip_rest, encode_flip, flip);
+                      code_skip, possible_skip_rest, encode_flip, flip);
     }
     best_qtheta = 0;
     *itheta = 0;
@@ -493,7 +514,7 @@ static int pvq_theta(daala_enc_ctx *enc,
           cost = dist + pvq_norm_lambda*
               od_pvq_rate(enc, coded_qg, j, ts, y_tmp, n, k,
                           model, adapt, exg, ext, nodesync, cdf_ctx, is_keyframe,
-                          code_skip, skip_rest, encode_flip, flip);
+                          code_skip, possible_skip_rest, encode_flip, flip);
         }
         if (cost < best_cost) {
           best_cost = cost;
@@ -536,7 +557,7 @@ static int pvq_theta(daala_enc_ctx *enc,
         cost = dist + pvq_norm_lambda*
             od_pvq_rate(enc, coded_qg, -1, 0, y_tmp, n, k,
                         model, adapt, exg, ext, nodesync, cdf_ctx, is_keyframe,
-                        code_skip, skip_rest, encode_flip, flip);
+                        code_skip, possible_skip_rest, encode_flip, flip);
       }
       if (cost <= best_cost) {
         best_cost = cost;
@@ -768,6 +789,7 @@ int od_pvq_encode(daala_enc_ctx *enc,
   int skip_theta_value;
   /* const unsigned char *pvq_qm; */
   double dc_rate;
+  int possible_skip_rest;
 #if !OD_SIGNAL_Q_SCALING
   OD_UNUSED(q_scaling);
   OD_UNUSED(bx);
@@ -805,6 +827,8 @@ int od_pvq_encode(daala_enc_ctx *enc,
       for(i = off[0]; i < off[nb_bands]; i++) ref[i] = -ref[i];
     }
   }
+  skip_theta_value = is_keyframe ? -1 : 0;
+  possible_skip_rest = 1;
   for (i = 0; i < nb_bands; i++) {
     int encode_flip;
     int q;
@@ -819,7 +843,8 @@ int od_pvq_encode(daala_enc_ctx *enc,
      model, &enc->state.adapt, exg + i, ext + i,
      robust || is_keyframe, (pli != 0)*OD_NBSIZES*PVQ_MAX_PARTITIONS
      + bs*PVQ_MAX_PARTITIONS + i, i == 0 && (i < nb_bands - 1),
-                      /*skip_rest =*/0, encode_flip, flip);
+                      possible_skip_rest, encode_flip, flip);
+    if (theta[i] != skip_theta_value || qg[i]) possible_skip_rest = 0;
     if (encode_flip) cfl_encoded = 1;
   }
   od_encode_checkpoint(enc, &buf);
@@ -843,7 +868,6 @@ int od_pvq_encode(daala_enc_ctx *enc,
 #endif
   cfl_encoded = 0;
   skip_rest = 1;
-  skip_theta_value = is_keyframe ? -1 : 0;
   for (i = 1; i < nb_bands; i++) {
     if (theta[i] != skip_theta_value || qg[i]) skip_rest = 0;
   }
