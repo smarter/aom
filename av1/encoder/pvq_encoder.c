@@ -229,7 +229,7 @@ static double od_pvq_rate(daala_enc_ctx *enc, int qg, int icgr, int theta, int t
   OD_UNUSED(y0);
   OD_UNUSED(bs);
 #else
-  if (k > 0) {
+  if (1 || k > 0) {
     od_rollback_buffer buf;
     int tell;
     od_encode_checkpoint(enc, &buf);
@@ -289,7 +289,7 @@ static int pvq_theta(daala_enc_ctx *enc,
  const int16_t *qm_inv, double pvq_norm_lambda) {
   od_val32 g;
   od_val32 gr;
-  od_coeff y_tmp[MAXN];
+  od_coeff y_tmp[MAXN] = { 0 };
   int i;
   /* Number of pulses. */
   int k;
@@ -367,7 +367,7 @@ static int pvq_theta(daala_enc_ctx *enc,
   qg = 0;
   dist = gain_weight*cg*cg*OD_CGAIN_SCALE_2;
   best_dist = dist;
-  best_cost = dist + pvq_norm_lambda*od_pvq_rate(enc, 0, 0, -1, 0, NULL, 0,
+  best_cost = dist + pvq_norm_lambda*od_pvq_rate(enc, 0, 0, -1, 0, y_tmp, 0,
    n, is_keyframe, pli);
   noref = 1;
   best_k = 0;
@@ -395,7 +395,7 @@ static int pvq_theta(daala_enc_ctx *enc,
       best_dist *= OD_CGAIN_SCALE_2;
     }
     best_cost = best_dist + pvq_norm_lambda*od_pvq_rate(enc, 0, icgr, 0, 0,
-     NULL, 0, n, is_keyframe, pli);
+     y_tmp, 0, n, is_keyframe, pli);
     best_qtheta = 0;
     *itheta = 0;
     *max_theta = 0;
