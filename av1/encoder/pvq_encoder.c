@@ -237,12 +237,6 @@ static void pvq_encode_partition(od_ec_enc *ec,
                                  int encode_flip,
                                  int flip);
 
-#define OLD 0
-
-#if OLD
-static double od_pvq_rate(daala_enc_ctx *enc, int qg, int icgr, int theta, int ts,
- const od_coeff *y0, int k, int n, int is_keyframe, int pli) {
-#else
 static double od_pvq_rate(daala_enc_ctx *enc,
                           int qg,
                           int theta,
@@ -261,7 +255,6 @@ static double od_pvq_rate(daala_enc_ctx *enc,
                           int skip_rest,
                           int encode_flip,
                           int flip) {
-#endif
   double rate;
 #if OD_PVQ_RATE_APPROX
   /* Estimates the number of bits it will cost to encode K pulses in
@@ -278,32 +271,13 @@ static double od_pvq_rate(daala_enc_ctx *enc,
 
   tell = od_ec_enc_tell_frac(&enc->ec);
 
-#if OLD
-  od_encode_pvq_codeword(&enc->ec,
-                         &enc->state.adapt.pvq.pvq_codeword_ctx, y0, n - (theta != -1), k);
-#else
   pvq_encode_partition(&enc->ec, qg, theta, max_theta, y0, n, k,
                        model, adapt, exg, ext, nodesync, cdf_ctx,
                        is_keyframe, code_skip, skip_rest, encode_flip, flip);
 
-#endif
-
-
   rate = (od_ec_enc_tell_frac(&enc->ec)-tell)/8.;
 
   od_encode_rollback(enc, &buf);
-#endif
-#if OLD
-  if (qg > 0 && theta >= 0) {
-    /* Approximate cost of entropy-coding theta */
-    rate += .9*OD_LOG2(ts);
-    /* Adding a cost to using the H/V pred because it's going to be off
-       most of the time. Cost is optimized on subset1, while making
-       sure we don't hurt the checkerboard image too much.
-       FIXME: Do real RDO instead of this arbitrary cost. */
-    if (is_keyframe && pli == 0) rate += 6;
-    if (qg == icgr) rate -= .5;
-  }
 #endif
   return rate;
 }
@@ -431,15 +405,10 @@ static int pvq_theta(daala_enc_ctx *enc,
   qg = 0;
   dist = gain_weight*cg*cg*OD_CGAIN_SCALE_2;
   best_dist = dist;
-#if OLD
-  best_cost = dist + pvq_norm_lambda*od_pvq_rate(enc, 0, 0, -1, 0, y_tmp, 0,
-   n, is_keyframe, pli);
-#else
   best_cost = dist + pvq_norm_lambda*
       od_pvq_rate(enc, 0, -1, 0, y_tmp, n, 0,
                   model, adapt, exg, ext, nodesync, cdf_ctx, is_keyframe,
                   code_skip, skip_rest, encode_flip, flip);
-#endif
   noref = 1;
   best_k = 0;
   *itheta = -1;
@@ -465,10 +434,6 @@ static int pvq_theta(daala_enc_ctx *enc,
        + scgr*(double)cg*(2 - 2*corr);
       best_dist *= OD_CGAIN_SCALE_2;
     }
-#if OLD
-    best_cost = best_dist + pvq_norm_lambda*od_pvq_rate(enc, 0, icgr, 0, 0,
-     y_tmp, 0, n, is_keyframe, pli);
-#else
     {
       int coded_qg = neg_interleave(0 + 1, icgr + 1);
       best_cost = best_dist + pvq_norm_lambda*
@@ -476,7 +441,6 @@ static int pvq_theta(daala_enc_ctx *enc,
                       model, adapt, exg, ext, nodesync, cdf_ctx, is_keyframe,
                       code_skip, skip_rest, encode_flip, flip);
     }
-#endif
     best_qtheta = 0;
     *itheta = 0;
     *max_theta = 0;
@@ -524,10 +488,6 @@ static int pvq_theta(daala_enc_ctx *enc,
         dist = gain_weight*(qcg - cg)*(qcg - cg) + qcg*(double)cg*dist_theta;
         dist *= OD_CGAIN_SCALE_2;
         /* Do approximate RDO. */
-#if OLD
-        cost = dist + pvq_norm_lambda*od_pvq_rate(enc, i, icgr, j, ts, y_tmp,
-         k, n, is_keyframe, pli);
-#else
         {
           int coded_qg = neg_interleave(i + 1, icgr + 1); // noref = 0
           cost = dist + pvq_norm_lambda*
@@ -535,7 +495,6 @@ static int pvq_theta(daala_enc_ctx *enc,
                           model, adapt, exg, ext, nodesync, cdf_ctx, is_keyframe,
                           code_skip, skip_rest, encode_flip, flip);
         }
-#endif
         if (cost < best_cost) {
           best_cost = cost;
           best_dist = dist;
@@ -572,10 +531,6 @@ static int pvq_theta(daala_enc_ctx *enc,
        + qcg*(double)cg*(2 - 2*cos_dist);
       dist *= OD_CGAIN_SCALE_2;
       /* Do approximate RDO. */
-#if OLD
-      cost = dist + pvq_norm_lambda*od_pvq_rate(enc, i, 0, -1, 0, y_tmp, k,
-       n, is_keyframe, pli);
-#else
       {
         int coded_qg = i - 1; // noref = 1
         cost = dist + pvq_norm_lambda*
@@ -583,7 +538,6 @@ static int pvq_theta(daala_enc_ctx *enc,
                         model, adapt, exg, ext, nodesync, cdf_ctx, is_keyframe,
                         code_skip, skip_rest, encode_flip, flip);
       }
-#endif
       if (cost <= best_cost) {
         best_cost = cost;
         best_dist = dist;
