@@ -217,8 +217,8 @@ int od_vector_is_null(const od_coeff *x, int len) {
   return 1;
 }
 
-static double od_pvq_rate(int qg, int icgr, int theta, int ts,
- const od_adapt_ctx *adapt, const od_coeff *y0, int k, int n,
+static double od_pvq_rate(daala_enc_ctx *enc, int qg, int icgr, int theta, int ts,
+ const od_coeff *y0, int k, int n,
  int is_keyframe, int pli) {
   double rate;
 #if OD_PVQ_RATE_APPROX
@@ -229,16 +229,17 @@ static double od_pvq_rate(int qg, int icgr, int theta, int ts,
   OD_UNUSED(y0);
   OD_UNUSED(bs);
 #else
-  if (k > 0){
-    od_ec_enc ec;
-    od_pvq_codeword_ctx cd;
+  if (k > 0) {
+    od_rollback_buffer buf;
     int tell;
-    od_ec_enc_init(&ec, 1000);
-    OD_COPY(&cd, &adapt->pvq.pvq_codeword_ctx, 1);
-    tell = od_ec_enc_tell_frac(&ec);
-    od_encode_pvq_codeword(&ec, &cd, y0, n - (theta != -1), k);
-    rate = (od_ec_enc_tell_frac(&ec)-tell)/8.;
-    od_ec_enc_clear(&ec);
+    od_encode_checkpoint(enc, &buf);
+
+    tell = od_ec_enc_tell_frac(&enc->ec);
+    od_encode_pvq_codeword(&enc->ec,
+     &enc->state.adapt.pvq.pvq_codeword_ctx, y0, n - (theta != -1), k);
+    rate = (od_ec_enc_tell_frac(&enc->ec)-tell)/8.;
+
+    od_encode_rollback(enc, &buf);
   }
   else rate = 0;
 #endif
@@ -280,10 +281,11 @@ static double od_pvq_rate(int qg, int icgr, int theta, int ts,
  * @param [in] pvq_norm_lambda enc->pvq_norm_lambda for quantized RDO
  * @return         gain      index of the quatized gain
 */
-static int pvq_theta(od_coeff *out, const od_coeff *x0, const od_coeff *r0,
+static int pvq_theta(daala_enc_ctx *enc,
+ od_coeff *out, const od_coeff *x0, const od_coeff *r0,
  int n, int q0, od_coeff *y, int *itheta, int *max_theta, int *vk,
  double beta, double *skip_diff, int robust, int is_keyframe, int pli,
- const od_adapt_ctx *adapt, const int16_t *qm,
+ const int16_t *qm,
  const int16_t *qm_inv, double pvq_norm_lambda) {
   od_val32 g;
   od_val32 gr;
@@ -365,7 +367,7 @@ static int pvq_theta(od_coeff *out, const od_coeff *x0, const od_coeff *r0,
   qg = 0;
   dist = gain_weight*cg*cg*OD_CGAIN_SCALE_2;
   best_dist = dist;
-  best_cost = dist + pvq_norm_lambda*od_pvq_rate(0, 0, -1, 0, adapt, NULL, 0,
+  best_cost = dist + pvq_norm_lambda*od_pvq_rate(enc, 0, 0, -1, 0, NULL, 0,
    n, is_keyframe, pli);
   noref = 1;
   best_k = 0;
@@ -392,7 +394,7 @@ static int pvq_theta(od_coeff *out, const od_coeff *x0, const od_coeff *r0,
        + scgr*(double)cg*(2 - 2*corr);
       best_dist *= OD_CGAIN_SCALE_2;
     }
-    best_cost = best_dist + pvq_norm_lambda*od_pvq_rate(0, icgr, 0, 0, adapt,
+    best_cost = best_dist + pvq_norm_lambda*od_pvq_rate(enc, 0, icgr, 0, 0,
      NULL, 0, n, is_keyframe, pli);
     best_qtheta = 0;
     *itheta = 0;
@@ -441,7 +443,7 @@ static int pvq_theta(od_coeff *out, const od_coeff *x0, const od_coeff *r0,
         dist = gain_weight*(qcg - cg)*(qcg - cg) + qcg*(double)cg*dist_theta;
         dist *= OD_CGAIN_SCALE_2;
         /* Do approximate RDO. */
-        cost = dist + pvq_norm_lambda*od_pvq_rate(i, icgr, j, ts, adapt, y_tmp,
+        cost = dist + pvq_norm_lambda*od_pvq_rate(enc, i, icgr, j, ts, y_tmp,
          k, n, is_keyframe, pli);
         if (cost < best_cost) {
           best_cost = cost;
@@ -479,7 +481,7 @@ static int pvq_theta(od_coeff *out, const od_coeff *x0, const od_coeff *r0,
        + qcg*(double)cg*(2 - 2*cos_dist);
       dist *= OD_CGAIN_SCALE_2;
       /* Do approximate RDO. */
-      cost = dist + pvq_norm_lambda*od_pvq_rate(i, 0, -1, 0, adapt, y_tmp, k,
+      cost = dist + pvq_norm_lambda*od_pvq_rate(enc, i, 0, -1, 0, y_tmp, k,
        n, is_keyframe, pli);
       if (cost <= best_cost) {
         best_cost = cost;
@@ -752,9 +754,9 @@ int od_pvq_encode(daala_enc_ctx *enc,
     int q;
     /*q = OD_MAXI(1, q0*pvq_qm[od_qm_get_index(bs, i + 1)] >> 4);*/
     q = OD_MAXI(1, q_ac);
-    qg[i] = pvq_theta(out + off[i], in + off[i], ref + off[i], size[i],
+    qg[i] = pvq_theta(enc, out + off[i], in + off[i], ref + off[i], size[i],
      q, y + off[i], &theta[i], &max_theta[i],
-     &k[i], beta[i], &skip_diff, robust, is_keyframe, pli, &enc->state.adapt,
+     &k[i], beta[i], &skip_diff, robust, is_keyframe, pli,
      qm + off[i], qm_inv + off[i], enc->pvq_norm_lambda);
   }
   od_encode_checkpoint(enc, &buf);
