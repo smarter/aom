@@ -267,6 +267,10 @@ static double od_pvq_rate(daala_enc_ctx *enc,
   od_rollback_buffer buf;
   int tell;
   int skip_rest;
+
+  if (possible_skip_rest && qg == 0 && theta == 0)
+    return 0;
+
   skip_rest = 0;
 
   od_encode_checkpoint(enc, &buf);
@@ -829,6 +833,7 @@ int od_pvq_encode(daala_enc_ctx *enc,
   }
   skip_theta_value = is_keyframe ? -1 : 0;
   possible_skip_rest = 1;
+  cfl_encoded = 0;
   for (i = 0; i < nb_bands; i++) {
     int encode_flip;
     int q;
