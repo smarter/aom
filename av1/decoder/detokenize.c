@@ -67,6 +67,11 @@ static int decode_coefs(const MACROBLOCKD *xd, PLANE_TYPE type,
   const aom_prob(*coef_probs)[COEFF_CONTEXTS][UNCONSTRAINED_NODES] =
       fc->coef_probs[tx_size][type][ref];
   const aom_prob *prob;
+#if CONFIG_RANS
+  const rans_lut(*coef_cdfs)[COEFF_CONTEXTS] =
+      fc->coef_cdfs[tx_size][type][ref];
+  const rans_lut *cdf;
+#endif  // CONFIG_RANS
   unsigned int(*coef_counts)[COEFF_CONTEXTS][UNCONSTRAINED_NODES + 1];
   unsigned int(*eob_branch_count)[COEFF_CONTEXTS];
   uint8_t token_cache[32 * 32];
@@ -141,6 +146,58 @@ static int decode_coefs(const MACROBLOCKD *xd, PLANE_TYPE type,
       prob = coef_probs[band][ctx];
     }
 
+#if CONFIG_RANS
+    cdf = &coef_cdfs[band][ctx];
+    token =
+        ONE_TOKEN + aom_read_tree_cdf(r, *cdf, CATEGORY6_TOKEN - ONE_TOKEN + 1);
+    INCREMENT_COUNT(ONE_TOKEN + (token > ONE_TOKEN));
+    switch (token) {
+      case ONE_TOKEN:
+      case TWO_TOKEN:
+      case THREE_TOKEN:
+      case FOUR_TOKEN: val = token; break;
+      case CATEGORY1_TOKEN:
+        val = CAT1_MIN_VAL + read_coeff(cat1_prob, 1, r);
+        break;
+      case CATEGORY2_TOKEN:
+        val = CAT2_MIN_VAL + read_coeff(cat2_prob, 2, r);
+        break;
+      case CATEGORY3_TOKEN:
+        val = CAT3_MIN_VAL + read_coeff(cat3_prob, 3, r);
+        break;
+      case CATEGORY4_TOKEN:
+        val = CAT4_MIN_VAL + read_coeff(cat4_prob, 4, r);
+        break;
+      case CATEGORY5_TOKEN:
+        val = CAT5_MIN_VAL + read_coeff(cat5_prob, 5, r);
+        break;
+      case CATEGORY6_TOKEN: {
+#if CONFIG_MISC_FIXES
+        const int skip_bits = TX_SIZES - 1 - tx_size;
+#else
+        const int skip_bits = 0;
+#endif
+        const uint8_t *cat6p = cat6_prob + skip_bits;
+#if CONFIG_AOM_HIGHBITDEPTH
+        switch (xd->bd) {
+          case AOM_BITS_8:
+            val = CAT6_MIN_VAL + read_coeff(cat6p, 14 - skip_bits, r);
+            break;
+          case AOM_BITS_10:
+            val = CAT6_MIN_VAL + read_coeff(cat6p, 16 - skip_bits, r);
+            break;
+          case AOM_BITS_12:
+            val = CAT6_MIN_VAL + read_coeff(cat6p, 18 - skip_bits, r);
+            break;
+          default: assert(0); return -1;
+        }
+#else
+        val = CAT6_MIN_VAL + read_coeff(cat6p, 14 - skip_bits, r);
+#endif
+        break;
+      }
+    }
+#else  // CONFIG_RANS
     if (!aom_read(r, prob[ONE_CONTEXT_NODE])) {
       INCREMENT_COUNT(ONE_TOKEN);
       token = ONE_TOKEN;
@@ -195,6 +252,7 @@ static int decode_coefs(const MACROBLOCKD *xd, PLANE_TYPE type,
         }
       }
     }
+#endif  // CONFIG_RANS
 #if CONFIG_AOM_QM
     dqv = ((iqmatrix[scan[c]] * (int)dqv) + (1 << (AOM_QM_BITS - 1))) >>
           AOM_QM_BITS;
@@ -218,47 +276,7 @@ static int decode_coefs(const MACROBLOCKD *xd, PLANE_TYPE type,
   return c;
 }
 
-// TODO(slavarnway): Decode version of av1_set_context.  Modify
-// av1_set_context
-// after testing is complete, then delete this version.
-static void dec_set_contexts(const MACROBLOCKD *xd,
-                             struct macroblockd_plane *pd, TX_SIZE tx_size,
-                             int has_eob, int aoff, int loff) {
-  ENTROPY_CONTEXT *const a = pd->above_context + aoff;
-  ENTROPY_CONTEXT *const l = pd->left_context + loff;
-  const int tx_size_in_blocks = 1 << tx_size;
-
-  // above
-  if (has_eob && xd->mb_to_right_edge < 0) {
-    int i;
-    const int blocks_wide =
-        pd->n4_w + (xd->mb_to_right_edge >> (5 + pd->subsampling_x));
-    int above_contexts = tx_size_in_blocks;
-    if (above_contexts + aoff > blocks_wide)
-      above_contexts = blocks_wide - aoff;
-
-    for (i = 0; i < above_contexts; ++i) a[i] = has_eob;
-    for (i = above_contexts; i < tx_size_in_blocks; ++i) a[i] = 0;
-  } else {
-    memset(a, has_eob, sizeof(ENTROPY_CONTEXT) * tx_size_in_blocks);
-  }
-
-  // left
-  if (has_eob && xd->mb_to_bottom_edge < 0) {
-    int i;
-    const int blocks_high =
-        pd->n4_h + (xd->mb_to_bottom_edge >> (5 + pd->subsampling_y));
-    int left_contexts = tx_size_in_blocks;
-    if (left_contexts + loff > blocks_high) left_contexts = blocks_high - loff;
-
-    for (i = 0; i < left_contexts; ++i) l[i] = has_eob;
-    for (i = left_contexts; i < tx_size_in_blocks; ++i) l[i] = 0;
-  } else {
-    memset(l, has_eob, sizeof(ENTROPY_CONTEXT) * tx_size_in_blocks);
-  }
-}
-
-int av1_decode_block_tokens(MACROBLOCKD *xd, int plane, const scan_order *sc,
+int av1_decode_block_tokens(MACROBLOCKD *xd, int plane, const SCAN_ORDER *sc,
                             int x, int y, TX_SIZE tx_size, aom_reader *r,
                             int seg_id) {
   struct macroblockd_plane *const pd = &xd->plane[plane];
@@ -273,6 +291,6 @@ int av1_decode_block_tokens(MACROBLOCKD *xd, int plane, const scan_order *sc,
   const int eob = decode_coefs(xd, pd->plane_type, pd->dqcoeff, tx_size,
                                dequant, ctx, sc->scan, sc->neighbors, r);
 #endif
-  dec_set_contexts(xd, pd, tx_size, eob > 0, x, y);
+  av1_set_contexts(xd, pd, tx_size, eob > 0, x, y);
   return eob;
 }

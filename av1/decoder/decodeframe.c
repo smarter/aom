@@ -140,9 +140,14 @@ static void read_tx_mode_probs(struct tx_probs *tx_probs, aom_reader *r) {
 
 static void read_switchable_interp_probs(FRAME_CONTEXT *fc, aom_reader *r) {
   int i, j;
-  for (j = 0; j < SWITCHABLE_FILTER_CONTEXTS; ++j)
+  for (j = 0; j < SWITCHABLE_FILTER_CONTEXTS; ++j) {
     for (i = 0; i < SWITCHABLE_FILTERS - 1; ++i)
       av1_diff_update_prob(r, &fc->switchable_interp_prob[j][i]);
+#if CONFIG_DAALA_EC
+    av1_tree_to_cdf(av1_switchable_interp_tree, fc->switchable_interp_prob[j],
+                    fc->switchable_interp_cdf[j]);
+#endif
+  }
 }
 
 static void read_inter_mode_probs(FRAME_CONTEXT *fc, aom_reader *r) {
@@ -490,9 +495,9 @@ static void predict_and_reconstruct_intra_block(MACROBLOCKD *const xd,
   if (!mbmi->skip) {
     TX_TYPE tx_type = get_tx_type(plane_type, xd, block_idx);
 #if !CONFIG_PVQ
-    const scan_order *sc = get_scan(tx_size, tx_type);
-    const int eob = av1_decode_block_tokens(xd, plane, sc, col, row, tx_size, r,
-                                            mbmi->segment_id);
+    const SCAN_ORDER *scan_order = get_scan(tx_size, tx_type);
+    const int eob = av1_decode_block_tokens(xd, plane, scan_order, col, row,
+                                            tx_size, r, mbmi->segment_id);
 #else
     // pvq_decode() for intra block runs here.
     // transform block size in pixels
@@ -554,7 +559,7 @@ static void predict_and_reconstruct_intra_block(MACROBLOCKD *const xd,
             dst[j * pd->dst.stride + i] -= dst[j * pd->dst.stride + i];
 #endif
         inverse_transform_block_intra(xd, plane, tx_type, tx_size, dst,
-                                    pd->dst.stride, eob);
+                                      pd->dst.stride, eob);
 #if CONFIG_PVQ
 			}
     }
@@ -573,9 +578,9 @@ static int reconstruct_inter_block(MACROBLOCKD *const xd, aom_reader *r,
   int block_idx = (row << 1) + col;
   TX_TYPE tx_type = get_tx_type(plane_type, xd, block_idx);
 #if !CONFIG_PVQ
-  const scan_order *sc = get_scan(tx_size, tx_type);
-  const int eob = av1_decode_block_tokens(xd, plane, sc, col, row, tx_size, r,
-                                          mbmi->segment_id);
+  const SCAN_ORDER *scan_order = get_scan(tx_size, tx_type);
+  const int eob = av1_decode_block_tokens(xd, plane, scan_order, col, row,
+                                          tx_size, r, mbmi->segment_id);
 #else
   int ac_dc_coded;
   int eob = 0;
@@ -673,17 +678,6 @@ static INLINE void dec_reset_skip_context(MACROBLOCKD *xd) {
   }
 }
 
-static void set_plane_n4(MACROBLOCKD *const xd, int bw, int bh, int bwl,
-                         int bhl) {
-  int i;
-  for (i = 0; i < MAX_MB_PLANE; i++) {
-    xd->plane[i].n4_w = (bw << 1) >> xd->plane[i].subsampling_x;
-    xd->plane[i].n4_h = (bh << 1) >> xd->plane[i].subsampling_y;
-    xd->plane[i].n4_wl = bwl - xd->plane[i].subsampling_x;
-    xd->plane[i].n4_hl = bhl - xd->plane[i].subsampling_y;
-  }
-}
-
 static MB_MODE_INFO *set_offsets(AV1_COMMON *const cm, MACROBLOCKD *const xd,
                                  BLOCK_SIZE bsize, int mi_row, int mi_col,
                                  int bw, int bh, int x_mis, int y_mis, int bwl,
@@ -698,12 +692,9 @@ static MB_MODE_INFO *set_offsets(AV1_COMMON *const cm, MACROBLOCKD *const xd,
   // passing bsize from decode_partition().
   xd->mi[0]->mbmi.sb_type = bsize;
   for (y = 0; y < y_mis; ++y)
-    for (x = !y; x < x_mis; ++x) {
-      xd->mi[y * cm->mi_stride + x] = xd->mi[0];
-    }
+    for (x = !y; x < x_mis; ++x) xd->mi[y * cm->mi_stride + x] = xd->mi[0];
 
   set_plane_n4(xd, bw, bh, bwl, bhl);
-
   set_skip_context(xd, mi_row, mi_col);
 
   // Distance of Mb to the various image edges. These are specified to 8th pel
@@ -981,6 +972,9 @@ static void read_coef_probs(FRAME_CONTEXT *fc, TX_MODE tx_mode, aom_reader *r) {
   TX_SIZE tx_size;
   for (tx_size = TX_4X4; tx_size <= max_tx_size; ++tx_size)
     read_coef_probs_common(fc->coef_probs[tx_size], r);
+#if CONFIG_RANS
+  av1_coef_pareto_cdfs(fc);
+#endif  // CONFIG_RANS
 }
 
 static void setup_segmentation(AV1_COMMON *const cm,
@@ -1076,7 +1070,26 @@ static void setup_loopfilter(struct loopfilter *lf,
 
 #if CONFIG_CLPF
 static void setup_clpf(AV1_COMMON *cm, struct aom_read_bit_buffer *rb) {
-  cm->clpf = aom_rb_read_literal(rb, 1);
+  cm->clpf_blocks = 0;
+  cm->clpf_strength = aom_rb_read_literal(rb, 2);
+  if (cm->clpf_strength) {
+    cm->clpf_size = aom_rb_read_literal(rb, 2);
+    if (cm->clpf_size) {
+      int i;
+      cm->clpf_numblocks = aom_rb_read_literal(rb, av1_clpf_maxbits(cm));
+      CHECK_MEM_ERROR(cm, cm->clpf_blocks, aom_malloc(cm->clpf_numblocks));
+      for (i = 0; i < cm->clpf_numblocks; i++) {
+        cm->clpf_blocks[i] = aom_rb_read_literal(rb, 1);
+      }
+    }
+  }
+}
+
+static int clpf_bit(int k, int l, const YV12_BUFFER_CONFIG *rec,
+                    const YV12_BUFFER_CONFIG *org, const AV1_COMMON *cm,
+                    int block_size, int w, int h, unsigned int strength,
+                    unsigned int fb_size_log2, uint8_t *bit) {
+  return *bit;
 }
 #endif
 
@@ -2557,8 +2570,22 @@ void av1_decode_frame(AV1Decoder *pbi, const uint8_t *data,
   }
 
 #if CONFIG_CLPF
-  if (cm->clpf && !cm->skip_loop_filter)
-    av1_clpf_frame(&pbi->cur_buf->buf, cm, &pbi->mb);
+  if (cm->clpf_strength && !cm->skip_loop_filter) {
+    YV12_BUFFER_CONFIG dst;  // Buffer for the result
+
+    dst = pbi->cur_buf->buf;
+    CHECK_MEM_ERROR(cm, dst.y_buffer, aom_malloc(dst.y_stride * dst.y_height));
+
+    av1_clpf_frame(&dst, &pbi->cur_buf->buf, 0, cm, !!cm->clpf_size,
+                   cm->clpf_strength + (cm->clpf_strength == 3),
+                   4 + cm->clpf_size, cm->clpf_blocks, clpf_bit);
+
+    // Copy result
+    memcpy(pbi->cur_buf->buf.y_buffer, dst.y_buffer,
+           dst.y_height * dst.y_stride);
+    aom_free(dst.y_buffer);
+  }
+  if (cm->clpf_blocks) aom_free(cm->clpf_blocks);
 #endif
 #if CONFIG_DERING
   if (cm->dering_level && !cm->skip_loop_filter) {

@@ -48,14 +48,43 @@
 #include "av1/encoder/pvq_encoder.h"
 #endif
 
+#if CONFIG_EXT_REFS
+
+#define LAST_FRAME_MODE_MASK                                      \
+  ((1 << INTRA_FRAME) | (1 << LAST2_FRAME) | (1 << LAST3_FRAME) | \
+   (1 << GOLDEN_FRAME) | (1 << BWDREF_FRAME) | (1 << ALTREF_FRAME))  // NOLINT
+#define LAST2_FRAME_MODE_MASK                                    \
+  ((1 << INTRA_FRAME) | (1 << LAST_FRAME) | (1 << LAST3_FRAME) | \
+   (1 << GOLDEN_FRAME) | (1 << BWDREF_FRAME) | (1 << ALTREF_FRAME))  // NOLINT
+#define LAST3_FRAME_MODE_MASK                                    \
+  ((1 << INTRA_FRAME) | (1 << LAST_FRAME) | (1 << LAST2_FRAME) | \
+   (1 << GOLDEN_FRAME) | (1 << BWDREF_FRAME) | (1 << ALTREF_FRAME))  // NOLINT
+#define GOLDEN_FRAME_MODE_MASK                                   \
+  ((1 << INTRA_FRAME) | (1 << LAST_FRAME) | (1 << LAST2_FRAME) | \
+   (1 << LAST3_FRAME) | (1 << BWDREF_FRAME) | (1 << ALTREF_FRAME))  // NOLINT
+#define BWDREF_FRAME_MODE_MASK                                   \
+  ((1 << INTRA_FRAME) | (1 << LAST_FRAME) | (1 << LAST2_FRAME) | \
+   (1 << LAST3_FRAME) | (1 << GOLDEN_FRAME) | (1 << ALTREF_FRAME))  // NOLINT
+#define ALTREF_FRAME_MODE_MASK                                   \
+  ((1 << INTRA_FRAME) | (1 << LAST_FRAME) | (1 << LAST2_FRAME) | \
+   (1 << LAST3_FRAME) | (1 << GOLDEN_FRAME) | (1 << BWDREF_FRAME))  // NOLINT
+
+#else
+
 #define LAST_FRAME_MODE_MASK \
   ((1 << GOLDEN_FRAME) | (1 << ALTREF_FRAME) | (1 << INTRA_FRAME))
 #define GOLDEN_FRAME_MODE_MASK \
   ((1 << LAST_FRAME) | (1 << ALTREF_FRAME) | (1 << INTRA_FRAME))
-#define ALT_REF_MODE_MASK \
+#define ALTREF_FRAME_MODE_MASK \
   ((1 << LAST_FRAME) | (1 << GOLDEN_FRAME) | (1 << INTRA_FRAME))
 
+#endif  // CONFIG_EXT_REFS
+
+#if CONFIG_EXT_REFS
+#define SECOND_REF_FRAME_MASK ((1 << ALTREF_FRAME) | (1 << BWDREF_FRAME) | 0x01)
+#else
 #define SECOND_REF_FRAME_MASK ((1 << ALTREF_FRAME) | 0x01)
+#endif  // CONFIG_EXT_REFS
 
 #define MIN_EARLY_TERM_INDEX 3
 #define NEW_MV_DISCOUNT_FACTOR 8
@@ -80,42 +109,101 @@ struct rdcost_block_args {
   int64_t best_rd;
   int exit_early;
   int use_fast_coef_costing;
-  const scan_order *so;
+  const SCAN_ORDER *scan_order;
   uint8_t skippable;
 };
 
 #define LAST_NEW_MV_INDEX 6
 static const MODE_DEFINITION av1_mode_order[MAX_MODES] = {
   { NEARESTMV, { LAST_FRAME, NONE } },
+#if CONFIG_EXT_REFS
+  { NEARESTMV, { LAST2_FRAME, NONE } },
+  { NEARESTMV, { LAST3_FRAME, NONE } },
+  { NEARESTMV, { BWDREF_FRAME, NONE } },
+#endif  // CONFIG_EXT_REFS
   { NEARESTMV, { ALTREF_FRAME, NONE } },
   { NEARESTMV, { GOLDEN_FRAME, NONE } },
 
   { DC_PRED, { INTRA_FRAME, NONE } },
 
   { NEWMV, { LAST_FRAME, NONE } },
+#if CONFIG_EXT_REFS
+  { NEWMV, { LAST2_FRAME, NONE } },
+  { NEWMV, { LAST3_FRAME, NONE } },
+  { NEWMV, { BWDREF_FRAME, NONE } },
+#endif  // CONFIG_EXT_REFS
   { NEWMV, { ALTREF_FRAME, NONE } },
   { NEWMV, { GOLDEN_FRAME, NONE } },
 
   { NEARMV, { LAST_FRAME, NONE } },
+#if CONFIG_EXT_REFS
+  { NEARMV, { LAST2_FRAME, NONE } },
+  { NEARMV, { LAST3_FRAME, NONE } },
+  { NEARMV, { BWDREF_FRAME, NONE } },
+#endif  // CONFIG_EXT_REFS
   { NEARMV, { ALTREF_FRAME, NONE } },
   { NEARMV, { GOLDEN_FRAME, NONE } },
 
   { ZEROMV, { LAST_FRAME, NONE } },
+#if CONFIG_EXT_REFS
+  { ZEROMV, { LAST2_FRAME, NONE } },
+  { ZEROMV, { LAST3_FRAME, NONE } },
+  { ZEROMV, { BWDREF_FRAME, NONE } },
+#endif  // CONFIG_EXT_REFS
   { ZEROMV, { GOLDEN_FRAME, NONE } },
   { ZEROMV, { ALTREF_FRAME, NONE } },
 
+  // TODO(zoeliu): May need to reconsider the order on the modes to check
+
   { NEARESTMV, { LAST_FRAME, ALTREF_FRAME } },
+#if CONFIG_EXT_REFS
+  { NEARESTMV, { LAST2_FRAME, ALTREF_FRAME } },
+  { NEARESTMV, { LAST3_FRAME, ALTREF_FRAME } },
+#endif  // CONFIG_EXT_REFS
   { NEARESTMV, { GOLDEN_FRAME, ALTREF_FRAME } },
+#if CONFIG_EXT_REFS
+  { NEARESTMV, { LAST_FRAME, BWDREF_FRAME } },
+  { NEARESTMV, { LAST2_FRAME, BWDREF_FRAME } },
+  { NEARESTMV, { LAST3_FRAME, BWDREF_FRAME } },
+  { NEARESTMV, { GOLDEN_FRAME, BWDREF_FRAME } },
+#endif  // CONFIG_EXT_REFS
 
   { TM_PRED, { INTRA_FRAME, NONE } },
 
   { NEARMV, { LAST_FRAME, ALTREF_FRAME } },
   { NEWMV, { LAST_FRAME, ALTREF_FRAME } },
+#if CONFIG_EXT_REFS
+  { NEARMV, { LAST2_FRAME, ALTREF_FRAME } },
+  { NEWMV, { LAST2_FRAME, ALTREF_FRAME } },
+  { NEARMV, { LAST3_FRAME, ALTREF_FRAME } },
+  { NEWMV, { LAST3_FRAME, ALTREF_FRAME } },
+#endif  // CONFIG_EXT_REFS
   { NEARMV, { GOLDEN_FRAME, ALTREF_FRAME } },
   { NEWMV, { GOLDEN_FRAME, ALTREF_FRAME } },
 
+#if CONFIG_EXT_REFS
+  { NEARMV, { LAST_FRAME, BWDREF_FRAME } },
+  { NEWMV, { LAST_FRAME, BWDREF_FRAME } },
+  { NEARMV, { LAST2_FRAME, BWDREF_FRAME } },
+  { NEWMV, { LAST2_FRAME, BWDREF_FRAME } },
+  { NEARMV, { LAST3_FRAME, BWDREF_FRAME } },
+  { NEWMV, { LAST3_FRAME, BWDREF_FRAME } },
+  { NEARMV, { GOLDEN_FRAME, BWDREF_FRAME } },
+  { NEWMV, { GOLDEN_FRAME, BWDREF_FRAME } },
+#endif  // CONFIG_EXT_REFS
+
   { ZEROMV, { LAST_FRAME, ALTREF_FRAME } },
+#if CONFIG_EXT_REFS
+  { ZEROMV, { LAST2_FRAME, ALTREF_FRAME } },
+  { ZEROMV, { LAST3_FRAME, ALTREF_FRAME } },
+#endif  // CONFIG_EXT_REFS
   { ZEROMV, { GOLDEN_FRAME, ALTREF_FRAME } },
+#if CONFIG_EXT_REFS
+  { ZEROMV, { LAST_FRAME, BWDREF_FRAME } },
+  { ZEROMV, { LAST2_FRAME, BWDREF_FRAME } },
+  { ZEROMV, { LAST3_FRAME, BWDREF_FRAME } },
+  { ZEROMV, { GOLDEN_FRAME, BWDREF_FRAME } },
+#endif  // CONFIG_EXT_REFS
 
   { H_PRED, { INTRA_FRAME, NONE } },
   { V_PRED, { INTRA_FRAME, NONE } },
@@ -128,9 +216,24 @@ static const MODE_DEFINITION av1_mode_order[MAX_MODES] = {
 };
 
 static const REF_DEFINITION av1_ref_order[MAX_REFS] = {
-  { { LAST_FRAME, NONE } },           { { GOLDEN_FRAME, NONE } },
+  { { LAST_FRAME, NONE } },
+#if CONFIG_EXT_REFS
+  { { LAST2_FRAME, NONE } },          { { LAST3_FRAME, NONE } },
+#endif  // CONFIG_EXT_REFS
+  { { GOLDEN_FRAME, NONE } },
+#if CONFIG_EXT_REFS
+  { { BWDREF_FRAME, NONE } },
+#endif  // CONFIG_EXT_REFS
   { { ALTREF_FRAME, NONE } },         { { LAST_FRAME, ALTREF_FRAME } },
-  { { GOLDEN_FRAME, ALTREF_FRAME } }, { { INTRA_FRAME, NONE } },
+#if CONFIG_EXT_REFS
+  { { LAST2_FRAME, ALTREF_FRAME } },  { { LAST3_FRAME, ALTREF_FRAME } },
+#endif  // CONFIG_EXT_REFS
+  { { GOLDEN_FRAME, ALTREF_FRAME } },
+#if CONFIG_EXT_REFS
+  { { LAST_FRAME, BWDREF_FRAME } },   { { LAST2_FRAME, BWDREF_FRAME } },
+  { { LAST3_FRAME, BWDREF_FRAME } },  { { GOLDEN_FRAME, BWDREF_FRAME } },
+#endif  // CONFIG_EXT_REFS
+  { { INTRA_FRAME, NONE } },
 };
 
 static void swap_block_ptr(MACROBLOCK *x, PICK_MODE_CONTEXT *ctx, int m, int n,
@@ -486,8 +589,8 @@ static void dist_block(MACROBLOCK *x, int plane, int block, TX_SIZE tx_size,
 static int rate_block(int plane, int block, int blk_row, int blk_col,
                       TX_SIZE tx_size, struct rdcost_block_args *args) {
   return cost_coeffs(args->x, plane, block, args->t_above + blk_col,
-                     args->t_left + blk_row, tx_size, args->so->scan,
-                     args->so->neighbors, args->use_fast_coef_costing);
+                     args->t_left + blk_row, tx_size, args->scan_order->scan,
+                     args->scan_order->neighbors, args->use_fast_coef_costing);
 }
 #endif
 
@@ -611,7 +714,7 @@ static void txfm_rd_in_plane(MACROBLOCK *x, int *rate, int64_t *distortion,
   av1_get_entropy_contexts(bsize, tx_size, pd, args.t_above, args.t_left);
 
   tx_type = get_tx_type(pd->plane_type, xd, 0);
-  args.so = get_scan(tx_size, tx_type);
+  args.scan_order = get_scan(tx_size, tx_type);
 
   av1_foreach_transformed_block_in_plane(xd, bsize, plane, block_rd_txfm,
                                          &args);
@@ -956,11 +1059,12 @@ static int64_t rd_pick_intra4x4block(const AV1_COMP *const cpi, MACROBLOCK *x,
                                     dst_stride, xd->bd);
           if (xd->lossless[xd->mi[0]->mbmi.segment_id]) {
             TX_TYPE tx_type = get_tx_type(PLANE_TYPE_Y, xd, block);
-            const scan_order *so = get_scan(TX_4X4, tx_type);
+            const SCAN_ORDER *scan_order = get_scan(TX_4X4, tx_type);
             av1_highbd_fwd_txfm_4x4(src_diff, coeff, 8, DCT_DCT, 1);
-            av1_regular_quantize_b_4x4(x, 0, block, so->scan, so->iscan);
+            av1_regular_quantize_b_4x4(x, 0, block, scan_order->scan,
+                                       scan_order->iscan);
             ratey += cost_coeffs(x, 0, block, tempa + idx, templ + idy, TX_4X4,
-                                 so->scan, so->neighbors,
+                                 scan_order->scan, scan_order->neighbors,
                                  cpi->sf.use_fast_coef_costing);
             if (RDCOST(x->rdmult, x->rddiv, ratey, distortion) >= best_rd)
               goto next_highbd;
@@ -970,11 +1074,12 @@ static int64_t rd_pick_intra4x4block(const AV1_COMP *const cpi, MACROBLOCK *x,
           } else {
             int64_t unused;
             TX_TYPE tx_type = get_tx_type(PLANE_TYPE_Y, xd, block);
-            const scan_order *so = get_scan(TX_4X4, tx_type);
+            const SCAN_ORDER *scan_order = get_scan(TX_4X4, tx_type);
             av1_highbd_fwd_txfm_4x4(src_diff, coeff, 8, tx_type, 0);
-            av1_regular_quantize_b_4x4(x, 0, block, so->scan, so->iscan);
+            av1_regular_quantize_b_4x4(x, 0, block, scan_order->scan,
+                                       scan_order->iscan);
             ratey += cost_coeffs(x, 0, block, tempa + idx, templ + idy, TX_4X4,
-                                 so->scan, so->neighbors,
+                                 scan_order->scan, scan_order->neighbors,
                                  cpi->sf.use_fast_coef_costing);
             distortion +=
                 av1_highbd_block_error(coeff, BLOCK_OFFSET(pd->dqcoeff, block),
@@ -1087,11 +1192,12 @@ static int64_t rd_pick_intra4x4block(const AV1_COMP *const cpi, MACROBLOCK *x,
         if (xd->lossless[xd->mi[0]->mbmi.segment_id]) {
 #if !CONFIG_PVQ
           TX_TYPE tx_type = get_tx_type(PLANE_TYPE_Y, xd, block);
-          const scan_order *so = get_scan(TX_4X4, tx_type);
+          const SCAN_ORDER *scan_order = get_scan(TX_4X4, tx_type);
           av1_fwd_txfm_4x4(src_diff, coeff, 8, DCT_DCT, 1);
-          av1_regular_quantize_b_4x4(x, 0, block, so->scan, so->iscan);
+          av1_regular_quantize_b_4x4(x, 0, block, scan_order->scan,
+                                     scan_order->iscan);
           ratey += cost_coeffs(x, 0, block, tempa + idx, templ + idy, TX_4X4,
-                               so->scan, so->neighbors,
+                               scan_order->scan, scan_order->neighbors,
                                cpi->sf.use_fast_coef_costing);
 #else
           skip = pvq_encode_helper(&x->daala_enc, coeff, ref_coeff, dqcoeff,
@@ -1116,11 +1222,12 @@ static int64_t rd_pick_intra4x4block(const AV1_COMP *const cpi, MACROBLOCK *x,
           int64_t unused;
 #if !CONFIG_PVQ
           TX_TYPE tx_type = get_tx_type(PLANE_TYPE_Y, xd, block);
-          const scan_order *so = get_scan(TX_4X4, tx_type);
+          const SCAN_ORDER *scan_order = get_scan(TX_4X4, tx_type);
           av1_fwd_txfm_4x4(src_diff, coeff, 8, tx_type, 0);
-          av1_regular_quantize_b_4x4(x, 0, block, so->scan, so->iscan);
+          av1_regular_quantize_b_4x4(x, 0, block, scan_order->scan,
+                                     scan_order->iscan);
           ratey += cost_coeffs(x, 0, block, tempa + idx, templ + idy, TX_4X4,
-                               so->scan, so->neighbors,
+                               scan_order->scan, scan_order->neighbors,
                                cpi->sf.use_fast_coef_costing);
 #else
           skip = pvq_encode_helper(&x->daala_enc, coeff, ref_coeff, dqcoeff,
@@ -1763,10 +1870,11 @@ static int64_t pick_intra_angle_routine_sbuv(
   return this_rd;
 }
 
-static int rd_pick_intra_angle_sbuv(AV1_COMP *cpi, MACROBLOCK *x, int *rate,
-                                    int *rate_tokenonly, int64_t *distortion,
-                                    int *skippable, BLOCK_SIZE bsize,
-                                    int rate_overhead, int64_t best_rd) {
+static int rd_pick_intra_angle_sbuv(const AV1_COMP *cpi, MACROBLOCK *x,
+                                    int *rate, int *rate_tokenonly,
+                                    int64_t *distortion, int *skippable,
+                                    BLOCK_SIZE bsize, int rate_overhead,
+                                    int64_t best_rd) {
   MB_MODE_INFO *mbmi = &x->e_mbd.mi[0]->mbmi;
   int64_t this_rd, best_rd_in, rd_cost[2 * (MAX_ANGLE_DELTA + 2)];
   int8_t angle_delta, best_angle_delta = 0;
@@ -2068,7 +2176,7 @@ static int64_t encode_inter_mb_segment(const AV1_COMP *const cpi, MACROBLOCK *x,
   int thisrate = 0;
 #if !CONFIG_PVQ
   TX_TYPE tx_type = get_tx_type(PLANE_TYPE_Y, xd, i);
-  const scan_order *so = get_scan(TX_4X4, tx_type);
+  const SCAN_ORDER *scan_order = get_scan(TX_4X4, tx_type);
 #else
   (void) cpi;
   (void) ta;
@@ -2131,7 +2239,7 @@ static int64_t encode_inter_mb_segment(const AV1_COMP *const cpi, MACROBLOCK *x,
 #if !CONFIG_PVQ
       fwd_txm4x4(av1_raster_block_offset_int16(BLOCK_8X8, k, p->src_diff),
                  coeff, 8);
-      av1_regular_quantize_b_4x4(x, 0, k, so->scan, so->iscan);
+      av1_regular_quantize_b_4x4(x, 0, k, scan_order->scan, scan_order->iscan);
 #else
       //TODO: Check whether 'k' is correct index
       dqcoeff = BLOCK_OFFSET(pd->dqcoeff, k);
@@ -2173,9 +2281,9 @@ static int64_t encode_inter_mb_segment(const AV1_COMP *const cpi, MACROBLOCK *x,
 #endif  // CONFIG_AOM_HIGHBITDEPTH
       thissse += ssz;
 #if !CONFIG_PVQ
-      thisrate +=
-          cost_coeffs(x, 0, k, ta + (k & 1), tl + (k >> 1), TX_4X4, so->scan,
-                      so->neighbors, cpi->sf.use_fast_coef_costing);
+    thisrate += cost_coeffs(x, 0, k, ta + (k & 1), tl + (k >> 1), TX_4X4,
+                                  scan_order->scan, scan_order->neighbors,
+                                  cpi->sf.use_fast_coef_costing);
 #else
       thisrate += rate_pvq;
 #endif
@@ -3921,7 +4029,17 @@ void av1_rd_pick_inter_mode_sb(const AV1_COMP *cpi, TileDataEnc *tile_data,
   InterpFilter single_inter_filter[MB_MODE_COUNT][MAX_REF_FRAMES];
   int single_skippable[MB_MODE_COUNT][MAX_REF_FRAMES];
   static const int flag_list[REFS_PER_FRAME + 1] = {
-    0, AOM_LAST_FLAG, AOM_GOLD_FLAG, AOM_ALT_FLAG
+    0,
+    AOM_LAST_FLAG,
+#if CONFIG_EXT_REFS
+    AOM_LAST2_FLAG,
+    AOM_LAST3_FLAG,
+#endif  // CONFIG_EXT_REFS
+    AOM_GOLD_FLAG,
+#if CONFIG_EXT_REFS
+    AOM_BWD_FLAG,
+#endif  // CONFIG_EXT_REFS
+    AOM_ALT_FLAG
   };
   int64_t best_rd = best_rd_so_far;
   int64_t best_pred_diff[REFERENCE_MODES];
@@ -4057,11 +4175,20 @@ void av1_rd_pick_inter_mode_sb(const AV1_COMP *cpi, TileDataEnc *tile_data,
 
   for (ref_frame = LAST_FRAME; ref_frame <= ALTREF_FRAME; ++ref_frame) {
     if (!(cpi->ref_frame_flags & flag_list[ref_frame])) {
-      // Skip checking missing references in both single and compound reference
-      // modes. Note that a mode will be skipped iff both reference frames
-      // are masked out.
-      ref_frame_skip_mask[0] |= (1 << ref_frame);
-      ref_frame_skip_mask[1] |= SECOND_REF_FRAME_MASK;
+// Skip checking missing references in both single and compound reference
+// modes. Note that a mode will be skipped iff both reference frames
+// are masked out.
+#if CONFIG_EXT_REFS
+      if (ref_frame == BWDREF_FRAME || ref_frame == ALTREF_FRAME) {
+        ref_frame_skip_mask[0] |= (1 << ref_frame);
+        ref_frame_skip_mask[1] |= ((1 << ref_frame) | 0x01);
+      } else {
+#endif  // CONFIG_EXT_REFS
+        ref_frame_skip_mask[0] |= (1 << ref_frame);
+        ref_frame_skip_mask[1] |= SECOND_REF_FRAME_MASK;
+#if CONFIG_EXT_REFS
+      }
+#endif  // CONFIG_EXT_REFS
     } else {
       for (i = LAST_FRAME; i <= ALTREF_FRAME; ++i) {
         // Skip fixed mv modes for poor references
@@ -4089,7 +4216,12 @@ void av1_rd_pick_inter_mode_sb(const AV1_COMP *cpi, TileDataEnc *tile_data,
     // an unfiltered alternative. We allow near/nearest as well
     // because they may result in zero-zero MVs but be cheaper.
     if (cpi->rc.is_src_frame_alt_ref && (cpi->oxcf.arnr_max_frames == 0)) {
-      ref_frame_skip_mask[0] = (1 << LAST_FRAME) | (1 << GOLDEN_FRAME);
+      ref_frame_skip_mask[0] = (1 << LAST_FRAME) |
+#if CONFIG_EXT_REFS
+                               (1 << LAST2_FRAME) | (1 << LAST3_FRAME) |
+                               (1 << BWDREF_FRAME) |
+#endif  // CONFIG_EXT_REFS
+                               (1 << GOLDEN_FRAME);
       ref_frame_skip_mask[1] = SECOND_REF_FRAME_MASK;
       mode_skip_mask[ALTREF_FRAME] = ~INTER_NEAREST_NEAR_ZERO;
       if (frame_mv[NEARMV][ALTREF_FRAME].as_int != 0)
@@ -4175,11 +4307,31 @@ void av1_rd_pick_inter_mode_sb(const AV1_COMP *cpi, TileDataEnc *tile_data,
           ref_frame_skip_mask[0] |= LAST_FRAME_MODE_MASK;
           ref_frame_skip_mask[1] |= SECOND_REF_FRAME_MASK;
           break;
+#if CONFIG_EXT_REFS
+        case LAST2_FRAME:
+          ref_frame_skip_mask[0] |= LAST2_FRAME_MODE_MASK;
+          ref_frame_skip_mask[1] |= SECOND_REF_FRAME_MASK;
+          break;
+        case LAST3_FRAME:
+          ref_frame_skip_mask[0] |= LAST3_FRAME_MODE_MASK;
+          ref_frame_skip_mask[1] |= SECOND_REF_FRAME_MASK;
+          break;
+#endif  // CONFIG_EXT_REFS
         case GOLDEN_FRAME:
           ref_frame_skip_mask[0] |= GOLDEN_FRAME_MODE_MASK;
           ref_frame_skip_mask[1] |= SECOND_REF_FRAME_MASK;
           break;
-        case ALTREF_FRAME: ref_frame_skip_mask[0] |= ALT_REF_MODE_MASK; break;
+#if CONFIG_EXT_REFS
+        case BWDREF_FRAME:
+          ref_frame_skip_mask[0] |= BWDREF_FRAME_MODE_MASK;
+          ref_frame_skip_mask[1] |= SECOND_REF_FRAME_MASK;
+          break;
+#endif  // CONFIG_EXT_REFS
+        case ALTREF_FRAME: ref_frame_skip_mask[0] |= ALTREF_FRAME_MODE_MASK;
+#if CONFIG_EXT_REFS
+          ref_frame_skip_mask[1] |= SECOND_REF_FRAME_MASK;
+#endif  // CONFIG_EXT_REFS
+          break;
         case NONE:
         case MAX_REF_FRAMES: assert(0 && "Invalid Reference frame"); break;
       }
@@ -4935,7 +5087,17 @@ void av1_rd_pick_inter_mode_sub8x8(const AV1_COMP *cpi, TileDataEnc *tile_data,
   int_mv frame_mv[MB_MODE_COUNT][MAX_REF_FRAMES];
   struct buf_2d yv12_mb[MAX_REF_FRAMES][MAX_MB_PLANE];
   static const int flag_list[REFS_PER_FRAME + 1] = {
-    0, AOM_LAST_FLAG, AOM_GOLD_FLAG, AOM_ALT_FLAG
+    0,
+    AOM_LAST_FLAG,
+#if CONFIG_EXT_REFS
+    AOM_LAST2_FLAG,
+    AOM_LAST3_FLAG,
+#endif  // CONFIG_EXT_REFS
+    AOM_GOLD_FLAG,
+#if CONFIG_EXT_REFS
+    AOM_BWD_FLAG,
+#endif  // CONFIG_EXT_REFS
+    AOM_ALT_FLAG
   };
   int64_t best_rd = best_rd_so_far;
   int64_t best_yrd = best_rd_so_far;  // FIXME(rbultje) more precise
@@ -5017,15 +5179,55 @@ void av1_rd_pick_inter_mode_sub8x8(const AV1_COMP *cpi, TileDataEnc *tile_data,
         switch (best_mbmode.ref_frame[0]) {
           case INTRA_FRAME: break;
           case LAST_FRAME:
-            ref_frame_skip_mask[0] |= (1 << GOLDEN_FRAME) | (1 << ALTREF_FRAME);
+            ref_frame_skip_mask[0] |= (1 << GOLDEN_FRAME) |
+#if CONFIG_EXT_REFS
+                                      (1 << LAST2_FRAME) | (1 << LAST3_FRAME) |
+                                      (1 << BWDREF_FRAME) |
+#endif  // CONFIG_EXT_REFS
+                                      (1 << ALTREF_FRAME);
             ref_frame_skip_mask[1] |= SECOND_REF_FRAME_MASK;
             break;
+#if CONFIG_EXT_REFS
+          case LAST2_FRAME:
+            ref_frame_skip_mask[0] |= (1 << LAST_FRAME) | (1 << LAST3_FRAME) |
+                                      (1 << GOLDEN_FRAME) |
+                                      (1 << BWDREF_FRAME) | (1 << ALTREF_FRAME);
+            ref_frame_skip_mask[1] |= SECOND_REF_FRAME_MASK;
+            break;
+          case LAST3_FRAME:
+            ref_frame_skip_mask[0] |= (1 << LAST_FRAME) | (1 << LAST2_FRAME) |
+                                      (1 << GOLDEN_FRAME) |
+                                      (1 << BWDREF_FRAME) | (1 << ALTREF_FRAME);
+            ref_frame_skip_mask[1] |= SECOND_REF_FRAME_MASK;
+            break;
+#endif  // CONFIG_EXT_REFS
           case GOLDEN_FRAME:
-            ref_frame_skip_mask[0] |= (1 << LAST_FRAME) | (1 << ALTREF_FRAME);
+            ref_frame_skip_mask[0] |= (1 << LAST_FRAME) |
+#if CONFIG_EXT_REFS
+                                      (1 << LAST2_FRAME) | (1 << LAST3_FRAME) |
+                                      (1 << BWDREF_FRAME) |
+#endif  // CONFIG_EXT_REFS
+                                      (1 << ALTREF_FRAME);
             ref_frame_skip_mask[1] |= SECOND_REF_FRAME_MASK;
             break;
+#if CONFIG_EXT_REFS
+          case BWDREF_FRAME:
+            ref_frame_skip_mask[0] |= (1 << LAST_FRAME) | (1 << LAST2_FRAME) |
+                                      (1 << LAST3_FRAME) | (1 << GOLDEN_FRAME) |
+                                      (1 << ALTREF_FRAME);
+            ref_frame_skip_mask[1] |= (1 << ALTREF_FRAME) | 0x01;
+            break;
+#endif  // CONFIG_EXT_REFS
           case ALTREF_FRAME:
-            ref_frame_skip_mask[0] |= (1 << GOLDEN_FRAME) | (1 << LAST_FRAME);
+            ref_frame_skip_mask[0] |= (1 << LAST_FRAME) |
+#if CONFIG_EXT_REFS
+                                      (1 << LAST2_FRAME) | (1 << LAST3_FRAME) |
+                                      (1 << BWDREF_FRAME) |
+#endif  // CONFIG_EXT_REFS
+                                      (1 << GOLDEN_FRAME);
+#if CONFIG_EXT_REFS
+            ref_frame_skip_mask[1] |= (1 << BWDREF_FRAME) | 0x01;
+#endif  // CONFIG_EXT_REFS
             break;
           case NONE:
           case MAX_REF_FRAMES: assert(0 && "Invalid Reference frame"); break;
@@ -5150,9 +5352,22 @@ void av1_rd_pick_inter_mode_sub8x8(const AV1_COMP *cpi, TileDataEnc *tile_data,
       this_rd_thresh = (ref_frame == LAST_FRAME)
                            ? rd_opt->threshes[segment_id][bsize][THR_LAST]
                            : rd_opt->threshes[segment_id][bsize][THR_ALTR];
+#if CONFIG_EXT_REFS
+      this_rd_thresh = (ref_frame == LAST2_FRAME)
+                           ? rd_opt->threshes[segment_id][bsize][THR_LAST2]
+                           : this_rd_thresh;
+      this_rd_thresh = (ref_frame == LAST3_FRAME)
+                           ? rd_opt->threshes[segment_id][bsize][THR_LAST3]
+                           : this_rd_thresh;
+#endif  // CONFIG_EXT_REFS
       this_rd_thresh = (ref_frame == GOLDEN_FRAME)
                            ? rd_opt->threshes[segment_id][bsize][THR_GOLD]
                            : this_rd_thresh;
+#if CONFIG_EXT_REFS
+// TODO(zoeliu): To explore whether this_rd_thresh should consider
+//               BWDREF_FRAME and ALTREF_FRAME
+#endif  // CONFIG_EXT_REFS
+
       if (cm->interp_filter != BILINEAR) {
         tmp_best_filter = EIGHTTAP;
         if (x->source_variance < sf->disable_filter_search_var_thresh) {

@@ -82,6 +82,10 @@ AV1_CX_SRCS-yes += encoder/temporal_filter.h
 AV1_CX_SRCS-yes += encoder/mbgraph.c
 AV1_CX_SRCS-yes += encoder/mbgraph.h
 AV1_CX_SRCS-$(CONFIG_DERING) += encoder/pickdering.c
+ifeq ($(CONFIG_CLPF),yes)
+AV1_CX_SRCS-yes += encoder/clpf_rdo.c
+AV1_CX_SRCS-yes += encoder/clpf_rdo.h
+endif
 
 ifeq ($(CONFIG_PVQ),yes)
 # PVQ from daala

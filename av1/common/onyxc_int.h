@@ -149,7 +149,10 @@ typedef struct AV1Common {
 #endif
 
 #if CONFIG_CLPF
-  int clpf;
+  int clpf_numblocks;
+  int clpf_size;
+  int clpf_strength;
+  uint8_t *clpf_blocks;
 #endif
 
   YV12_BUFFER_CONFIG *frame_to_show;
@@ -451,6 +454,17 @@ static INLINE void set_skip_context(MACROBLOCKD *xd, int mi_row, int mi_col) {
 static INLINE int calc_mi_size(int len) {
   // len is in mi units.
   return len + MI_BLOCK_SIZE;
+}
+
+static void set_plane_n4(MACROBLOCKD *const xd, int bw, int bh, int bwl,
+                         int bhl) {
+  int i;
+  for (i = 0; i < MAX_MB_PLANE; i++) {
+    xd->plane[i].n4_w = (bw << 1) >> xd->plane[i].subsampling_x;
+    xd->plane[i].n4_h = (bh << 1) >> xd->plane[i].subsampling_y;
+    xd->plane[i].n4_wl = bwl - xd->plane[i].subsampling_x;
+    xd->plane[i].n4_hl = bhl - xd->plane[i].subsampling_y;
+  }
 }
 
 static INLINE void set_mi_row_col(MACROBLOCKD *xd, const TileInfo *const tile,
