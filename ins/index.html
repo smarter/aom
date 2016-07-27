@@ -1,0 +1,349 @@
+<html>
+
+<head>
+  <meta charset="utf-8" />
+  <!--<meta name="viewport" content="width=device-width, initial-scale=1">-->
+  <meta name="viewport" content="user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimal-ui">
+
+  <!-- Angular Material style sheet -->
+  <link rel="stylesheet" href="lib/angular-material.min.css">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <link rel="stylesheet" href="lib/angularjs-color-picker.min.css">
+
+  <style type="text/css">
+    html {
+      line-height: 1.4;
+    }
+
+    #left-panel {
+      width: 280px;
+      min-width: 280px;
+      background-color: #dddddd;
+    }
+    #right-panel {
+      width: 512px;
+      background-color: #dddddd;
+    }
+    .button-panel {
+      background-color: #cccccc;
+    }
+    md-list-item {
+      font-size: 14px;
+      min-height: 38px;
+      height: 24px;
+      margin: 0px;
+    }
+    .md-list-item-narrow {
+      min-height: 20px;
+    }
+    .color-picker-swatch {
+      width: 8px !important;
+      border: 0 !important;
+      right: 0px;
+    }
+    .keyShortcut {
+      color: blueviolet;
+    }
+    #fileInput, #y4mFileInput {
+      display: none;
+    }
+    .md-button.md-fab.md-overlay-primary {
+      background-color: #555555;
+      opacity: 0.5;
+    }
+  </style>
+</head>
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+  ga('create', 'UA-8428278-2', 'auto');
+  ga('send', 'pageview');
+</script>
+<body ng-app="AomInspectorApp" ng-controller="AppCtrl as vm" flex layout="column" ng-cloak>
+  <div><md-progress-linear md-mode="{{vm.progressMode}}" value="{{vm.progressValue}}"></md-progress-linear></div>
+  <div flex layout="row">
+    <md-sidenav
+        class="md-sidenav-left"
+        md-component-id="left"
+        md-is-locked-open="$mdMedia('gt-xs')"
+        md-whiteframe="4" id="left-panel">
+      <div>
+        <!--Menu-->
+        <md-menu-bar>
+          <md-menu>
+            <button ng-click="$mdOpenMenu()">
+            File
+            </button>
+            <md-menu-content>
+              <md-menu-item>
+                <md-button ng-click="vm.uiAction('open-file', $event)">
+                  Open IVF ...
+                </md-button>
+              </md-menu-item>
+              <md-menu-item>
+                <md-button ng-click="vm.uiAction('open-y4m-file', $event)">
+                  Open Y4M ...
+                </md-button>
+              </md-menu-item>
+              <md-menu-item>
+                <md-button ng-click="vm.uiAction('open-soccer', $event)">
+                  Open Soccer
+                </md-button>
+              </md-menu-item>
+              <md-menu-item>
+                <md-button ng-click="vm.uiAction('open-tiger', $event)">
+                  Open Tiger
+                </md-button>
+              </md-menu-item>
+              <md-menu-item>
+                <md-button ng-click="vm.uiAction('open-tiger-60', $event)">
+                  Open Tiger (--cq-level = 60)
+                </md-button>
+              </md-menu-item>
+              <md-menu-item>
+                <md-button ng-click="vm.uiAction('open-crosswalk', $event)">
+                  Open Crosswalk
+                </md-button>
+              </md-menu-item>
+            </md-menu-content>
+          </md-menu>
+        <md-menu-bar>
+      </div>
+      <div class="button-panel ">
+        <md-button ng-click="vm.uiZoom(.5)" class="md-icon-button">
+          <i class="material-icons">zoom_out</i>
+          <md-tooltip md-direction="bottom">
+            Zoom Out: [
+          </md-tooltip>
+        </md-button>
+        <md-button ng-click="vm.uiZoom(2)" class="md-icon-button">
+          <i class="material-icons">zoom_in</i>
+          <md-tooltip md-direction="bottom">
+            Zoom In: ]
+          </md-tooltip>
+        </md-button>
+        <md-button ng-click="vm.uiReload()" class="md-icon-button">
+          <i class="material-icons">refresh</i>
+          <md-tooltip md-direction="bottom">
+            Reload: R
+          </md-tooltip>
+        </md-button>
+        <md-button ng-click="vm.uiPlayPause()" class="md-icon-button">
+          <i class="material-icons">{{vm.isPlaying ? "pause" : "play_arrow"}}</i>
+          <md-tooltip md-direction="bottom">
+            Play / Pause: Space
+          </md-tooltip>
+        </md-button>
+        <md-button ng-click="vm.uiNextFrame()" class="md-icon-button">
+          <i class="material-icons md-18">skip_next</i>
+          <md-tooltip md-direction="bottom">
+            Next Frame: .
+          </md-tooltip>
+        </md-button>
+      </div>
+      <md-content flex>
+        <md-list>
+          <md-subheader class="md-sticky">Bitstream Info</md-subheader>
+          <md-list-item class="md-list-item-narrow" ng-cloak ng-repeat="(name, p) in vm.uiFrameInfoProperties">
+            <div flex="50">{{p.description}}</div>
+            <div flex="50" style="text-align: right;">{{p.value}}</div>
+          </md-list-item>
+          <md-divider></md-divider>
+          <md-subheader class="md-sticky">Layers</md-subheader>
+          <md-list-item ng-cloak ng-repeat="(name, option) in vm.options">
+            {{option.description}} [<span class="keyShortcut">{{option.key}}</span>]
+            <md-checkbox class="md-secondary" ng-model="option.value" ng-change="vm.uiChange()" ng-disabled="option.disabled" aria-label="name"></md-checkbox>
+            <md-tooltip md-direction="right">
+              {{option.detail}}
+            </md-tooltip>
+          </md-list-item>
+          <md-list-item>
+            <md-button flex="100" class="md-raised" ng-click="vm.uiResetLayers()">
+              Restore Default Layers
+              <md-tooltip md-direction="top">
+                Restore Default Layers, Shortcut: x
+              </md-tooltip>
+            </md-button>
+          </md-list-item>
+          <md-divider></md-divider>
+          <md-subheader class="md-sticky">Preferences</md-subheader>
+          <md-list-item ng-cloak ng-repeat="(name, option) in vm.colorOptions">
+            <div flex="100">{{option.description}}</div>
+            <div>
+            <color-picker color-picker-pos="'top right'" color-picker-swatch-only="true" ng-model="option.value" color-picker-on-change="vm.uiChangeColor()" ></color-picker>
+            </div>
+          </md-list-item>
+          <md-list-item>
+            <md-button flex="100" class="md-raised" ng-click="vm.uiResetColors()">
+              Restore Default Colors
+              <md-tooltip md-direction="top">
+                Restore Default Colors
+              </md-tooltip>
+            </md-button>
+          </md-list-item>
+          <md-divider></md-divider>
+          <md-subheader class="md-sticky">Sharing</md-subheader>
+          <md-list-item>
+            <input ng-model="vm.sharingLink" style="width: 100%; padding: 6px; color: lightslategrey;" select-on-click>
+          </md-list-item>
+        </md-list>
+        <md-subheader class="md-sticky">Build Configuration</md-subheader>
+        <div class="md-padding md-caption">
+          {{ vm.aom.getStringProperty(Property.GET_CODEC_BUILD_CONFIG) }}
+        </div>
+      </md-content>
+    </md-sidenav>
+    <md-content flex layout="row">
+      <md-content class="dragscroll" flex layout="row" style="overflow: scroll;">
+        <div id="container" style="position: relative; width: 128px; height: 128px;">
+          <canvas id="display" oncontextmenu="event.preventDefault()" style="position: absolute; left: 0; top: 0; z-index: 0; image-rendering: pixelated; background-color: #F5F5F5;"
+            width=0 height=0></canvas>
+          <canvas id="overlay" oncontextmenu="event.preventDefault()" style="position: absolute; left: 0; top: 0; z-index: 1; image-rendering: pixelated; cursor: crosshair;"
+            width=0 height=0></canvas>
+        </div>
+      </md-content>
+      <div style="position: absolute; left: 0; top: 0; z-index: 2;">
+        <md-button class="md-fab md-mini md-overlay-primary" ng-click="vm.uiToggleMenu()" class="md-icon-button" hide-gt-xs>
+          <i class="material-icons">menu</i>
+          <md-tooltip md-direction="bottom">
+            Show Menu: Tab
+          </md-tooltip>
+        </md-button>
+      </div>
+      <div style="position: absolute; right: 0; top: 0; z-index: 2;" ng-hide="vm.options.showInspector.value">
+        <md-button class="md-fab md-mini md-overlay-primary" ng-click="vm.uiToggleInspector()" class="md-icon-button">
+          <i class="material-icons">picture_in_picture</i>
+          <md-tooltip md-direction="bottom">
+            Show Inspector: 2
+          </md-tooltip>
+        </md-button>
+      </div>
+    </md-content>
+    <md-content id="right-panel" ng-hide="!vm.options.showInspector.value">
+      <canvas id="zoom" oncontextmenu="event.preventDefault()" style="left: 0; bottom: 0; z-index: 1000; image-rendering: pixelated;"
+            width=0 height=0></canvas>
+      <div style="background-color: white;">
+        <md-subheader class="md-sticky">Frame Statistics</md-subheader>
+        <canvas id="chart" oncontextmenu="event.preventDefault()" width=0 height=0></canvas>
+      </div>
+      <md-tabs md-dynamic-height md-border-bottom>
+        <md-tab label="Block Info">
+          <md-content class="md-padding">
+            <md-list>
+              <md-list-item class="md-list-item-narrow" ng-cloak ng-repeat="(name, p) in vm.uiBlockInfoProperties" style="color: {{p.color}};">
+                <div flex="50">{{p.description}}</div>
+                <div flex="50" style="text-align: right;">{{p.value}}</div>
+              </md-list-item>
+            </md-list>
+          </md-content>
+        </md-tab>
+        <md-tab label="Frame Statistcs">
+          <md-content class="md-padding">
+          <md-list>
+            <md-list-item ng-cloak ng-repeat="(name, statistic) in vm.frameStatistics">
+              {{statistic.description}}
+            <md-checkbox class="md-secondary" ng-model="statistic.show" ng-change="vm.drawFrameStatistics()" aria-label="name"}></md-checkbox>
+            <md-tooltip md-direction="top">
+              {{statistic.detail}}
+            </md-tooltip>
+            </md-list-item>
+          </md-list>
+          </md-content>
+        </md-tab>
+        <md-tab label="Help">
+          <md-content class="md-padding">
+            <h3 class="md-title"><a href="https://github.com/mbebenita/aomanalyzer">AOM Bitstream Analyzer</a></h3>
+            <section layout="row" layout-align="center center" layout-wrap>
+              <md-button flex="50" class="md-raised" ng-click="vm.fileIssue('bug')">I found a bug!</md-button>
+              <md-button flex="50" class="md-raised" ng-click="vm.fileIssue('enhancement')">I need a feature!</md-button>
+            </section>
+            <p class="md-body-1">
+              This tool allows you to explore <a href="http://aomedia.org/">AV1</a> bitstreams.
+              The analyzer uses the AV1 decoder (compiled to JavaScript using Emscripten) to extract information from the bitstream and then visualizes it in a variety of ways.
+              <span class="md-body-2" style="color: green;">The analyzer is a client side only tool, no data is ever submitted to a server.</span>
+            </p>
+
+            <h3 class="md-body-2">Y, U, V Image Planes</h3>
+            <p class="md-body-1">
+              This allows you to toggle any combination of image planes.
+              Often times, the Y plane is the most interesting and is the only plane taken into consideration when computing errors and other metrics in the analyzer.
+            </p>
+
+            <h3 class="md-body-2">Original Image</h3>
+            <p class="md-body-1">
+              You can display the original uncompressed frame by loading a .y4m file it in the file menu. If you need to compute error metrics, you'll need to have loaded the original .y4m file.
+            </p>
+
+            <h3 class="md-body-2">Decoded Image / Predicted Image</h3>
+            <p class="md-body-1">
+              You can display the decoded and predicted frame by themselves, or you can display the residual if you toggle both at the same time.
+              One interesting visualization is to hide the decoded image, show the predicted image and then toggle the mode layer to see how the predicted image
+              is constructed.
+            </p>
+            <h3 class="md-body-2">SB Grid, Tile Grid, Transform Grid, Split Grid</h3>
+            <p class="md-body-1">
+              This allows you to see various partitioning schemes.
+            </p>
+            <h3 class="md-body-2">Motion Vectors</h3>
+            <p class="md-body-1">
+              Blocks have to motion vectors. These are displayed using two different colored vectors.
+              The fill color indicates the magnitude of the motion in each block.
+            </p>
+            <h3 class="md-body-2">Mode</h3>
+            <p class="md-body-1">
+              Block prediction modes. You can hover the mouse cursor over a block to see exactly what prediction mode it uses.
+            </p>
+            <h3 class="md-body-2">Bits</h3>
+            <p class="md-body-1">
+              Displays the number of bits used per block, scaled by the bits used in the most expensive block in the frame.
+            </p>
+            <h3 class="md-body-2">Cursor Zoom Lock</h3>
+            <p class="md-body-1">
+              This allows you to lock the cursor position while still moving the mouse to interact with UI elements in the analyzer.
+              This is useful when advancing frames to see how a specific region of the image changes.
+            </p>
+            <h3 class="md-body-2">Frame Statistics</h3>
+            <p class="md-body-1">
+              Various frame metrics are plotted per frame. You can toggle these in the Frame Statistics tab. Most of these metrics are scaled to the largest observed value.
+            </p>
+            <h3 class="md-body-2">Keyboard Shortcuts</h3>
+            <p class="md-body-1">
+              All analyzer features have keyboard <span class="keyShortcut">shortcuts</span>, use them.
+            </p>
+            <h3 class="md-body-2">Sharing Link</h3>
+            <p class="md-body-1">
+              You can share your current analyzer state with someone by sending them the sharing link.
+            </p>
+          </md-content>
+        </md-tab>
+      </md-tabs>
+    </md-content>
+  </div>
+</body>
+
+<!-- Angular Material requires Angular.js Libraries -->
+  <script src="lib/angular.min.js"></script>
+  <script src="lib/angular-animate.min.js"></script>
+  <script src="lib/angular-aria.min.js"></script>
+  <script src="lib/angular-messages.min.js"></script>
+
+  <!-- Angular Material Library -->
+  <script src="lib/angular-material.min.js"></script>
+  <script src="lib/tinycolor-min.js"></script>
+  <script src="lib/tinygradient.min.js"></script>
+  <script src="lib/angularjs-color-picker.min.js"></script>
+
+
+  <script src="lib/jsGradient.js"></script>
+  <script src="app.js"></script>
+  <script src="lib/mousetrap.min.js"></script>
+  <script src="lib/dragscroll.js"></script>
+
+  <div style="display: none;">
+    <input id="fileInput" type="file" onchange="angular.element(this).scope().fileInputNameChanged(this)">
+    <input id="y4mFileInput" type="file" onchange="angular.element(this).scope().y4mFileInputNameChanged(this)">
+  </div>
+
+</html>
