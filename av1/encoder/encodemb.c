@@ -1268,8 +1268,7 @@ void av1_encode_block_intra(int plane, int block, int blk_row, int blk_col,
 #else
                      scan_order->iscan, qmatrix, iqmatrix);
 #endif
-
-      if (*eob) {
+      if (args->ctx != NULL) {
         ENTROPY_CONTEXT *a, *l;
         struct optimize_ctx *const ctx = args->ctx;
 
@@ -1277,11 +1276,13 @@ void av1_encode_block_intra(int plane, int block, int blk_row, int blk_col,
         l = &ctx->tl[plane][blk_row];
 
         if (x->optimize) {
-         const int ctx = combine_entropy_contexts(*a, *l);
-         *a = *l = optimize_b(x, plane, block, tx_size, ctx) > 0;
+        const int ctx = combine_entropy_contexts(*a, *l);
+          *a = *l = optimize_b(x, plane, block, tx_size, ctx) > 0;
         } else {
-         *a = *l = p->eobs[block] > 0;
+          *a = *l = p->eobs[block] > 0;
         }
+      }
+      if (*eob) {
         // this is like av1_short_idct4x4 but has a special case around eob<=1
         // which is significant (not just an optimization) for the lossless
         // case.
@@ -1371,6 +1372,12 @@ void av1_encode_intra_block_plane(MACROBLOCK *x, BLOCK_SIZE bsize, int plane) {
   MB_MODE_INFO *mbmi = &xd->mi[0]->mbmi;
   struct encode_b_args arg = { x, &ctx, &mbmi->skip };
 
+  if (x->optimize) {
+    const struct macroblockd_plane *const pd = &xd->plane[plane];
+    const TX_SIZE tx_size = plane ? get_uv_tx_size(mbmi, pd) : mbmi->tx_size;
+    av1_get_entropy_contexts(bsize, tx_size, pd, ctx.ta[plane],
+                             ctx.tl[plane]);
+  }
   av1_foreach_transformed_block_in_plane(xd, bsize, plane,
                                          av1_encode_block_intra, &arg);
 }
