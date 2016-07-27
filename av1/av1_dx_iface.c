@@ -29,6 +29,7 @@
 #include "av1/decoder/decodeframe.h"
 
 #include "av1/av1_iface_common.h"
+#include "analyzer/analyzer.h"
 
 typedef aom_codec_stream_info_t av1_stream_info_t;
 
@@ -77,6 +78,8 @@ struct aom_codec_alg_priv {
   void *ext_priv;  // Private data associated with the external frame buffers.
   aom_get_frame_buffer_cb_fn_t get_ext_fb_cb;
   aom_release_frame_buffer_cb_fn_t release_ext_fb_cb;
+
+  AnalyzerData *analyzer_data;
 };
 
 static aom_codec_err_t decoder_init(aom_codec_ctx_t *ctx,
@@ -466,6 +469,7 @@ static aom_codec_err_t decode_one(aom_codec_alg_priv_t *ctx,
     // decrypt config between frames.
     frame_worker_data->pbi->decrypt_cb = ctx->decrypt_cb;
     frame_worker_data->pbi->decrypt_state = ctx->decrypt_state;
+    frame_worker_data->pbi->analyzer_data = ctx->analyzer_data;
 
     worker->had_error = 0;
     winterface->execute(worker);
@@ -1014,6 +1018,13 @@ static aom_codec_err_t ctrl_set_skip_loop_filter(aom_codec_alg_priv_t *ctx,
   return AOM_CODEC_OK;
 }
 
+static aom_codec_err_t ctrl_analyzer_set_data(aom_codec_alg_priv_t *ctx,
+                                              va_list args) {
+  AnalyzerData *analyzer_data = va_arg(args, AnalyzerData *);
+  ctx->analyzer_data = analyzer_data;
+  return AOM_CODEC_OK;
+}
+
 static aom_codec_ctrl_fn_map_t decoder_ctrl_maps[] = {
   { AOM_COPY_REFERENCE, ctrl_copy_reference },
 
@@ -1028,6 +1039,8 @@ static aom_codec_ctrl_fn_map_t decoder_ctrl_maps[] = {
   { AOMD_SET_DECRYPTOR, ctrl_set_decryptor },
   { AV1_SET_BYTE_ALIGNMENT, ctrl_set_byte_alignment },
   { AV1_SET_SKIP_LOOP_FILTER, ctrl_set_skip_loop_filter },
+
+  { ANALYZER_SET_DATA, ctrl_analyzer_set_data },
 
   // Getters
   { AOMD_GET_LAST_REF_UPDATES, ctrl_get_last_ref_updates },

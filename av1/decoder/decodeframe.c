@@ -52,6 +52,7 @@
 #include "av1/decoder/decoder.h"
 #include "av1/decoder/detokenize.h"
 #include "av1/decoder/dsubexp.h"
+#include "../common/blockd.h"
 
 #define MAX_AV1_HEADER_SIZE 80
 
@@ -377,7 +378,9 @@ static void inverse_transform_block_intra(MACROBLOCKD *xd, int plane,
   }
 }
 
-static void predict_and_reconstruct_intra_block(MACROBLOCKD *const xd,
+static void predict_and_reconstruct_intra_block(AV1Decoder *const pbi,
+                                                int mi_row, int mi_col,
+                                                MACROBLOCKD *const xd,
                                                 aom_reader *r,
                                                 MB_MODE_INFO *const mbmi,
                                                 int plane, int row, int col,
@@ -394,6 +397,9 @@ static void predict_and_reconstruct_intra_block(MACROBLOCKD *const xd,
 
   av1_predict_intra_block(xd, pd->n4_wl, pd->n4_hl, tx_size, mode, dst,
                           pd->dst.stride, dst, pd->dst.stride, col, row, plane);
+
+  // Save predicted block
+  analyzer_record_predicted_block(pbi, plane, pd->subsampling_x, pd->subsampling_y, mi_col, mi_row, col, row, dst, pd->dst.stride, tx_size);
 
   if (!mbmi->skip) {
     TX_TYPE tx_type = get_tx_type(plane_type, xd, block_idx);
@@ -478,6 +484,7 @@ static void decode_block(AV1Decoder *const pbi, MACROBLOCKD *const xd,
 #if CONFIG_ACCOUNTING
   aom_accounting_set_context(&pbi->accounting, mi_col, mi_row);
 #endif
+  const size_t mi_bits_before = aom_reader_tell(r);
   MB_MODE_INFO *mbmi = set_offsets(cm, xd, bsize, mi_row, mi_col, bw, bh, x_mis,
                                    y_mis, bwl, bhl);
 
@@ -517,7 +524,7 @@ static void decode_block(AV1Decoder *const pbi, MACROBLOCKD *const xd,
 
       for (row = 0; row < max_blocks_high; row += step)
         for (col = 0; col < max_blocks_wide; col += step)
-          predict_and_reconstruct_intra_block(xd, r, mbmi, plane, row, col,
+          predict_and_reconstruct_intra_block(pbi, mi_row, mi_col, xd, r, mbmi, plane, row, col,
                                               tx_size);
     }
   } else {
@@ -527,6 +534,35 @@ static void decode_block(AV1Decoder *const pbi, MACROBLOCKD *const xd,
     if (mbmi->motion_mode == OBMC_CAUSAL)
       av1_build_obmc_inter_predictors_sb(cm, xd, mi_row, mi_col);
 #endif  // CONFIG_MOTION_VAR
+
+    // Save predicted blocks.
+    for (int plane = 0; plane < MAX_MB_PLANE; ++plane) {
+      const struct macroblockd_plane *const pd = &xd->plane[plane];
+
+      const TX_SIZE tx_size =
+        plane ? dec_get_uv_tx_size(mbmi, pd->n4_wl, pd->n4_hl)
+              : mbmi->tx_size;
+      const int num_4x4_w = pd->n4_w;
+      const int num_4x4_h = pd->n4_h;
+      const int step = (1 << tx_size);
+      int row, col;
+      const int max_blocks_wide =
+        num_4x4_w + (xd->mb_to_right_edge >= 0
+                     ? 0
+                     : xd->mb_to_right_edge >> (5 + pd->subsampling_x));
+      const int max_blocks_high =
+        num_4x4_h +
+        (xd->mb_to_bottom_edge >= 0 ? 0 : xd->mb_to_bottom_edge >>
+                                          (5 + pd->subsampling_y));
+
+      for (row = 0; row < max_blocks_high; row += step) {
+        for (col = 0; col < max_blocks_wide; col += step) {
+          uint8_t *const dst = &pd->dst.buf[4 * row * pd->dst.stride + 4 * col];
+          analyzer_record_predicted_block(pbi, plane, pd->subsampling_x, pd->subsampling_y, mi_col, mi_row, col, row, dst, pd->dst.stride, tx_size);
+        }
+      }
+    }
+
     // Reconstruction
     if (!mbmi->skip) {
       int eobtotal = 0;
@@ -566,6 +602,8 @@ static void decode_block(AV1Decoder *const pbi, MACROBLOCKD *const xd,
   }
 
   xd->corrupted |= aom_reader_has_error(r);
+  const size_t mi_bits_after = aom_reader_tell(r);
+  analyzer_record_mi_bits(pbi, 0, mi_col, mi_row, mi_bits_after - mi_bits_before);
 }
 
 static INLINE int dec_partition_plane_context(const MACROBLOCKD *xd, int mi_row,
@@ -2310,6 +2348,7 @@ void av1_decode_frame(AV1Decoder *pbi, const uint8_t *data,
     av1_dering_frame(&pbi->cur_buf->buf, cm, &pbi->mb, cm->dering_level);
   }
 #endif  // CONFIG_DERING
+  analyzer_record_frame(pbi);
 
   if (!xd->corrupted) {
     if (cm->refresh_frame_context == REFRESH_FRAME_CONTEXT_BACKWARD) {

@@ -88,6 +88,8 @@ AV1_COMMON_SRCS-yes += common/accounting.h
 endif
 AV1_COMMON_SRCS-yes += common/odintrin.c
 AV1_COMMON_SRCS-yes += common/odintrin.h
+AV1_COMMON_SRCS-yes += analyzer/analyzer.c
+AV1_COMMON_SRCS-yes += analyzer/analyzer.h
 
 ifneq ($(CONFIG_AOM_HIGHBITDEPTH),yes)
 AV1_COMMON_SRCS-$(HAVE_DSPR2)  += common/mips/dspr2/itrans4_dspr2.c
