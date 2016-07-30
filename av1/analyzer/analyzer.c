@@ -12,24 +12,24 @@
 #include "../common/blockd.h"
 #include "../common/onyxc_int.h"
 
-aom_codec_err_t analyzer_record_predicted_block(struct AV1Decoder *pbi,
-                                                uint32_t plane,
-                                                uint32_t subsampling_x,
-                                                uint32_t subsampling_y,
-                                                uint32_t mi_col,
-                                                uint32_t mi_row,
-                                                uint32_t col,
-                                                uint32_t row,
-                                                unsigned char* src,
-                                                uint32_t src_stride,
-                                                uint32_t transform_size) {
+AnalyzerError analyzer_record_predicted_block(struct AV1Decoder *pbi,
+                                              uint32_t plane,
+                                              uint32_t subsampling_x,
+                                              uint32_t subsampling_y,
+                                              uint32_t mi_col,
+                                              uint32_t mi_row,
+                                              uint32_t col,
+                                              uint32_t row,
+                                              unsigned char* src,
+                                              uint32_t src_stride,
+                                              uint32_t transform_size) {
   if (pbi->analyzer_data == NULL) {
-    return AOM_CODEC_OK;
+    return ANALYZER_OK;
   }
   AnalyzerImage *image = &pbi->analyzer_data->predicted_image;
   AnalyzerImagePlane *imagePlane = &image->planes[plane];
   if (imagePlane->buffer == NULL) {
-    return AOM_CODEC_OK;
+    return ANALYZER_OK;
   }
   int size = 4 << transform_size;
   int mi_size_y = MI_SIZE >> subsampling_y;
@@ -37,7 +37,7 @@ aom_codec_err_t analyzer_record_predicted_block(struct AV1Decoder *pbi,
   size_t offset = mi_row * mi_size_y * imagePlane->stride + mi_col * mi_size_x +
                row * (mi_size_y >> 1) * imagePlane->stride + col * (mi_size_x >> 1);
   if (offset > imagePlane->size) {
-    return AOM_CODEC_ERROR;
+    return ANALYZER_ERROR;
   }
 
   unsigned char* dst = imagePlane->buffer + offset;
@@ -46,17 +46,17 @@ aom_codec_err_t analyzer_record_predicted_block(struct AV1Decoder *pbi,
     dst += imagePlane->stride;
     src += src_stride;
   }
-  return AOM_CODEC_OK;
+  return ANALYZER_OK;
 }
 
 // Saves the decoder state.
-aom_codec_err_t analyzer_record_frame(struct AV1Decoder *pbi) {
+AnalyzerError analyzer_record_frame(struct AV1Decoder *pbi) {
   AV1_COMMON *const cm = &pbi->common;
   const uint32_t mi_rows = cm->mi_rows;
   const uint32_t mi_cols = cm->mi_cols;
   uint32_t r, c;
   if (pbi->analyzer_data == NULL) {
-    return AOM_CODEC_OK;
+    return ANALYZER_OK;
   }
 
   pbi->analyzer_data->mi_rows = mi_rows;
@@ -69,7 +69,7 @@ aom_codec_err_t analyzer_record_frame(struct AV1Decoder *pbi) {
   AnalyzerMIBuffer mi_grid = pbi->analyzer_data->mi_grid;
   if (mi_grid.length > 0) {
     if (mi_rows * mi_cols > mi_grid.length) {
-      return AOM_CODEC_ERROR;
+      return ANALYZER_ERROR;
     }
     for (r = 0; r < mi_rows; ++r) {
       for (c = 0; c < mi_cols; ++c) {
@@ -100,21 +100,21 @@ aom_codec_err_t analyzer_record_frame(struct AV1Decoder *pbi) {
       }
     }
   }
-  return AOM_CODEC_OK;
+  return ANALYZER_OK;
 }
 
-aom_codec_err_t analyzer_record_mi_bits(struct AV1Decoder *pbi,
-                                        uint32_t plane,
-                                        uint32_t mi_col,
-                                        uint32_t mi_row,
-                                        uint32_t bits) {
+AnalyzerError analyzer_record_mi_bits(struct AV1Decoder *pbi,
+                                      uint32_t plane,
+                                      uint32_t mi_col,
+                                      uint32_t mi_row,
+                                      uint32_t bits) {
   AV1_COMMON *const cm = &pbi->common;
   if (pbi->analyzer_data == NULL) {
-    return AOM_CODEC_OK;
+    return ANALYZER_OK;
   }
   if (plane != 0) {
-    return AOM_CODEC_OK;
+    return ANALYZER_OK;
   }
   pbi->analyzer_data->mi_grid.buffer[mi_row * cm->mi_cols + mi_col].bits += bits;
-  return AOM_CODEC_OK;
+  return ANALYZER_OK;
 }
