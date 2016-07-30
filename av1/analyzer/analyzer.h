@@ -3,6 +3,11 @@
 
 struct AV1Decoder;
 
+typedef enum {
+  ANALYZER_OK,
+  ANALYZER_ERROR
+} AnalyzerError;
+
 typedef uint8_t AnalyzerPredictionMode;
 typedef int8_t AnalyzerReferenceFrame;
 typedef int8_t AnalyzerInterpFilter;
@@ -63,22 +68,22 @@ typedef struct AnalyzerData {
   uint32_t tile_cols_log2;
 } AnalyzerData;
 
-aom_codec_err_t analyzer_record_predicted_block(struct AV1Decoder *pbi,
-                                                uint32_t plane,
-                                                uint32_t subsampling_x,
-                                                uint32_t subsampling_y,
-                                                uint32_t mi_col,
-                                                uint32_t mi_row,
-                                                uint32_t col,
-                                                uint32_t row,
-                                                unsigned char* dst,
-                                                uint32_t dst_stride,
-                                                uint32_t transform_size);
+AnalyzerError analyzer_record_predicted_block(struct AV1Decoder *pbi,
+                                              uint32_t plane,
+                                              uint32_t subsampling_x,
+                                              uint32_t subsampling_y,
+                                              uint32_t mi_col,
+                                              uint32_t mi_row,
+                                              uint32_t col,
+                                              uint32_t row,
+                                              unsigned char* dst,
+                                              uint32_t dst_stride,
+                                              uint32_t transform_size);
 
-aom_codec_err_t analyzer_record_frame(struct AV1Decoder *pbi);
-aom_codec_err_t analyzer_record_mi_bits(struct AV1Decoder *pbi,
-                                        uint32_t plane,
-                                        uint32_t mi_col,
-                                        uint32_t mi_row,
-                                        uint32_t bits);
+AnalyzerError analyzer_record_frame(struct AV1Decoder *pbi);
+AnalyzerError analyzer_record_mi_bits(struct AV1Decoder *pbi,
+                                      uint32_t plane,
+                                      uint32_t mi_col,
+                                      uint32_t mi_row,
+                                      uint32_t bits);
 #endif  // ANALYZER_H_
