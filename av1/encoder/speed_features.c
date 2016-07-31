@@ -136,6 +136,7 @@ static void set_good_speed_feature(AV1_COMP *cpi, AV1_COMMON *cm,
   sf->adaptive_rd_thresh = 1;
 
   if (speed >= 1) {
+#if 0
     if ((cpi->twopass.fr_content_type == FC_GRAPHICS_ANIMATION) ||
         av1_internal_image_edge(cpi)) {
       sf->use_square_partition_only = !frame_is_boosted(cpi);
@@ -149,6 +150,7 @@ static void set_good_speed_feature(AV1_COMP *cpi, AV1_COMMON *cm,
     sf->adaptive_motion_search = 1;
     sf->mv.auto_mv_step_size = 1;
     sf->adaptive_rd_thresh = 2;
+#endif
     sf->mv.subpel_iters_per_step = 1;
     sf->mode_skip_start = 10;
     sf->adaptive_pred_interp_filter = 1;
