@@ -142,8 +142,9 @@ static void set_good_speed_feature(AV1_COMP *cpi, AV1_COMMON *cm,
     } else {
       sf->use_square_partition_only = !frame_is_intra_only(cm);
     }
-
+#if 0
     sf->less_rectangular_check = 1;
+#endif
 
     sf->use_rd_breakout = 1;
     sf->adaptive_motion_search = 1;
