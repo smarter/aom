@@ -144,13 +144,13 @@ static void set_good_speed_feature(AV1_COMP *cpi, AV1_COMMON *cm,
       sf->use_square_partition_only = !frame_is_intra_only(cm);
     }
 
+#endif
     sf->less_rectangular_check = 1;
 
     sf->use_rd_breakout = 1;
     sf->adaptive_motion_search = 1;
     sf->mv.auto_mv_step_size = 1;
     sf->adaptive_rd_thresh = 2;
-#endif
     sf->mv.subpel_iters_per_step = 1;
     sf->mode_skip_start = 10;
     sf->adaptive_pred_interp_filter = 1;
