@@ -145,12 +145,13 @@ static void set_good_speed_feature(AV1_COMP *cpi, AV1_COMMON *cm,
 
     sf->less_rectangular_check = 1;
 
-    sf->use_rd_breakout = 1;
 #if 0
+    sf->use_rd_breakout = 1;
+#endif
     sf->adaptive_motion_search = 1;
     sf->mv.auto_mv_step_size = 1;
     sf->adaptive_rd_thresh = 2;
-#endif
+
     sf->mv.subpel_iters_per_step = 1;
     sf->mode_skip_start = 10;
     sf->adaptive_pred_interp_filter = 1;
