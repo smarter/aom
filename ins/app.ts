@@ -99,7 +99,9 @@ enum AOMAnalyzerBlockSize {
 }
 
 enum Property {
-  GET_CODEC_BUILD_CONFIG
+  GET_CODEC_BUILD_CONFIG,
+  GET_CLPF_STRENGTH,
+  GET_DERING_LEVEL
 }
 
 enum MIProperty {
@@ -179,7 +181,7 @@ interface AOMInternal {
   _open_file(): number;
 
   _get_property(p: Property): number;
-  _get_mi_property(p: MIProperty, c: number, r: number, i: number): number;
+  _get_mi_property(p: MIProperty, mi_col: number, mi_row: number, i: number): number;
 
   _get_predicted_plane_buffer(pli: number): number;
   _get_predicted_plane_stride(pli: number): number;
@@ -218,8 +220,8 @@ class AOM {
   getStringProperty(p: Property): string {
     return this.native.UTF8ToString(this.get_property(p));
   }
-  get_mi_property(p: MIProperty, c: number, r: number, i: number = 0) {
-    return this.native._get_mi_property(p, c, r, i);
+  get_mi_property(p: MIProperty, mi_col: number, mi_row: number, i: number = 0) {
+    return this.native._get_mi_property(p, mi_col, mi_row, i);
   }
   get_predicted_plane_buffer(pli: number): number {
     return this.native._get_predicted_plane_buffer(pli);
@@ -827,6 +829,18 @@ class AppCtrl {
           let error = self.getFrameError();
           return error ? error.mseToString() : "N/A";
         }
+      },
+      clpfStrength: {
+        description: "CLPF Strength",
+        get value() {
+          return self.aom.get_property(Property.GET_CLPF_STRENGTH);
+        }
+      },
+      deringLevel: {
+        description: "Dering Level",
+        get value() {
+          return self.aom.get_property(Property.GET_DERING_LEVEL);
+        }
       }
     };
   }
@@ -1414,7 +1428,11 @@ class AppCtrl {
       return;
     }
     this.playInterval = this.$interval(() => {
-      this.playFrame();
+      if (!this.playFrame()) {
+        this.$interval.cancel(this.playInterval);
+        this.playInterval = 0;
+        return;
+      }
       this.drawFrame();
     }, 1);
   }
@@ -1443,6 +1461,7 @@ class AppCtrl {
       this.tileGridSize.cols = 1 << tileGridSize.cols;
       this.tileGridSize.rows = 1 << tileGridSize.rows;
     }
+    return true;
   }
 
   frameStatistics = {
