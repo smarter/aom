@@ -66,6 +66,8 @@ typedef struct AnalyzerData {
   uint32_t mi_cols;
   uint32_t tile_rows_log2;
   uint32_t tile_cols_log2;
+  uint32_t clpf_strength;
+  uint32_t dering_level;
 } AnalyzerData;
 
 AnalyzerError analyzer_record_predicted_block(struct AV1Decoder *pbi,

@@ -229,6 +229,16 @@
         <canvas id="chart" oncontextmenu="event.preventDefault()" width=0 height=0></canvas>
       </div>
       <md-tabs md-dynamic-height md-border-bottom>
+        <md-tab label="Frame Info">
+          <md-content class="md-padding">
+            <md-list>
+              <md-list-item class="md-list-item-narrow" ng-cloak ng-repeat="(name, p) in vm.uiFrameInfoProperties" style="color: {{p.color}};">
+                <div flex="50">{{p.description}}</div>
+                <div flex="50" style="text-align: right;">{{p.value}}</div>
+              </md-list-item>
+            </md-list>
+          </md-content>
+        </md-tab>
         <md-tab label="Block Info">
           <md-content class="md-padding">
             <md-list>
