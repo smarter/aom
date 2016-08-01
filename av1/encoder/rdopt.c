@@ -1272,8 +1272,8 @@ static int64_t rd_pick_intra4x4block(const AV1_COMP *const cpi, MACROBLOCK *x,
       *bestdistortion = distortion;
       best_rd = this_rd;
       *best_mode = mode;
-      memcpy(a, tempa, num_4x4_blocks_wide * sizeof(tempa[0]));
-      memcpy(l, templ, num_4x4_blocks_high * sizeof(templ[0]));
+      memcpy(ta, tempa, num_4x4_blocks_wide * sizeof(tempa[0]));
+      memcpy(tl, templ, num_4x4_blocks_high * sizeof(templ[0]));
       for (idy = 0; idy < num_4x4_blocks_high * 4; ++idy)
         memcpy(best_dst + idy * 8, dst_init + idy * dst_stride,
                num_4x4_blocks_wide * 4);
