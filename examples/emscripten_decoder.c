@@ -232,13 +232,19 @@ int get_tile_cols_and_rows_log2() {
 
 typedef enum {
   GET_CODEC_BUILD_CONFIG,
+  GET_CLPF_STRENGTH,
+  GET_DERING_LEVEL
 } GetProperty;
 
 EMSCRIPTEN_KEEPALIVE
-const char *get_property(GetProperty v) {
+const int get_property(GetProperty v) {
   switch (v) {
     case GET_CODEC_BUILD_CONFIG:
       return aom_codec_build_config();
+    case GET_CLPF_STRENGTH:
+      return analyzer_data.clpf_strength;
+    case GET_DERING_LEVEL:
+      return analyzer_data.dering_level;
   }
 }
 
