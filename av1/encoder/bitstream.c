@@ -1037,6 +1037,10 @@ static void write_modes(AV1_COMP *cpi, const TileInfo *const tile,
   MACROBLOCKD *const xd = &cpi->td.mb.e_mbd;
   int mi_row, mi_col;
 
+#if CONFIG_PVQ
+  assert(cpi->td.mb.pvq_q->curr_pos == 0);
+#endif
+
   for (mi_row = tile->mi_row_start; mi_row < tile->mi_row_end;
        mi_row += MI_BLOCK_SIZE) {
     av1_zero(xd->left_seg_context);
@@ -1052,6 +1056,8 @@ static void write_modes(AV1_COMP *cpi, const TileInfo *const tile,
   // check # of pvq blocks that are encoded and written to bitstream
   // are the same
   assert(cpi->td.mb.pvq_q->curr_pos == cpi->td.mb.pvq_q->last_pos);
+  // Reset curr_pos in case we repack the bitstream
+  cpi->td.mb.pvq_q->curr_pos = 0;
 #endif
 }
 
