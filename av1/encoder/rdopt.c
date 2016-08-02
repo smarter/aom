@@ -2229,10 +2229,9 @@ static int64_t encode_inter_mb_segment(const AV1_COMP *const cpi, MACROBLOCK *x,
       int16_t *src_int16 = &p->src_int16[4 * (ir * diff_stride + ic)];
       int i, j, tx_blk_size;
       int rate_pvq;
-      int pvq_blk_offset = (ir + idy) * 16 + (ic + idx);
+      int pvq_blk_offset = (ir + idy) * 2 + (ic + idx);
       PVQ_INFO *pvq_info;
-      assert(pvq_blk_offset < 16 * 16);
-      pvq_info = *(x->pvq + pvq_blk_offset) + 0;//plane 0
+      pvq_info = &x->pvq[pvq_blk_offset][0];
 #endif
       k += (idy * 2 + idx);
       coeff = BLOCK_OFFSET(p->coeff, k);
@@ -2272,7 +2271,7 @@ static int64_t encode_inter_mb_segment(const AV1_COMP *const cpi, MACROBLOCK *x,
         thisdistortion +=
             av1_block_error(coeff, BLOCK_OFFSET(pd->dqcoeff, k), 16, &ssz);
       }
-#elif 0//CONFIG_PVQ
+#elif CONFIG_PVQ
       thisdistortion +=
           av1_block_error2_c(coeff, BLOCK_OFFSET(pd->dqcoeff, k), ref_coeff, 16, &ssz);
 #else
@@ -2633,6 +2632,11 @@ static int64_t rd_pick_best_sub8x8_mode(
   const int has_second_rf = has_second_ref(mbmi);
   const int inter_mode_mask = cpi->sf.inter_mode_mask[bsize];
   MB_MODE_INFO_EXT *const mbmi_ext = x->mbmi_ext;
+#if CONFIG_PVQ
+  od_rollback_buffer pre_buf;
+
+  od_encode_checkpoint(&x->daala_enc, &pre_buf);
+#endif
 
   av1_zero(*bsi);
 
@@ -2664,6 +2668,10 @@ static int64_t rd_pick_best_sub8x8_mode(
       int64_t best_rd = INT64_MAX;
       const int i = idy * 2 + idx;
       int ref;
+#if CONFIG_PVQ
+      od_rollback_buffer idx_buf, post_buf;
+      od_encode_checkpoint(&x->daala_enc, &idx_buf);
+#endif
 
       for (ref = 0; ref < 1 + has_second_rf; ++ref) {
         const MV_REFERENCE_FRAME frame = mbmi->ref_frame[ref];
@@ -2691,6 +2699,9 @@ static int64_t rd_pick_best_sub8x8_mode(
                sizeof(bsi->rdstat[i][mode_idx].ta));
         memcpy(bsi->rdstat[i][mode_idx].tl, t_left,
                sizeof(bsi->rdstat[i][mode_idx].tl));
+#if CONFIG_PVQ
+        od_encode_rollback(&x->daala_enc, &idx_buf);
+#endif
 
         // motion search for newmv (single predictor case only)
         if (!has_second_rf && this_mode == NEWMV &&
@@ -2907,6 +2918,10 @@ static int64_t rd_pick_best_sub8x8_mode(
         if (bsi->rdstat[i][mode_idx].brdcost < best_rd) {
           mode_selected = this_mode;
           best_rd = bsi->rdstat[i][mode_idx].brdcost;
+
+#if CONFIG_PVQ
+          od_encode_checkpoint(&x->daala_enc, &post_buf);
+#endif
         }
       } /*for each 4x4 mode*/
 
@@ -2916,12 +2931,18 @@ static int64_t rd_pick_best_sub8x8_mode(
           for (midx = 0; midx < INTER_MODES; ++midx)
             bsi->rdstat[iy][midx].brdcost = INT64_MAX;
         bsi->segment_rd = INT64_MAX;
+#if CONFIG_PVQ
+        od_encode_rollback(&x->daala_enc, &pre_buf);
+#endif
         return INT64_MAX;
       }
 
       mode_idx = INTER_OFFSET(mode_selected);
       memcpy(t_above, bsi->rdstat[i][mode_idx].ta, sizeof(t_above));
       memcpy(t_left, bsi->rdstat[i][mode_idx].tl, sizeof(t_left));
+#if CONFIG_PVQ
+      od_encode_rollback(&x->daala_enc, &post_buf);
+#endif
 
       set_and_cost_bmi_mvs(cpi, x, xd, i, mode_selected, mode_mv[mode_selected],
                            frame_mv, seg_mvs[i], bsi->ref_mv, x->nmvjointcost,
@@ -2939,10 +2960,16 @@ static int64_t rd_pick_best_sub8x8_mode(
           for (midx = 0; midx < INTER_MODES; ++midx)
             bsi->rdstat[iy][midx].brdcost = INT64_MAX;
         bsi->segment_rd = INT64_MAX;
+#if CONFIG_PVQ
+        od_encode_rollback(&x->daala_enc, &pre_buf);
+#endif
         return INT64_MAX;
       }
     }
   } /* for each label */
+#if CONFIG_PVQ
+  od_encode_rollback(&x->daala_enc, &pre_buf);
+#endif
 
   bsi->r = br;
   bsi->d = bd;
