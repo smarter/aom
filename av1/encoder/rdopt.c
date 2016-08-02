@@ -2251,8 +2251,8 @@ static int64_t encode_inter_mb_segment(const AV1_COMP *const cpi, MACROBLOCK *x,
       // in order to use existing VP10 transform functions
       for (j = 0; j < tx_blk_size; j++)
         for (i = 0; i < tx_blk_size; i++) {
-          src_int16[diff_stride * j + i] = src[src_stride * j + i];
-          pred[diff_stride * j + i] = dst[dst_stride * j + i];
+          src_int16[diff_stride * j + i] = src[src_stride * (j + 4*idy) + (i + 4*idx)];
+          pred[diff_stride * j + i] = dst[dst_stride * (j + 4*idy) + (i + 4*idx)];
         }
 
       fwd_txm4x4(src_int16, coeff, diff_stride);
