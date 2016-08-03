@@ -106,9 +106,9 @@ enum Property {
 
 enum MIProperty {
   GET_MI_MV,
+  GET_MI_MV_REFERENCE_FRAME,
   GET_MI_MODE,
   GET_MI_SKIP,
-  GET_MI_REFERENCE_FRAME,
   GET_MI_BLOCK_SIZE,
   GET_MI_TRANSFORM_TYPE,
   GET_MI_TRANSFORM_SIZE,
@@ -914,8 +914,8 @@ class AppCtrl {
         description: "Reference Frames",
         get value() {
           return withMIUnderMouse(mi => {
-            return self.aom.get_mi_property(MIProperty.GET_MI_REFERENCE_FRAME, mi.x, mi.y, 0) + ", " +
-                   self.aom.get_mi_property(MIProperty.GET_MI_REFERENCE_FRAME, mi.x, mi.y, 1);
+            return self.aom.get_mi_property(MIProperty.GET_MI_MV_REFERENCE_FRAME, mi.x, mi.y, 0) + ", " +
+                   self.aom.get_mi_property(MIProperty.GET_MI_MV_REFERENCE_FRAME, mi.x, mi.y, 1);
           });
         }
       },
