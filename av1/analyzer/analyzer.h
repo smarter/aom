@@ -38,7 +38,7 @@ typedef struct AnalyzerMV {
  */
 typedef struct AnalyzerMI {
   AnalyzerMV mv[2];
-  AnalyzerReferenceFrame reference_frame[2];
+  AnalyzerReferenceFrame mv_reference_frame[2];
   AnalyzerInterpFilter filter;
   AnalyzerPredictionMode mode;
   int8_t dering_gain;

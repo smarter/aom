@@ -88,8 +88,8 @@ AnalyzerError analyzer_record_frame(struct AV1Decoder *pbi) {
         mi->mv[1].col = mbmi->mv[1].as_mv.col;
         mi->mv[1].row = mbmi->mv[1].as_mv.row;
         // Reference Frames
-        mi->reference_frame[0] = mbmi->ref_frame[0];
-        mi->reference_frame[1] = mbmi->ref_frame[1];
+        mi->mv_reference_frame[0] = mbmi->ref_frame[0];
+        mi->mv_reference_frame[1] = mbmi->ref_frame[1];
         // Prediction Mode
         mi->mode = mbmi->mode;
         // Deringing Gain

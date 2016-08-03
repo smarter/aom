@@ -250,9 +250,9 @@ const int get_property(GetProperty v) {
 
 typedef enum {
   GET_MI_MV,
+  GET_MI_MV_REFERENCE_FRAME,
   GET_MI_MODE,
   GET_MI_SKIP,
-  GET_MI_REFERENCE_FRAME,
   GET_MI_BLOCK_SIZE,
   GET_MI_TRANSFORM_TYPE,
   GET_MI_TRANSFORM_SIZE,
@@ -271,8 +271,8 @@ int get_mi_property(GetMIProperty v, int c, int r, int i) {
       return mi->mode;
     case GET_MI_SKIP:
       return mi->skip;
-    case GET_MI_REFERENCE_FRAME:
-      return mi->reference_frame[i];
+    case GET_MI_MV_REFERENCE_FRAME:
+      return mi->mv_reference_frame[i];
     case GET_MI_BLOCK_SIZE:
       return mi->block_size;
     case GET_MI_TRANSFORM_TYPE:
