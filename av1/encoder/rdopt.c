@@ -1711,9 +1711,10 @@ static int64_t rd_pick_intra_sby_mode(const AV1_COMP *const cpi, MACROBLOCK *x,
   const PREDICTION_MODE A = av1_above_block_mode(xd->mi[0], above_mi, 0);
   const PREDICTION_MODE L = av1_left_block_mode(xd->mi[0], left_mi, 0);
 #if CONFIG_PVQ
-  od_rollback_buffer buf;
+  od_rollback_buffer pre_buf, post_buf;
 
-  od_encode_checkpoint(&x->daala_enc, &buf);
+  od_encode_checkpoint(&x->daala_enc, &pre_buf);
+  od_encode_checkpoint(&x->daala_enc, &post_buf);
 #endif
 
   bmode_costs = cpi->y_mode_costs[A][L];
@@ -1734,6 +1735,9 @@ static int64_t rd_pick_intra_sby_mode(const AV1_COMP *const cpi, MACROBLOCK *x,
   for (mode = DC_PRED; mode <= TM_PRED; mode++) {
     mbmi->mode = mode;
 
+#if CONFIG_PVQ
+    od_encode_rollback(&x->daala_enc, &pre_buf);
+#endif
 #if CONFIG_EXT_INTRA
     if (is_directional_mode(mbmi->mode)) {
       if (directional_mode_skip_mask[mbmi->mode]) continue;
@@ -1750,9 +1754,6 @@ static int64_t rd_pick_intra_sby_mode(const AV1_COMP *const cpi, MACROBLOCK *x,
     super_block_yrd(cpi, x, &this_rate_tokenonly, &this_distortion, &s, NULL,
                     bsize, best_rd);
 #endif // CONFIG_EXT_INTRA
-#if CONFIG_PVQ
-    od_encode_rollback(&x->daala_enc, &buf);
-#endif
     if (this_rate_tokenonly == INT_MAX) continue;
 
     this_rate = this_rate_tokenonly + bmode_costs[mode];
@@ -1768,6 +1769,9 @@ static int64_t rd_pick_intra_sby_mode(const AV1_COMP *const cpi, MACROBLOCK *x,
     this_rd = RDCOST(x->rdmult, x->rddiv, this_rate, this_distortion);
 
     if (this_rd < best_rd) {
+#if CONFIG_PVQ
+    od_encode_checkpoint(&x->daala_enc, &post_buf);
+#endif
       mode_selected = mode;
       best_rd = this_rd;
       best_tx = mbmi->tx_size;
@@ -1781,6 +1785,10 @@ static int64_t rd_pick_intra_sby_mode(const AV1_COMP *const cpi, MACROBLOCK *x,
       *skippable = s;
     }
   }
+
+#if CONFIG_PVQ
+  od_encode_rollback(&x->daala_enc, &post_buf);
+#endif
 
   mbmi->mode = mode_selected;
   mbmi->tx_size = best_tx;
