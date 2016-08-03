@@ -194,7 +194,7 @@ int read_frame() {
   }
   img = NULL;
   aom_codec_iter_t iter = NULL;
-  
+
   size_t frame_size = 0;
   const unsigned char *frame =
       aom_video_reader_get_frame(reader, &frame_size);
@@ -204,6 +204,7 @@ int read_frame() {
   }
   img = aom_codec_get_frame(&codec, &iter);
   if (img == NULL) {
+    printf("OKAY.\n");
     return EXIT_FAILURE;
   }
   ++frame_count;
@@ -355,7 +356,7 @@ int main(int argc, char **argv) {
 EMSCRIPTEN_KEEPALIVE
 void quit() {
   printf("Processed %d frames.\n", frame_count);
-  if (aom_codec_destroy(&codec)) 
+  if (aom_codec_destroy(&codec))
     die_codec(&codec, "Failed to destroy codec");
 
   // printf("Play: ffplay -f rawvideo -pix_fmt yuv420p -s %dx%d %s\n",

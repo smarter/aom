@@ -7,8 +7,8 @@ fi
 
 cd asm
 emmake make
-cp examples/emscripten_decoder examples/emscripten_decoder.bc
-emcc -O3 examples/emscripten_decoder.bc -o examples/decoder.js -s TOTAL_MEMORY=134217728
+cp examples/analyzer_decoder examples/analyzer_decoder.bc
+emcc -O3 examples/analyzer_decoder.bc -o examples/decoder.js -s TOTAL_MEMORY=134217728
 cd ..
 mkdir -p ins/bin
 cp asm/examples/decoder.js ins/bin/decoder.js
