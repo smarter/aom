@@ -4083,6 +4083,9 @@ void av1_rd_pick_inter_mode_sb(const AV1_COMP *cpi, TileDataEnc *tile_data,
   int64_t mode_threshold[MAX_MODES];
   int *mode_map = tile_data->mode_map[bsize];
   const int mode_search_skip_flags = sf->mode_search_skip_flags;
+#if CONFIG_PVQ
+  od_rollback_buffer pre_buf;
+#endif
 
 #if CONFIG_EXT_INTRA
   int angle_stats_ready = 0;
@@ -4289,6 +4292,9 @@ void av1_rd_pick_inter_mode_sb(const AV1_COMP *cpi, TileDataEnc *tile_data,
     midx = end_pos;
   }
 
+#if CONFIG_PVQ
+  od_encode_checkpoint(&x->daala_enc, &pre_buf);
+#endif
   for (midx = 0; midx < MAX_MODES; ++midx) {
     int mode_index = mode_map[midx];
     int mode_excluded = 0;
@@ -4302,6 +4308,9 @@ void av1_rd_pick_inter_mode_sb(const AV1_COMP *cpi, TileDataEnc *tile_data,
     int64_t total_sse = INT64_MAX;
 #if CONFIG_REF_MV
     uint8_t ref_frame_type;
+#endif
+#if CONFIG_PVQ
+    od_encode_rollback(&x->daala_enc, &pre_buf);
 #endif
     this_mode = av1_mode_order[mode_index].mode;
     ref_frame = av1_mode_order[mode_index].ref_frame[0];
@@ -5133,6 +5142,11 @@ void av1_rd_pick_inter_mode_sub8x8(const AV1_COMP *cpi, TileDataEnc *tile_data,
   int ref_frame_skip_mask[2] = { 0 };
   int internal_active_edge =
       av1_active_edge_sb(cpi, mi_row, mi_col) && av1_internal_image_edge(cpi);
+#if CONFIG_PVQ
+  od_rollback_buffer pre_buf;
+
+  od_encode_checkpoint(&x->daala_enc, &pre_buf);
+#endif
 
   memset(x->zcoeff_blk[TX_4X4], 0, 4);
   av1_zero(best_mbmode);
@@ -5176,6 +5190,10 @@ void av1_rd_pick_inter_mode_sub8x8(const AV1_COMP *cpi, TileDataEnc *tile_data,
     int i;
     int this_skip2 = 0;
     int64_t total_sse = INT_MAX;
+
+#if CONFIG_PVQ
+    od_encode_rollback(&x->daala_enc, &pre_buf);
+#endif
 
     ref_frame = av1_ref_order[ref_index].ref_frame[0];
     second_ref_frame = av1_ref_order[ref_index].ref_frame[1];
