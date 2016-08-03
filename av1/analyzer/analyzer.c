@@ -67,10 +67,10 @@ AnalyzerError analyzer_record_frame(struct AV1Decoder *pbi) {
 
 #if CONFIG_CLPF
   pbi->analyzer_data->clpf_strength = cm->clpf_strength;
-#endif CONFIG_CLPF
+#endif
 #if CONFIG_DERING
   pbi->analyzer_data->dering_level = cm->dering_level;
-#endif CONFIG_DERING
+#endif
   // Save mode info.
   AnalyzerMIBuffer mi_grid = pbi->analyzer_data->mi_grid;
   if (mi_grid.length > 0) {
