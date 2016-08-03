@@ -158,6 +158,8 @@ struct macroblock {
 
 #if CONFIG_PVQ
   int rate;
+  // 1 if neither AC or DC is coded. Only used during RDO.
+  int pvq_skip[MAX_MB_PLANE];
   PVQ_QUEUE *pvq_q;
   PVQ_INFO pvq[256][3]; // 16x16 of 4x4 blocks, YUV
   daala_enc_ctx daala_enc;

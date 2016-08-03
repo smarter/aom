@@ -667,6 +667,7 @@ void od_encode_quantizer_scaling(daala_enc_ctx *enc, int q_scaling,
  * @param [in]     by      y-coordinate of this block
  * @param [in]     qm      QM with magnitude compensation
  * @param [in]     qm_inv  Inverse of QM with magnitude compensation
+ * @param [in]     pvq_info  If null, conisdered as RDO search mode
  * @return         Returns 1 if both DC and AC coefficients are skipped,
  *                 zero otherwise
  */
@@ -788,7 +789,8 @@ int od_pvq_encode(daala_enc_ctx *enc,
   /* Code as if we're not skipping. */
   od_encode_cdf_adapt(&enc->ec, 2 + (out[0] != 0), skip_cdf,
    4, enc->state.adapt.skip_increment);
-  pvq_info->ac_dc_coded = 2 + (out[0] != 0);
+  if (pvq_info)
+    pvq_info->ac_dc_coded = 2 + (out[0] != 0);
 #if OD_SIGNAL_Q_SCALING
   if (bs == OD_NBSIZES - 1 && pli == 0) {
     od_encode_quantizer_scaling(enc, q_scaling, bx >> (OD_NBSIZES - 1),
@@ -819,9 +821,10 @@ int od_pvq_encode(daala_enc_ctx *enc,
    * TODO: Better if we can call this function only when mode decision
    *       (i.e. RDO) is over.
    */
-  store_pvq_enc_info(pvq_info, qg, theta, max_theta, k,
-    y, nb_bands, off, size,
-    skip_rest, skip_dir, bs);
+  if (pvq_info)
+    store_pvq_enc_info(pvq_info, qg, theta, max_theta, k,
+      y, nb_bands, off, size,
+      skip_rest, skip_dir, bs);
 
   for (i = 0; i < nb_bands; i++) {
     int encode_flip;
@@ -887,7 +890,8 @@ int od_pvq_encode(daala_enc_ctx *enc,
     od_encode_rollback(enc, &buf);
     od_encode_cdf_adapt(&enc->ec, out[0] != 0, skip_cdf,
      4, enc->state.adapt.skip_increment);
-    pvq_info->ac_dc_coded = (out[0] != 0);
+    if (pvq_info)
+      pvq_info->ac_dc_coded = (out[0] != 0);
 #if OD_SIGNAL_Q_SCALING
     if (bs == OD_NBSIZES - 1 && pli == 0) {
       int skip;

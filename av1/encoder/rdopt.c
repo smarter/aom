@@ -604,10 +604,6 @@ static void block_rd_txfm(int plane, int block, int blk_row, int blk_col,
   int rate;
   int64_t dist;
   int64_t sse;
-#if CONFIG_PVQ
-  PVQ_INFO *pvq_info;
-  pvq_info = &x->pvq[block][plane];
-#endif
 
   if (args->exit_early) return;
 
@@ -675,7 +671,7 @@ static void block_rd_txfm(int plane, int block, int blk_row, int blk_col,
 #if !CONFIG_PVQ
         !x->plane[plane].eobs[block] ||
 #else
-        !pvq_info->ac_dc_coded ||
+        x->pvq_skip[plane] ||
 #endif
         (rd1 > rd2 && !xd->lossless[mbmi->segment_id]);
 
@@ -691,7 +687,7 @@ static void block_rd_txfm(int plane, int block, int blk_row, int blk_col,
 #if !CONFIG_PVQ
   args->skippable &= !x->plane[plane].eobs[block];
 #else
-  args->skippable &= !pvq_info->ac_dc_coded;
+  args->skippable &= x->pvq_skip[plane];
 #endif
 }
 
@@ -1165,7 +1161,6 @@ static int64_t rd_pick_intra4x4block(const AV1_COMP *const cpi, MACROBLOCK *x,
         TX_TYPE tx_type = get_tx_type(PLANE_TYPE_Y, xd, block);
         int rate_pvq;
         int skip;
-        PVQ_INFO *pvq_info = &x->pvq[block][0];
 #endif
         xd->mi[0]->bmi[block].as_mode = mode;
         av1_predict_intra_block(xd, 1, 1, TX_4X4, mode, dst, dst_stride, dst,
@@ -1202,7 +1197,7 @@ static int64_t rd_pick_intra4x4block(const AV1_COMP *const cpi, MACROBLOCK *x,
 #else
           skip = pvq_encode_helper(&x->daala_enc, coeff, ref_coeff, dqcoeff,
               &p->eobs[block], pd->dequant,
-              0, TX_4X4, &rate_pvq, pvq_info);
+              0, TX_4X4, &rate_pvq, NULL);
           ratey += rate_pvq;
 #endif
           if (RDCOST(x->rdmult, x->rddiv, ratey, distortion) >= best_rd)
@@ -1232,7 +1227,7 @@ static int64_t rd_pick_intra4x4block(const AV1_COMP *const cpi, MACROBLOCK *x,
 #else
           skip = pvq_encode_helper(&x->daala_enc, coeff, ref_coeff, dqcoeff,
               &p->eobs[block], pd->dequant,
-              0, TX_4X4, &rate_pvq, pvq_info);
+              0, TX_4X4, &rate_pvq, NULL);
           ratey += rate_pvq;
 #endif
           // No need for av1_block_error2_c because the ssz is unused
@@ -1295,7 +1290,6 @@ static int64_t rd_pick_intra4x4block(const AV1_COMP *const cpi, MACROBLOCK *x,
       TX_TYPE tx_type = get_tx_type(PLANE_TYPE_Y, xd, block);
       int rate_pvq;
       int skip;
-      PVQ_INFO *pvq_info = &x->pvq[block][0];
       int lossless = xd->lossless[xd->mi[0]->mbmi.segment_id];
 
       av1_predict_intra_block(xd, 1, 1, TX_4X4, *best_mode, dst, dst_stride, dst,
@@ -1319,7 +1313,7 @@ static int64_t rd_pick_intra4x4block(const AV1_COMP *const cpi, MACROBLOCK *x,
 
       skip = pvq_encode_helper(&x->daala_enc, coeff, ref_coeff, dqcoeff,
           &p->eobs[block], pd->dequant,
-          0, TX_4X4, &rate_pvq, pvq_info);
+          0, TX_4X4, &rate_pvq, NULL);
 
       if (lossless) {
         if (!skip) {
@@ -2223,9 +2217,6 @@ static int64_t encode_inter_mb_segment(const AV1_COMP *const cpi, MACROBLOCK *x,
       int16_t *src_int16 = &p->src_int16[4 * (ir * diff_stride + ic)];
       int i, j, tx_blk_size;
       int rate_pvq;
-      int pvq_blk_offset = (ir + idy) * 2 + (ic + idx);
-      PVQ_INFO *pvq_info;
-      pvq_info = &x->pvq[pvq_blk_offset][0];
 #endif
       k += (idy * 2 + idx);
       coeff = BLOCK_OFFSET(p->coeff, k);
@@ -2254,7 +2245,7 @@ static int64_t encode_inter_mb_segment(const AV1_COMP *const cpi, MACROBLOCK *x,
 
       pvq_encode_helper(&x->daala_enc, coeff, ref_coeff, dqcoeff,
           &p->eobs[k], pd->dequant,
-          0, TX_4X4, &rate_pvq, pvq_info);
+          0, TX_4X4, &rate_pvq, NULL);
 #endif
 
 #if CONFIG_AOM_HIGHBITDEPTH

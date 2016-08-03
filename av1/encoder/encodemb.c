@@ -561,6 +561,8 @@ void av1_xform_quant_fp(MACROBLOCK *x, int plane, int block, int blk_row,
                              &x->rate,       // rate measured
                              pvq_info);      // PVQ info for a block
 
+  x->pvq_skip[plane] = skip;
+
   if (!skip)
     mbmi->skip = 0;
 #endif//#if !CONFIG_PVQ
@@ -865,6 +867,8 @@ void av1_xform_quant(MACROBLOCK *x, int plane, int block, int blk_row,
                              tx_size,        // block size in log_2 - 2
                              &x->rate,       // rate measured
                              pvq_info);      // PVQ info for a block
+
+  x->pvq_skip[plane] = skip;
 
   if (!skip)
     mbmi->skip = 0;
@@ -1310,6 +1314,8 @@ void av1_encode_block_intra(int plane, int block, int blk_row, int blk_col,
                              &x->rate,       // rate measured
                              pvq_info);       // PVQ info for a block
 
+  x->pvq_skip[plane] = skip;
+
   if (!skip)
     mbmi->skip = 0;
 
@@ -1423,10 +1429,10 @@ int pvq_encode_helper(daala_enc_ctx *daala_enc,
           0, 0, 0, //q_scaling, bx, by,
           daala_enc->state.qm + off, daala_enc->state.qm_inv + off, pvq_info);
 
-  if (skip)
+  if (skip && pvq_info)
     assert(pvq_info->ac_dc_coded == 0);
 
-  if (!skip)
+  if (!skip && pvq_info)
     assert(pvq_info->ac_dc_coded > 0);
 
   // Encode residue of DC coeff, if required.
@@ -1442,7 +1448,8 @@ int pvq_encode_helper(daala_enc_ctx *daala_enc,
 
   // need to save quantized residue of DC coeff
   // so that final pvq bitstream writing can know whether DC is coded.
-  pvq_info->dq_dc_residue = out_int32[0];
+  if (pvq_info)
+    pvq_info->dq_dc_residue = out_int32[0];
 
   out_int32[0] = out_int32[0] * pvq_dc_quant;
   out_int32[0] += ref_int32[0];
@@ -1463,8 +1470,6 @@ int pvq_encode_helper(daala_enc_ctx *daala_enc,
   //  if (dqcoeff[j]) *eob = j + 1;
 
   *eob = tx_blk_size * tx_blk_size;
-
-  pvq_info->eob = *eob;
 
   *rate = (od_ec_enc_tell(&daala_enc->ec) - tell) << AV1_PROB_COST_SHIFT;
   assert(*rate >= 0);
