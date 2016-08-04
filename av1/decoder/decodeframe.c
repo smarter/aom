@@ -850,7 +850,12 @@ static PARTITION_TYPE read_partition(AV1_COMMON *cm, MACROBLOCKD *xd,
   PARTITION_TYPE p;
 
   if (has_rows && has_cols)
+#if CONFIG_DAALA_EC
+    p = (PARTITION_TYPE)aom_read_tree_cdf(r, cm->fc->partition_cdf[ctx],
+                                          PARTITION_TYPES);
+#else
     p = (PARTITION_TYPE)aom_read_tree(r, av1_partition_tree, probs);
+#endif
   else if (!has_rows && has_cols)
     p = aom_read(r, probs[1]) ? PARTITION_SPLIT : PARTITION_HORZ;
   else if (has_rows && !has_cols)
@@ -2216,15 +2221,12 @@ static size_t read_uncompressed_header(AV1Decoder *pbi,
 
   setup_segmentation(cm, rb);
 
-  {
-    int i;
-    for (i = 0; i < MAX_SEGMENTS; ++i) {
-      const int qindex = CONFIG_MISC_FIXES && cm->seg.enabled
-                             ? av1_get_qindex(&cm->seg, i, cm->base_qindex)
-                             : cm->base_qindex;
-      xd->lossless[i] = qindex == 0 && cm->y_dc_delta_q == 0 &&
-                        cm->uv_dc_delta_q == 0 && cm->uv_ac_delta_q == 0;
-    }
+  for (i = 0; i < MAX_SEGMENTS; ++i) {
+    const int qindex = CONFIG_MISC_FIXES && cm->seg.enabled
+                           ? av1_get_qindex(&cm->seg, i, cm->base_qindex)
+                           : cm->base_qindex;
+    xd->lossless[i] = qindex == 0 && cm->y_dc_delta_q == 0 &&
+                      cm->uv_dc_delta_q == 0 && cm->uv_ac_delta_q == 0;
   }
 
   setup_segmentation_dequant(cm);
@@ -2248,15 +2250,24 @@ static void read_ext_tx_probs(FRAME_CONTEXT *fc, aom_reader *r) {
   int i, j, k;
   if (aom_read(r, GROUP_DIFF_UPDATE_PROB)) {
     for (i = TX_4X4; i < EXT_TX_SIZES; ++i) {
-      for (j = 0; j < TX_TYPES; ++j)
+      for (j = 0; j < TX_TYPES; ++j) {
         for (k = 0; k < TX_TYPES - 1; ++k)
           av1_diff_update_prob(r, &fc->intra_ext_tx_prob[i][j][k]);
+#if CONFIG_DAALA_EC
+        av1_tree_to_cdf(av1_ext_tx_tree, fc->intra_ext_tx_prob[i][j],
+                        fc->intra_ext_tx_cdf[i][j]);
+#endif
+      }
     }
   }
   if (aom_read(r, GROUP_DIFF_UPDATE_PROB)) {
     for (i = TX_4X4; i < EXT_TX_SIZES; ++i) {
       for (k = 0; k < TX_TYPES - 1; ++k)
         av1_diff_update_prob(r, &fc->inter_ext_tx_prob[i][k]);
+#if CONFIG_DAALA_EC
+      av1_tree_to_cdf(av1_ext_tx_tree, fc->inter_ext_tx_prob[i],
+                      fc->inter_ext_tx_cdf[i]);
+#endif
     }
   }
 }
@@ -2301,9 +2312,14 @@ static int read_compressed_header(AV1Decoder *pbi, const uint8_t *data,
     for (i = 0; i < INTRA_MODES - 1; ++i)
       av1_diff_update_prob(&r, &fc->uv_mode_prob[j][i]);
 
-  for (j = 0; j < PARTITION_CONTEXTS; ++j)
+  for (j = 0; j < PARTITION_CONTEXTS; ++j) {
     for (i = 0; i < PARTITION_TYPES - 1; ++i)
       av1_diff_update_prob(&r, &fc->partition_prob[j][i]);
+#if CONFIG_DAALA_EC
+    av1_tree_to_cdf(av1_partition_tree, fc->partition_prob[j],
+                    fc->partition_cdf[j]);
+#endif
+  }
 #endif
 
   if (frame_is_intra_only(cm)) {
@@ -2345,9 +2361,14 @@ static int read_compressed_header(AV1Decoder *pbi, const uint8_t *data,
         av1_diff_update_prob(&r, &fc->y_mode_prob[j][i]);
 
 #if !CONFIG_MISC_FIXES
-    for (j = 0; j < PARTITION_CONTEXTS; ++j)
+    for (j = 0; j < PARTITION_CONTEXTS; ++j) {
       for (i = 0; i < PARTITION_TYPES - 1; ++i)
         av1_diff_update_prob(&r, &fc->partition_prob[j][i]);
+#if CONFIG_DAALA_EC
+      av1_tree_to_cdf(av1_partition_tree, fc->partition_prob[j],
+                      fc->partition_cdf[j]);
+#endif
+    }
 #endif
 
 #if CONFIG_REF_MV

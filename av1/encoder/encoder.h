@@ -81,6 +81,21 @@ typedef struct {
 } CODING_CONTEXT;
 
 typedef enum {
+  // regular inter frame
+  REGULAR_FRAME = 0,
+  // alternate reference frame
+  ARF_FRAME = 1,
+  // overlay frame
+  OVERLAY_FRAME = 2,
+  // golden frame
+  GLD_FRAME = 3,
+#if CONFIG_EXT_REFS
+  // backward reference frame
+  BRF_FRAME = 4,
+#endif
+} FRAME_CONTEXT_INDEX;
+
+typedef enum {
   // encode_breakout is disabled.
   ENCODE_BREAKOUT_DISABLED = 0,
   // encode_breakout is enabled.
@@ -478,7 +493,7 @@ typedef struct AV1_COMP {
                     // scaled.
 
   // Store frame variance info in SOURCE_VAR_BASED_PARTITION search type.
-  diff *source_diff_var;
+  DIFF *source_diff_var;
   // The threshold used in SOURCE_VAR_BASED_PARTITION search type.
   unsigned int source_var_thresh;
   int frames_till_next_var_check;
@@ -645,12 +660,10 @@ static INLINE int enc_is_ref_frame_buf(AV1_COMP *cpi, RefCntBuffer *frame_buf) {
 #endif  // CONFIG_EXT_REFS
 
 static INLINE int get_token_alloc(int mb_rows, int mb_cols) {
-  // TODO(JBB): double check we can't exceed this token count if we have a
-  // 32x32 transform crossing a boundary at a multiple of 16.
-  // mb_rows, cols are in units of 16 pixels. We assume 3 planes all at full
-  // resolution. We assume up to 1 token per pixel, and then allow
-  // a head room of 1 EOSB token per 8x8 block per plane.
-  return mb_rows * mb_cols * (16 * 16 + 4) * 3;
+  // We assume 3 planes all at full resolution. We assume up to 1 token per
+  // pixel, and then allow a head room of 1 EOSB token per 4x4 block per plane,
+  // plus EOSB_TOKEN per plane.
+  return mb_rows * mb_cols * (16 * 16 + 17) * 3;
 }
 
 // Get the allocated token size for a tile. It does the same calculation as in

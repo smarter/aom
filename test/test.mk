@@ -101,16 +101,26 @@ LIBAOM_TEST_SRCS-yes                   += encoder_parms_get_to_decoder.cc
 endif
 
 LIBAOM_TEST_SRCS-yes                   += convolve_test.cc
+LIBAOM_TEST_SRCS-yes                   += convolve_test.cc
 LIBAOM_TEST_SRCS-yes                   += av1_convolve_test.cc
 LIBAOM_TEST_SRCS-yes                   += lpf_8_test.cc
 LIBAOM_TEST_SRCS-yes                   += intrapred_test.cc
 LIBAOM_TEST_SRCS-$(CONFIG_AV1_ENCODER) += dct16x16_test.cc
 LIBAOM_TEST_SRCS-$(CONFIG_AV1_ENCODER) += dct32x32_test.cc
+LIBAOM_TEST_SRCS-yes                   += convolve_test.cc
+LIBAOM_TEST_SRCS-yes                   += av1_convolve_optimz_test.cc
 LIBAOM_TEST_SRCS-$(CONFIG_AV1_ENCODER) += fdct4x4_test.cc
 LIBAOM_TEST_SRCS-$(CONFIG_AV1_ENCODER) += fdct8x8_test.cc
 LIBAOM_TEST_SRCS-$(CONFIG_AV1_ENCODER) += variance_test.cc
 LIBAOM_TEST_SRCS-$(CONFIG_AV1_ENCODER) += quantize_test.cc
 LIBAOM_TEST_SRCS-$(CONFIG_AV1_ENCODER) += subtract_test.cc
+LIBAOM_TEST_SRCS-yes += function_equivalence_test.h
+LIBAOM_TEST_SRCS-yes += blend_a64_mask_test.cc
+LIBAOM_TEST_SRCS-yes += blend_a64_mask_1d_test.cc
+ifeq ($(CONFIG_MOTION_VAR),yes)
+LIBAOM_TEST_SRCS-$(CONFIG_AV1_ENCODER) += obmc_sad_test.cc
+LIBAOM_TEST_SRCS-$(CONFIG_AV1_ENCODER) += obmc_variance_test.cc
+endif
 
 ifeq ($(CONFIG_AV1_ENCODER)$(CONFIG_AV1_TEMPORAL_DENOISING),yesyes)
 LIBAOM_TEST_SRCS-$(HAVE_SSE2) += denoiser_sse2_test.cc

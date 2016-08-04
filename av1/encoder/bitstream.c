@@ -74,6 +74,11 @@ void av1_encode_token_init() {
       an in-order traversal of the av1_switchable_interp_tree structure. */
   av1_indices_from_tree(av1_switchable_interp_ind, av1_switchable_interp_inv,
                         SWITCHABLE_FILTERS, av1_switchable_interp_tree);
+  /* This hack is necessary because the four TX_TYPES are not consecutive,
+      e.g., 0, 1, 2, 3, when doing an in-order traversal of the av1_ext_tx_tree
+      structure. */
+  av1_indices_from_tree(av1_ext_tx_ind, av1_ext_tx_inv, TX_TYPES,
+                        av1_ext_tx_tree);
 #endif
 }
 
@@ -288,9 +293,14 @@ static void update_ext_tx_probs(AV1_COMMON *cm, aom_writer *w) {
   aom_write(w, do_update, GROUP_DIFF_UPDATE_PROB);
   if (do_update) {
     for (i = TX_4X4; i < EXT_TX_SIZES; ++i) {
-      for (j = 0; j < TX_TYPES; ++j)
+      for (j = 0; j < TX_TYPES; ++j) {
         prob_diff_update(av1_ext_tx_tree, cm->fc->intra_ext_tx_prob[i][j],
                          cm->counts.intra_ext_tx[i][j], TX_TYPES, w);
+#if CONFIG_DAALA_EC
+        av1_tree_to_cdf(av1_ext_tx_tree, cm->fc->intra_ext_tx_prob[i][j],
+                        cm->fc->intra_ext_tx_cdf[i][j]);
+#endif
+      }
     }
   }
   savings = 0;
@@ -305,6 +315,10 @@ static void update_ext_tx_probs(AV1_COMMON *cm, aom_writer *w) {
     for (i = TX_4X4; i < EXT_TX_SIZES; ++i) {
       prob_diff_update(av1_ext_tx_tree, cm->fc->inter_ext_tx_prob[i],
                        cm->counts.inter_ext_tx[i], TX_TYPES, w);
+#if CONFIG_DAALA_EC
+      av1_tree_to_cdf(av1_ext_tx_tree, cm->fc->inter_ext_tx_prob[i],
+                      cm->fc->inter_ext_tx_cdf[i]);
+#endif
     }
   }
 }
@@ -318,41 +332,39 @@ static void pack_mb_tokens(aom_writer *w, TOKENEXTRA **tp,
 #endif
 
   while (p < stop && p->token != EOSB_TOKEN) {
-    const int t = p->token;
+    const uint8_t token = p->token;
+    aom_tree_index index = 0;
 #if !CONFIG_RANS
-    const struct av1_token *const a = &av1_coef_encodings[t];
-    int i = 0;
-    int v = a->value;
-    int n = a->len;
+    const struct av1_token *const coef_encoding = &av1_coef_encodings[token];
+    int coef_value = coef_encoding->value;
+    int coef_length = coef_encoding->len;
 #endif  // !CONFIG_RANS
 #if CONFIG_AOM_HIGHBITDEPTH
-    const av1_extra_bit *b;
-    if (bit_depth == AOM_BITS_12)
-      b = &av1_extra_bits_high12[t];
-    else if (bit_depth == AOM_BITS_10)
-      b = &av1_extra_bits_high10[t];
-    else
-      b = &av1_extra_bits[t];
+    const av1_extra_bit *const extra_bits_av1 =
+        (bit_depth == AOM_BITS_12)
+            ? &av1_extra_bits_high12[token]
+            : (bit_depth == AOM_BITS_10) ? &av1_extra_bits_high10[token]
+                                         : &av1_extra_bits[token];
 #else
-    const av1_extra_bit *const b = &av1_extra_bits[t];
+    const av1_extra_bit *const extra_bits_av1 = &av1_extra_bits[token];
     (void)bit_depth;
 #endif  // CONFIG_AOM_HIGHBITDEPTH
 
 #if CONFIG_RANS
-    if (!p->skip_eob_node) aom_write(w, t != EOB_TOKEN, p->context_tree[0]);
+    if (!p->skip_eob_node) aom_write(w, token != EOB_TOKEN, p->context_tree[0]);
 
-    if (t != EOB_TOKEN) {
-      aom_write(w, t != ZERO_TOKEN, p->context_tree[1]);
-      if (t != ZERO_TOKEN) {
-        aom_write_tree_cdf(w, t - ONE_TOKEN, *p->token_cdf,
-                           CATEGORY6_TOKEN - ONE_TOKEN + 1);
+    if (token != EOB_TOKEN) {
+      aom_write(w, token != ZERO_TOKEN, p->context_tree[1]);
+      if (token != ZERO_TOKEN) {
+        aom_write_symbol(w, token - ONE_TOKEN, *p->token_cdf,
+                         CATEGORY6_TOKEN - ONE_TOKEN + 1);
       }
     }
 #else
     /* skip one or two nodes */
     if (p->skip_eob_node) {
-      n -= p->skip_eob_node;
-      i = 2 * p->skip_eob_node;
+      coef_length -= p->skip_eob_node;
+      index = 2 * p->skip_eob_node;
     }
 
     // TODO(jbb): expanding this can lead to big gains.  It allows
@@ -363,46 +375,53 @@ static void pack_mb_tokens(aom_writer *w, TOKENEXTRA **tp,
     // is split into two treed writes.  The first treed write takes care of the
     // unconstrained nodes.  The second treed write takes care of the
     // constrained nodes.
-    if (t >= TWO_TOKEN && t < EOB_TOKEN) {
-      int len = UNCONSTRAINED_NODES - p->skip_eob_node;
-      int bits = v >> (n - len);
-      aom_write_tree_bits(w, av1_coef_tree, p->context_tree, bits, len, i);
-      v &= (1 << (n - len)) - 1;
+    if (token >= TWO_TOKEN && token < EOB_TOKEN) {
+      const int unconstrained_len = UNCONSTRAINED_NODES - p->skip_eob_node;
+      const int unconstrained_bits =
+          coef_value >> (coef_length - unconstrained_len);
+      // Unconstrained nodes.
+      aom_write_tree_bits(w, av1_coef_tree, p->context_tree, unconstrained_bits,
+                          unconstrained_len, index);
+      coef_value &= (1 << (coef_length - unconstrained_len)) - 1;
+      // Constrained nodes.
       aom_write_tree(w, av1_coef_con_tree,
-                     av1_pareto8_full[p->context_tree[PIVOT_NODE] - 1], v,
-                     n - len, 0);
+                     av1_pareto8_full[p->context_tree[PIVOT_NODE] - 1],
+                     coef_value, coef_length - unconstrained_len, 0);
     } else {
-      aom_write_tree_bits(w, av1_coef_tree, p->context_tree, v, n, i);
+      aom_write_tree_bits(w, av1_coef_tree, p->context_tree, coef_value,
+                          coef_length, index);
     }
 #endif  // CONFIG_RANS
 
-    if (b->base_val) {
-      const int e = p->extra, l = b->len;
+    if (extra_bits_av1->base_val) {
+      const int extra_bits = p->extra;
+      const int extra_bits_av1_length = extra_bits_av1->len;
 #if CONFIG_MISC_FIXES
-      int skip_bits = (b->base_val == CAT6_MIN_VAL) ? TX_SIZES - 1 - tx : 0;
+      int skip_bits =
+          (extra_bits_av1->base_val == CAT6_MIN_VAL) ? TX_SIZES - 1 - tx : 0;
 #else
       int skip_bits = 0;
 #endif
 
-      if (l) {
-        const unsigned char *pb = b->prob;
-        int v = e >> 1;
-        int n = l; /* number of bits in v, assumed nonzero */
-        int i = 0;
+      if (extra_bits_av1_length > 0) {
+        const unsigned char *pb = extra_bits_av1->prob;
+        const int value = extra_bits >> 1;
+        const int num_bits = extra_bits_av1_length;  // number of bits in value
+        assert(num_bits > 0);
 
-        do {
-          const int bb = (v >> --n) & 1;
+        for (index = 0; index < num_bits; ++index) {
+          const int shift = num_bits - index - 1;
+          const int bb = (value >> shift) & 1;
           if (skip_bits) {
-            skip_bits--;
+            --skip_bits;
             assert(!bb);
           } else {
-            aom_write(w, bb, pb[i >> 1]);
+            aom_write(w, bb, pb[index]);
           }
-          i = b->tree[i + bb];
-        } while (n);
+        }
       }
 
-      aom_write_bit(w, e & 1);
+      aom_write_bit(w, extra_bits & 1);
     }
     ++p;
   }
@@ -530,25 +549,23 @@ static void write_switchable_interp_filter(AV1_COMP *const cpi,
   const AV1_COMMON *const cm = &cpi->common;
   const MB_MODE_INFO *const mbmi = &xd->mi[0]->mbmi;
   if (cm->interp_filter == SWITCHABLE) {
+    int ctx;
 #if CONFIG_EXT_INTERP
-    if (is_interp_needed(xd)) {
-#endif
-      const int ctx = av1_get_pred_context_switchable_interp(xd);
-#if CONFIG_DAALA_EC
-      aom_write_tree_cdf(w, av1_switchable_interp_ind[mbmi->interp_filter],
-                         cm->fc->switchable_interp_cdf[ctx],
-                         SWITCHABLE_FILTERS);
-#else
-      av1_write_token(w, av1_switchable_interp_tree,
-                      cm->fc->switchable_interp_prob[ctx],
-                      &switchable_interp_encodings[mbmi->interp_filter]);
-#endif
-      ++cpi->interp_filter_selected[0][mbmi->interp_filter];
-#if CONFIG_EXT_INTERP
-    } else {
+    if (!is_interp_needed(xd)) {
       assert(mbmi->interp_filter == EIGHTTAP);
+      return;
     }
 #endif
+    ctx = av1_get_pred_context_switchable_interp(xd);
+#if CONFIG_DAALA_EC
+    aom_write_symbol(w, av1_switchable_interp_ind[mbmi->interp_filter],
+                     cm->fc->switchable_interp_cdf[ctx], SWITCHABLE_FILTERS);
+#else
+    av1_write_token(w, av1_switchable_interp_tree,
+                    cm->fc->switchable_interp_prob[ctx],
+                    &switchable_interp_encodings[mbmi->interp_filter]);
+#endif
+    ++cpi->interp_filter_selected[0][mbmi->interp_filter];
   }
 }
 
@@ -697,15 +714,28 @@ static void pack_inter_mode_mvs(AV1_COMP *cpi, const MODE_INFO *mi,
   if (mbmi->tx_size < TX_32X32 && cm->base_qindex > 0 && !mbmi->skip &&
       !segfeature_active(&cm->seg, mbmi->segment_id, SEG_LVL_SKIP)) {
     if (is_inter) {
+#if CONFIG_DAALA_EC
+      aom_write_symbol(w, av1_ext_tx_ind[mbmi->tx_type],
+                       cm->fc->inter_ext_tx_cdf[mbmi->tx_size], TX_TYPES);
+#else
       av1_write_token(w, av1_ext_tx_tree,
                       cm->fc->inter_ext_tx_prob[mbmi->tx_size],
                       &ext_tx_encodings[mbmi->tx_type]);
+#endif
     } else {
+#if CONFIG_DAALA_EC
+      aom_write_symbol(
+          w, av1_ext_tx_ind[mbmi->tx_type],
+          cm->fc->intra_ext_tx_cdf[mbmi->tx_size]
+                                  [intra_mode_to_tx_type_context[mbmi->mode]],
+          TX_TYPES);
+#else
       av1_write_token(
           w, av1_ext_tx_tree,
           cm->fc->intra_ext_tx_prob[mbmi->tx_size]
                                    [intra_mode_to_tx_type_context[mbmi->mode]],
           &ext_tx_encodings[mbmi->tx_type]);
+#endif
     }
   } else {
     if (!mbmi->skip) assert(mbmi->tx_type == DCT_DCT);
@@ -953,7 +983,11 @@ static void write_partition(const AV1_COMMON *const cm,
   const int has_cols = (mi_col + hbs) < cm->mi_cols;
 
   if (has_rows && has_cols) {
+#if CONFIG_DAALA_EC
+    aom_write_symbol(w, p, cm->fc->partition_cdf[ctx], PARTITION_TYPES);
+#else
     av1_write_token(w, av1_partition_tree, probs, &partition_encodings[p]);
+#endif
   } else if (!has_rows && has_cols) {
     assert(p == PARTITION_SPLIT || p == PARTITION_HORZ);
     aom_write(w, p == PARTITION_SPLIT, probs[1]);
@@ -1146,7 +1180,6 @@ static void update_coef_probs_common(aom_writer *const bc, AV1_COMP *cpi,
               for (t = 0; t < entropy_nodes_update; ++t) {
                 aom_prob newp = new_coef_probs[i][j][k][l][t];
                 aom_prob *oldp = old_coef_probs[i][j][k][l] + t;
-                const aom_prob upd = DIFF_UPDATE_PROB;
                 int s;
                 int u = 0;
                 if (t == PIVOT_NODE)
@@ -1942,9 +1975,14 @@ static size_t write_compressed_header(AV1_COMP *cpi, uint8_t *data) {
     prob_diff_update(av1_intra_mode_tree, fc->uv_mode_prob[i],
                      counts->uv_mode[i], INTRA_MODES, header_bc);
 
-  for (i = 0; i < PARTITION_CONTEXTS; ++i)
+  for (i = 0; i < PARTITION_CONTEXTS; ++i) {
     prob_diff_update(av1_partition_tree, fc->partition_prob[i],
                      counts->partition[i], PARTITION_TYPES, header_bc);
+#if CONFIG_DAALA_EC
+    av1_tree_to_cdf(av1_partition_tree, cm->fc->partition_prob[i],
+                    cm->fc->partition_cdf[i]);
+#endif
+  }
 #endif
 
   if (frame_is_intra_only(cm)) {
@@ -2024,9 +2062,14 @@ static size_t write_compressed_header(AV1_COMP *cpi, uint8_t *data) {
                        counts->y_mode[i], INTRA_MODES, header_bc);
 
 #if !CONFIG_MISC_FIXES
-    for (i = 0; i < PARTITION_CONTEXTS; ++i)
+    for (i = 0; i < PARTITION_CONTEXTS; ++i) {
       prob_diff_update(av1_partition_tree, fc->partition_prob[i],
                        counts->partition[i], PARTITION_TYPES, header_bc);
+#if CONFIG_DAALA_EC
+      av1_tree_to_cdf(av1_partition_tree, cm->fc->partition_prob[i],
+                      cm->fc->partition_cdf[i]);
+#endif
+    }
 #endif
 
     av1_write_nmv_probs(cm, cm->allow_high_precision_mv, header_bc,
