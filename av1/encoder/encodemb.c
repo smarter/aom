@@ -968,7 +968,7 @@ static void encode_block(int plane, int block, int blk_row, int blk_col,
   // but av1_inv_txfm_add_*x*() also does addition of predicted image to
   // inverse transformed image,
   // pass blank dummy image to av1_inv_txfm_add_*x*(), i.e. set dst as zeros
-    for (j=0; j < tx_blk_size; j++)
+    for (j = 0; j < tx_blk_size; j++)
       for (i = 0; i < tx_blk_size; i++)
         dst[j * pd->dst.stride + i] -= dst[j *  pd->dst.stride + i];
 #endif
@@ -1325,7 +1325,7 @@ void av1_encode_block_intra(int plane, int block, int blk_row, int blk_col,
   // pass blank dummy image to av1_inv_txfm_add_*x*(), i.e. set dst as zeros
 
   if (!skip) {
-    for (j=0; j < tx_blk_size; j++)
+    for (j = 0; j < tx_blk_size; j++)
       for (i = 0; i < tx_blk_size; i++)
         dst[j * dst_stride + i] -= dst[j * dst_stride + i];
 
@@ -1396,18 +1396,12 @@ int pvq_encode_helper(daala_enc_ctx *daala_enc,
 
   tell = od_ec_enc_tell(&daala_enc->ec);
 
-  /*{// for debugging, to match with decoder side ref vector.
-  int i;
-  for (i=0; i<tx_blk_size*tx_blk_size; i++)
-    pvq_info->ref_coeff[i] = ref_coeff[i];
-  }*/
-
   // Change coefficient ordering for pvq encoding.
   od_raster_to_coding_order(coeff_pvq, tx_blk_size, coeff, tx_blk_size);
   od_raster_to_coding_order(ref_coeff_pvq, tx_blk_size, ref_coeff, tx_blk_size);
 
   //copy int16 inputs to int32
-  for (i=0; i < tx_blk_size * tx_blk_size; i++) {
+  for (i = 0; i < tx_blk_size * tx_blk_size; i++) {
     ref_int32[i] = ref_coeff_pvq[i];
     in_int32[i] = coeff_pvq[i];
   }
@@ -1455,7 +1449,7 @@ int pvq_encode_helper(daala_enc_ctx *daala_enc,
   out_int32[0] += ref_int32[0];
 
   //copy int32 result back to int16
-  for (i=0; i < tx_blk_size * tx_blk_size; i++)
+  for (i = 0; i < tx_blk_size * tx_blk_size; i++)
     dqcoeff_pvq[i] = out_int32[i];
 
   // Safely initialize dqcoeff since some coeffs (band size > 128 coeffs)
@@ -1464,10 +1458,6 @@ int pvq_encode_helper(daala_enc_ctx *daala_enc,
 
   // Back to original coefficient order
   od_coding_order_to_raster(dqcoeff, tx_blk_size, dqcoeff_pvq, tx_blk_size);
-
-  // Mark last nonzero coeff position.
-  //for (j = 0; j < tx_blk_size * tx_blk_size; j++)
-  //  if (dqcoeff[j]) *eob = j + 1;
 
   *eob = tx_blk_size * tx_blk_size;
 
@@ -1491,7 +1481,7 @@ void store_pvq_enc_info(PVQ_INFO *pvq_info,
                         int bs) {  // block size in log_2 -2
   int i;
 
-  for (i=0; i < nb_bands; i++) {
+  for (i = 0; i < nb_bands; i++) {
     pvq_info->qg[i] = qg[i];
     pvq_info->theta[i] = theta[i];
     pvq_info->max_theta[i] = max_theta[i];
@@ -1500,9 +1490,9 @@ void store_pvq_enc_info(PVQ_INFO *pvq_info,
     pvq_info->size[i] = size[i];
   }
   // TODO: just copying block size should be fine
-  for (i=0; i < OD_BSIZE_MAX*OD_BSIZE_MAX; i++) {
+  for (i = 0; i < OD_BSIZE_MAX*OD_BSIZE_MAX; i++)
     pvq_info->y[i] = y[i];
-  }
+
   pvq_info->nb_bands = nb_bands;
   pvq_info->skip_rest = skip_rest;
   pvq_info->skip_dir = skip_dir;
