@@ -1491,8 +1491,7 @@ void store_pvq_enc_info(PVQ_INFO *pvq_info,
     pvq_info->size[i] = size[i];
   }
 
-  for (i = 0; i < tx_blk_size * tx_blk_size; i++)
-    pvq_info->y[i] = y[i];
+  memcpy(pvq_info->y, y, tx_blk_size * tx_blk_size * sizeof(od_coeff));
 
   pvq_info->nb_bands = nb_bands;
   pvq_info->skip_rest = skip_rest;
