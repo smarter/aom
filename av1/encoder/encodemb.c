@@ -1480,6 +1480,7 @@ void store_pvq_enc_info(PVQ_INFO *pvq_info,
                         int skip_dir,
                         int bs) {  // block size in log_2 -2
   int i;
+  const int tx_blk_size = 1 << (bs + 2);
 
   for (i = 0; i < nb_bands; i++) {
     pvq_info->qg[i] = qg[i];
@@ -1489,8 +1490,8 @@ void store_pvq_enc_info(PVQ_INFO *pvq_info,
     pvq_info->off[i] = off[i];
     pvq_info->size[i] = size[i];
   }
-  // TODO: just copying block size should be fine
-  for (i = 0; i < OD_BSIZE_MAX*OD_BSIZE_MAX; i++)
+
+  for (i = 0; i < tx_blk_size * tx_blk_size; i++)
     pvq_info->y[i] = y[i];
 
   pvq_info->nb_bands = nb_bands;
