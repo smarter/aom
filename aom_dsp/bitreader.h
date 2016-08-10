@@ -27,6 +27,9 @@
 #endif
 #include "aom_dsp/prob.h"
 #include "av1/common/odintrin.h"
+#if CONFIG_ACCOUNTING
+#include "av1/common/accounting.h"
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -38,6 +41,24 @@ typedef struct AnsDecoder aom_reader;
 typedef struct daala_reader aom_reader;
 #else
 typedef struct aom_dk_reader aom_reader;
+#endif
+
+#define AOM_ACCT_DEFAULT_VALUE __func__
+
+#if CONFIG_ACCOUNTING
+# define AOM_ACCT_STR_PARAM , const char *acct_str
+# define aom_read(r, prob, str) aom_read_(r, prob, str)
+# define aom_read_bit(r, str) aom_read_bit_(r, str)
+# define aom_read_tree(r, tree, probs, str) aom_read_tree_(r, tree, probs, str)
+# define aom_read_literal(r, bits, str) aom_read_literal_(r, bits, str)
+# define aom_read_tree_bits(r, tree, probs, str) aom_read_tree_bits_(r, tree, probs, str)
+#else
+# define AOM_ACCT_STR_PARAM
+# define aom_read(r, prob, str) aom_read_(r, prob)
+# define aom_read_bit(r, str) aom_read_bit_(r)
+# define aom_read_tree(r, tree, probs, str) aom_read_tree_(r, tree, probs)
+# define aom_read_literal(r, bits, str) aom_read_literal_(r, bits)
+# define aom_read_tree_bits(r, tree, probs, str) aom_read_tree_bits_(r, tree, probs)
 #endif
 
 static INLINE int aom_reader_init(aom_reader *r, const uint8_t *buffer,
@@ -87,47 +108,63 @@ static INLINE ptrdiff_t aom_reader_tell(const aom_reader *r) {
 #endif
 }
 
-static INLINE int aom_read(aom_reader *r, int prob) {
-#if CONFIG_ANS
-  return uabs_read(r, prob);
-#elif CONFIG_DAALA_EC
-  return aom_daala_read(r, prob);
-#else
-  return aom_dk_read(r, prob);
+#if CONFIG_ACCOUNTING
+static INLINE void aom_process_accounting(aom_reader *r, const char *str) {
+  if (r->accounting != NULL) {
+    uint32_t tell;
+    tell = aom_reader_tell(r);
+    aom_accounting_record(r->accounting, str, tell - r->accounting->last_tell);
+    r->accounting->last_tell = tell;
+  }
+}
 #endif
+
+static INLINE int aom_read_(aom_reader *r, int prob AOM_ACCT_STR_PARAM) {
+  int ret;
+#if CONFIG_ANS
+  ret = uabs_read(r, prob);
+#elif CONFIG_DAALA_EC
+  ret = aom_daala_read(r, prob);
+#else
+  ret = aom_dk_read(r, prob);
+#endif
+#if CONFIG_ACCOUNTING
+  aom_process_accounting(r, acct_str);
+#endif
+  return ret;
 }
 
-static INLINE int aom_read_bit(aom_reader *r) {
+static INLINE int aom_read_bit_(aom_reader *r AOM_ACCT_STR_PARAM) {
 #if CONFIG_ANS
   return uabs_read_bit(r);  // Non trivial optimization at half probability
 #else
-  return aom_read(r, 128);  // aom_prob_half
+  return aom_read(r, 128, acct_str);  // aom_prob_half
 #endif
 }
 
-static INLINE int aom_read_literal(aom_reader *r, int bits) {
+static INLINE int aom_read_literal_(aom_reader *r, int bits AOM_ACCT_STR_PARAM) {
   int literal = 0, bit;
 
-  for (bit = bits - 1; bit >= 0; bit--) literal |= aom_read_bit(r) << bit;
+  for (bit = bits - 1; bit >= 0; bit--) literal |= aom_read_bit(r, acct_str) << bit;
 
   return literal;
 }
 
-static INLINE int aom_read_tree_bits(aom_reader *r, const aom_tree_index *tree,
-                                     const aom_prob *probs) {
+static INLINE int aom_read_tree_bits_(aom_reader *r, const aom_tree_index *tree,
+                                     const aom_prob *probs AOM_ACCT_STR_PARAM) {
   aom_tree_index i = 0;
 
-  while ((i = tree[i + aom_read(r, probs[i >> 1])]) > 0) continue;
+  while ((i = tree[i + aom_read(r, probs[i >> 1], acct_str)]) > 0) continue;
 
   return -i;
 }
 
-static INLINE int aom_read_tree(aom_reader *r, const aom_tree_index *tree,
-                                const aom_prob *probs) {
+static INLINE int aom_read_tree_(aom_reader *r, const aom_tree_index *tree,
+                                const aom_prob *probs AOM_ACCT_STR_PARAM) {
 #if CONFIG_DAALA_EC
   return daala_read_tree_bits(r, tree, probs);
 #else
-  return aom_read_tree_bits(r, tree, probs);
+  return aom_read_tree_bits(r, tree, probs, acct_str);
 #endif
 }
 

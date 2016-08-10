@@ -44,7 +44,9 @@
 #include "av1/common/seg_common.h"
 #include "av1/common/thread_common.h"
 #include "av1/common/tile_common.h"
-
+#if CONFIG_ACCOUNTING
+#include "av1/common/accounting.h"
+#endif
 #include "av1/decoder/decodeframe.h"
 #include "av1/decoder/decodemv.h"
 #include "av1/decoder/decoder.h"
@@ -104,8 +106,8 @@ static TX_MODE read_tx_mode(struct aom_read_bit_buffer *rb) {
 }
 #else
 static TX_MODE read_tx_mode(aom_reader *r) {
-  TX_MODE tx_mode = aom_read_literal(r, 2);
-  if (tx_mode == ALLOW_32X32) tx_mode += aom_read_bit(r);
+  TX_MODE tx_mode = aom_read_literal(r, 2, "tx_mode");
+  if (tx_mode == ALLOW_32X32) tx_mode += aom_read_bit(r, "tx_mode");
   return tx_mode;
 }
 #endif
@@ -172,8 +174,8 @@ static REFERENCE_MODE read_frame_reference_mode(
 static REFERENCE_MODE read_frame_reference_mode(const AV1_COMMON *cm,
                                                 aom_reader *r) {
   if (is_compound_reference_allowed(cm)) {
-    return aom_read_bit(r)
-               ? (aom_read_bit(r) ? REFERENCE_MODE_SELECT : COMPOUND_REFERENCE)
+    return aom_read_bit(r, "frame_reference_mode")
+               ? (aom_read_bit(r, "frame_reference_mode") ? REFERENCE_MODE_SELECT : COMPOUND_REFERENCE)
                : SINGLE_REFERENCE;
   } else {
     return SINGLE_REFERENCE;
@@ -214,7 +216,7 @@ static void update_mv_probs(aom_prob *p, int n, aom_reader *r) {
 #if CONFIG_MISC_FIXES
     av1_diff_update_prob(r, &p[i]);
 #else
-    if (aom_read(r, MV_UPDATE_PROB)) p[i] = (aom_read_literal(r, 7) << 1) | 1;
+    if (aom_read(r, MV_UPDATE_PROB, "mv_prob")) p[i] = (aom_read_literal(r, 7, "mv_prob") << 1) | 1;
 #endif
 }
 
@@ -473,6 +475,9 @@ static void decode_block(AV1Decoder *const pbi, MACROBLOCKD *const xd,
   const int x_mis = AOMMIN(bw, cm->mi_cols - mi_col);
   const int y_mis = AOMMIN(bh, cm->mi_rows - mi_row);
 
+#if CONFIG_ACCOUNTING
+  aom_accounting_set_context(&pbi->accounting, mi_col, mi_row);
+#endif
   MB_MODE_INFO *mbmi = set_offsets(cm, xd, bsize, mi_row, mi_col, bw, bh, x_mis,
                                    y_mis, bwl, bhl);
 
@@ -600,12 +605,12 @@ static PARTITION_TYPE read_partition(AV1_COMMON *cm, MACROBLOCKD *xd,
     p = (PARTITION_TYPE)aom_read_tree_cdf(r, cm->fc->partition_cdf[ctx],
                                           PARTITION_TYPES);
 #else
-    p = (PARTITION_TYPE)aom_read_tree(r, av1_partition_tree, probs);
+    p = (PARTITION_TYPE)aom_read_tree(r, av1_partition_tree, probs, AOM_ACCT_DEFAULT_VALUE);
 #endif
   else if (!has_rows && has_cols)
-    p = aom_read(r, probs[1]) ? PARTITION_SPLIT : PARTITION_HORZ;
+    p = aom_read(r, probs[1], AOM_ACCT_DEFAULT_VALUE) ? PARTITION_SPLIT : PARTITION_HORZ;
   else if (has_rows && !has_cols)
-    p = aom_read(r, probs[2]) ? PARTITION_SPLIT : PARTITION_VERT;
+    p = aom_read(r, probs[2], AOM_ACCT_DEFAULT_VALUE) ? PARTITION_SPLIT : PARTITION_VERT;
   else
     p = PARTITION_SPLIT;
 
@@ -704,7 +709,7 @@ static void read_coef_probs_common(av1_coeff_probs_model *coef_probs,
                                    aom_reader *r) {
   int i, j, k, l, m;
 
-  if (aom_read_bit(r))
+  if (aom_read_bit(r, "coef_probs_common"))
     for (i = 0; i < PLANE_TYPES; ++i)
       for (j = 0; j < REF_TYPES; ++j)
         for (k = 0; k < COEF_BANDS; ++k)
@@ -1259,7 +1264,9 @@ static const uint8_t *decode_tiles(AV1Decoder *pbi, const uint8_t *data,
         aom_memalign(32, tile_cols * tile_rows * (sizeof(*pbi->tile_data))));
     pbi->total_tiles = tile_rows * tile_cols;
   }
-
+#if CONFIG_ACCOUNTING
+  aom_accounting_reset(&pbi->accounting);
+#endif
   // Load all tile information into tile_data.
   for (tile_row = 0; tile_row < tile_rows; ++tile_row) {
     for (tile_col = 0; tile_col < tile_cols; ++tile_col) {
@@ -1277,6 +1284,9 @@ static const uint8_t *decode_tiles(AV1Decoder *pbi, const uint8_t *data,
       setup_token_decoder(buf->data, data_end, buf->size, &cm->error,
                           &tile_data->bit_reader, pbi->decrypt_cb,
                           pbi->decrypt_state);
+#if CONFIG_ACCOUNTING
+      tile_data->bit_reader.accounting = &pbi->accounting;
+#endif
       av1_init_macroblockd(cm, &tile_data->xd, tile_data->dqcoeff);
       tile_data->xd.plane[0].color_index_map = tile_data->color_index_map[0];
       tile_data->xd.plane[1].color_index_map = tile_data->color_index_map[1];
@@ -1332,6 +1342,10 @@ static const uint8_t *decode_tiles(AV1Decoder *pbi, const uint8_t *data,
         av1_frameworker_broadcast(pbi->cur_buf, mi_row << MI_BLOCK_SIZE_LOG2);
     }
   }
+
+#if CONFIG_ACCOUNTING
+  // aom_accounting_dump(&pbi->accounting);
+#endif
 
   // Loopfilter remaining rows in the frame.
   if (cm->lf.filter_level && !cm->skip_loop_filter) {
@@ -1933,7 +1947,7 @@ static size_t read_uncompressed_header(AV1Decoder *pbi,
 
 static void read_ext_tx_probs(FRAME_CONTEXT *fc, aom_reader *r) {
   int i, j, k;
-  if (aom_read(r, GROUP_DIFF_UPDATE_PROB)) {
+  if (aom_read(r, GROUP_DIFF_UPDATE_PROB, "ext_tx_probs")) {
     for (i = TX_4X4; i < EXT_TX_SIZES; ++i) {
       for (j = 0; j < TX_TYPES; ++j) {
         for (k = 0; k < TX_TYPES - 1; ++k)
@@ -1945,7 +1959,7 @@ static void read_ext_tx_probs(FRAME_CONTEXT *fc, aom_reader *r) {
       }
     }
   }
-  if (aom_read(r, GROUP_DIFF_UPDATE_PROB)) {
+  if (aom_read(r, GROUP_DIFF_UPDATE_PROB, "ext_tx_probs")) {
     for (i = TX_4X4; i < EXT_TX_SIZES; ++i) {
       for (k = 0; k < TX_TYPES - 1; ++k)
         av1_diff_update_prob(r, &fc->inter_ext_tx_prob[i][k]);

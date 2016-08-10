@@ -26,7 +26,7 @@
 #include "aom_dsp/aom_dsp_common.h"
 
 static PREDICTION_MODE read_intra_mode(aom_reader *r, const aom_prob *p) {
-  return (PREDICTION_MODE)aom_read_tree(r, av1_intra_mode_tree, p);
+  return (PREDICTION_MODE)aom_read_tree(r, av1_intra_mode_tree, p, AOM_ACCT_DEFAULT_VALUE);
 }
 
 static PREDICTION_MODE read_intra_mode_y(AV1_COMMON *cm, MACROBLOCKD *xd,
@@ -55,7 +55,7 @@ static PREDICTION_MODE read_inter_mode(AV1_COMMON *cm, MACROBLOCKD *xd,
   int16_t mode_ctx = ctx & NEWMV_CTX_MASK;
   aom_prob mode_prob = cm->fc->newmv_prob[mode_ctx];
 
-  if (aom_read(r, mode_prob) == 0) {
+  if (aom_read(r, mode_prob, AOM_ACCT_DEFAULT_VALUE) == 0) {
     if (counts) ++counts->newmv_mode[mode_ctx][0];
     return NEWMV;
   }
@@ -66,7 +66,7 @@ static PREDICTION_MODE read_inter_mode(AV1_COMMON *cm, MACROBLOCKD *xd,
   mode_ctx = (ctx >> ZEROMV_OFFSET) & ZEROMV_CTX_MASK;
 
   mode_prob = cm->fc->zeromv_prob[mode_ctx];
-  if (aom_read(r, mode_prob) == 0) {
+  if (aom_read(r, mode_prob, AOM_ACCT_DEFAULT_VALUE) == 0) {
     if (counts) ++counts->zeromv_mode[mode_ctx][0];
     return ZEROMV;
   }
@@ -79,7 +79,7 @@ static PREDICTION_MODE read_inter_mode(AV1_COMMON *cm, MACROBLOCKD *xd,
   if (ctx & (1 << SKIP_NEARESTMV_SUB8X8_OFFSET)) mode_ctx = 8;
 
   mode_prob = cm->fc->refmv_prob[mode_ctx];
-  if (aom_read(r, mode_prob) == 0) {
+  if (aom_read(r, mode_prob) == 0, AOM_ACCT_DEFAULT_VALUE) {
     if (counts) ++counts->refmv_mode[mode_ctx][0];
     return NEARESTMV;
   } else {
@@ -91,7 +91,7 @@ static PREDICTION_MODE read_inter_mode(AV1_COMMON *cm, MACROBLOCKD *xd,
   assert(0);
 #else
   const int mode =
-      aom_read_tree(r, av1_inter_mode_tree, cm->fc->inter_mode_probs[ctx]);
+      aom_read_tree(r, av1_inter_mode_tree, cm->fc->inter_mode_probs[ctx], AOM_ACCT_DEFAULT_VALUE);
   FRAME_COUNTS *counts = xd->counts;
   if (counts) ++counts->inter_mode[ctx][mode];
 
@@ -111,7 +111,7 @@ static void read_drl_idx(const AV1_COMMON *cm, MACROBLOCKD *xd,
       if (xd->ref_mv_count[ref_frame_type] > idx + 1) {
         uint8_t drl_ctx = av1_drl_ctx(xd->ref_mv_stack[ref_frame_type], idx);
         aom_prob drl_prob = cm->fc->drl_prob[drl_ctx];
-        if (!aom_read(r, drl_prob)) {
+        if (!aom_read(r, drl_prob), AOM_ACCT_DEFAULT_VALUE) {
           mbmi->ref_mv_idx = idx;
           if (xd->counts) ++xd->counts->drl_mode[drl_ctx][0];
           return;
@@ -131,7 +131,7 @@ static void read_drl_idx(const AV1_COMMON *cm, MACROBLOCKD *xd,
       if (xd->ref_mv_count[ref_frame_type] > idx + 1) {
         uint8_t drl_ctx = av1_drl_ctx(xd->ref_mv_stack[ref_frame_type], idx);
         aom_prob drl_prob = cm->fc->drl_prob[drl_ctx];
-        if (!aom_read(r, drl_prob)) {
+        if (!aom_read(r, drl_prob), AOM_ACCT_DEFAULT_VALUE) {
           mbmi->ref_mv_idx = idx - 1;
           if (xd->counts) ++xd->counts->drl_mode[drl_ctx][0];
           return;
@@ -152,7 +152,7 @@ static MOTION_MODE read_motion_mode(AV1_COMMON *cm, MACROBLOCKD *xd,
     FRAME_COUNTS *counts = xd->counts;
 
     motion_mode = aom_read_tree(r, av1_motion_mode_tree,
-                                cm->fc->motion_mode_prob[mbmi->sb_type]);
+                                cm->fc->motion_mode_prob[mbmi->sb_type], AOM_ACCT_DEFAULT_VALUE);
     if (counts) ++counts->motion_mode[mbmi->sb_type][motion_mode];
     return (MOTION_MODE)(SIMPLE_TRANSLATION + motion_mode);
   } else {
@@ -163,7 +163,7 @@ static MOTION_MODE read_motion_mode(AV1_COMMON *cm, MACROBLOCKD *xd,
 
 static int read_segment_id(aom_reader *r,
                            const struct segmentation_probs *segp) {
-  return aom_read_tree(r, av1_segment_tree, segp->tree_probs);
+  return aom_read_tree(r, av1_segment_tree, segp->tree_probs, AOM_ACCT_DEFAULT_VALUE);
 }
 
 static TX_SIZE read_selected_tx_size(AV1_COMMON *cm, MACROBLOCKD *xd,
@@ -171,11 +171,11 @@ static TX_SIZE read_selected_tx_size(AV1_COMMON *cm, MACROBLOCKD *xd,
   FRAME_COUNTS *counts = xd->counts;
   const int ctx = get_tx_size_context(xd);
   const aom_prob *tx_probs = get_tx_probs(max_tx_size, ctx, &cm->fc->tx_probs);
-  int tx_size = aom_read(r, tx_probs[0]);
+  int tx_size = aom_read(r, tx_probs[0], AOM_ACCT_DEFAULT_VALUE);
   if (tx_size != TX_4X4 && max_tx_size >= TX_16X16) {
-    tx_size += aom_read(r, tx_probs[1]);
+    tx_size += aom_read(r, tx_probs[1], AOM_ACCT_DEFAULT_VALUE);
     if (tx_size != TX_8X8 && max_tx_size >= TX_32X32)
-      tx_size += aom_read(r, tx_probs[2]);
+      tx_size += aom_read(r, tx_probs[2], AOM_ACCT_DEFAULT_VALUE);
   }
 
   if (counts) ++get_tx_counts(max_tx_size, ctx, &counts->tx)[tx_size];
@@ -294,7 +294,7 @@ static int read_inter_segment_id(AV1_COMMON *const cm, MACROBLOCKD *const xd,
   if (seg->temporal_update) {
     const int ctx = av1_get_pred_context_seg_id(xd);
     const aom_prob pred_prob = segp->pred_probs[ctx];
-    mbmi->seg_id_predicted = aom_read(r, pred_prob);
+    mbmi->seg_id_predicted = aom_read(r, pred_prob, AOM_ACCT_DEFAULT_VALUE);
 #if CONFIG_MISC_FIXES
     if (counts) ++counts->seg.pred[ctx][mbmi->seg_id_predicted];
 #endif
@@ -322,7 +322,7 @@ static int read_skip(AV1_COMMON *cm, const MACROBLOCKD *xd, int segment_id,
     return 1;
   } else {
     const int ctx = av1_get_skip_context(xd);
-    const int skip = aom_read(r, cm->fc->skip_probs[ctx]);
+    const int skip = aom_read(r, cm->fc->skip_probs[ctx], AOM_ACCT_DEFAULT_VALUE);
     FRAME_COUNTS *counts = xd->counts;
     if (counts) ++counts->skip[ctx][skip];
     return skip;
@@ -333,10 +333,10 @@ static int read_skip(AV1_COMMON *cm, const MACROBLOCKD *xd, int segment_id,
 static INLINE int read_uniform(aom_reader *r, int n) {
   const int l = get_unsigned_bits(n);
   const int m = (1 << l) - n;
-  const int v = aom_read_literal(r, l - 1);
+  const int v = aom_read_literal(r, l - 1, AOM_ACCT_DEFAULT_VALUE);
 
   assert(l != 0);
-  return (v < m) ? v : ((v << 1) - m + aom_read_literal(r, 1));
+  return (v < m) ? v : ((v << 1) - m + aom_read_literal(r, 1), AOM_ACCT_DEFAULT_VALUE);
 }
 
 static void read_intra_angle_info(MB_MODE_INFO *const mbmi, aom_reader *r) {
@@ -416,7 +416,7 @@ static void read_intra_frame_mode_info(AV1_COMMON *const cm,
     TX_TYPE tx_type_nom = intra_mode_to_tx_type_context[mbmi->mode];
     mbmi->tx_type =
         aom_read_tree(r, av1_ext_tx_tree,
-                      cm->fc->intra_ext_tx_prob[mbmi->tx_size][tx_type_nom]);
+                      cm->fc->intra_ext_tx_prob[mbmi->tx_size][tx_type_nom], AOM_ACCT_DEFAULT_VALUE);
     if (counts)
       ++counts->intra_ext_tx[mbmi->tx_size][tx_type_nom][mbmi->tx_type];
   } else {
@@ -427,29 +427,29 @@ static void read_intra_frame_mode_info(AV1_COMMON *const cm,
 static int read_mv_component(aom_reader *r, const nmv_component *mvcomp,
                              int usehp) {
   int mag, d, fr, hp;
-  const int sign = aom_read(r, mvcomp->sign);
-  const int mv_class = aom_read_tree(r, av1_mv_class_tree, mvcomp->classes);
+  const int sign = aom_read(r, mvcomp->sign, AOM_ACCT_DEFAULT_VALUE);
+  const int mv_class = aom_read_tree(r, av1_mv_class_tree, mvcomp->classes, AOM_ACCT_DEFAULT_VALUE);
   const int class0 = mv_class == MV_CLASS_0;
 
   // Integer part
   if (class0) {
-    d = aom_read_tree(r, av1_mv_class0_tree, mvcomp->class0);
+    d = aom_read_tree(r, av1_mv_class0_tree, mvcomp->class0, AOM_ACCT_DEFAULT_VALUE);
     mag = 0;
   } else {
     int i;
     const int n = mv_class + CLASS0_BITS - 1;  // number of bits
 
     d = 0;
-    for (i = 0; i < n; ++i) d |= aom_read(r, mvcomp->bits[i]) << i;
+    for (i = 0; i < n; ++i) d |= aom_read(r, mvcomp->bits[i], AOM_ACCT_DEFAULT_VALUE) << i;
     mag = CLASS0_SIZE << (mv_class + 2);
   }
 
   // Fractional part
   fr = aom_read_tree(r, av1_mv_fp_tree,
-                     class0 ? mvcomp->class0_fp[d] : mvcomp->fp);
+                     class0 ? mvcomp->class0_fp[d] : mvcomp->fp, AOM_ACCT_DEFAULT_VALUE);
 
   // High precision part (if hp is not used, the default value of the hp is 1)
-  hp = usehp ? aom_read(r, class0 ? mvcomp->class0_hp : mvcomp->hp) : 1;
+  hp = usehp ? aom_read(r, class0 ? mvcomp->class0_hp : mvcomp->hp, AOM_ACCT_DEFAULT_VALUE) : 1;
 
   // Result
   mag += ((d << 3) | (fr << 1) | hp) + 1;
@@ -460,7 +460,7 @@ static INLINE void read_mv(aom_reader *r, MV *mv, const MV *ref,
                            const nmv_context *ctx, nmv_context_counts *counts,
                            int allow_hp) {
   const MV_JOINT_TYPE joint_type =
-      (MV_JOINT_TYPE)aom_read_tree(r, av1_mv_joint_tree, ctx->joints);
+      (MV_JOINT_TYPE)aom_read_tree(r, av1_mv_joint_tree, ctx->joints, AOM_ACCT_DEFAULT_VALUE);
   const int use_hp = allow_hp && av1_use_mv_hp(ref);
   MV diff = { 0, 0 };
 
@@ -482,7 +482,7 @@ static REFERENCE_MODE read_block_reference_mode(AV1_COMMON *cm,
   if (cm->reference_mode == REFERENCE_MODE_SELECT) {
     const int ctx = av1_get_reference_mode_context(cm, xd);
     const REFERENCE_MODE mode =
-        (REFERENCE_MODE)aom_read(r, cm->fc->comp_inter_prob[ctx]);
+        (REFERENCE_MODE)aom_read(r, cm->fc->comp_inter_prob[ctx], AOM_ACCT_DEFAULT_VALUE);
     FRAME_COUNTS *counts = xd->counts;
     if (counts) ++counts->comp_inter[ctx][mode];
     return mode;  // SINGLE_REFERENCE or COMPOUND_REFERENCE
@@ -510,30 +510,30 @@ static void read_ref_frames(AV1_COMMON *const cm, MACROBLOCKD *const xd,
       const int idx = cm->ref_frame_sign_bias[cm->comp_bwd_ref[0]];
       // Read forward references.
       const int ctx_fwd = av1_get_pred_context_comp_fwdref_p(cm, xd);
-      const int bit_fwd = aom_read(r, fc->comp_fwdref_prob[ctx_fwd][0]);
+      const int bit_fwd = aom_read(r, fc->comp_fwdref_prob[ctx_fwd][0], AOM_ACCT_DEFAULT_VALUE);
       if (counts) ++counts->comp_fwdref[ctx_fwd][0][bit_fwd];
       if (!bit_fwd) {
         const int ctx_fwd1 = av1_get_pred_context_comp_fwdref_p1(cm, xd);
-        const int bit_fwd1 = aom_read(r, fc->comp_fwdref_prob[ctx_fwd1][1]);
+        const int bit_fwd1 = aom_read(r, fc->comp_fwdref_prob[ctx_fwd1][1], AOM_ACCT_DEFAULT_VALUE);
         if (counts) ++counts->comp_fwdref[ctx_fwd1][1][bit_fwd1];
         ref_frame[!idx] = cm->comp_fwd_ref[bit_fwd1 ? 0 : 1];
       } else {
         const int ctx_fwd2 = av1_get_pred_context_comp_fwdref_p2(cm, xd);
-        const int bit_fwd2 = aom_read(r, fc->comp_fwdref_prob[ctx_fwd2][2]);
+        const int bit_fwd2 = aom_read(r, fc->comp_fwdref_prob[ctx_fwd2][2], AOM_ACCT_DEFAULT_VALUE);
         if (counts) ++counts->comp_fwdref[ctx_fwd2][2][bit_fwd2];
         ref_frame[!idx] = cm->comp_fwd_ref[bit_fwd2 ? 3 : 2];
       }
       // Read backward references.
       {
         const int ctx_bwd = av1_get_pred_context_comp_bwdref_p(cm, xd);
-        const int bit_bwd = aom_read(r, fc->comp_bwdref_prob[ctx_bwd][0]);
+        const int bit_bwd = aom_read(r, fc->comp_bwdref_prob[ctx_bwd][0], AOM_ACCT_DEFAULT_VALUE);
         if (counts) ++counts->comp_bwdref[ctx_bwd][0][bit_bwd];
         ref_frame[idx] = cm->comp_bwd_ref[bit_bwd];
       }
 #else
       const int idx = cm->ref_frame_sign_bias[cm->comp_fixed_ref];
       const int ctx = av1_get_pred_context_comp_ref_p(cm, xd);
-      const int bit = aom_read(r, fc->comp_ref_prob[ctx]);
+      const int bit = aom_read(r, fc->comp_ref_prob[ctx], AOM_ACCT_DEFAULT_VALUE);
       if (counts) ++counts->comp_ref[ctx][bit];
       ref_frame[idx] = cm->comp_fixed_ref;
       ref_frame[!idx] = cm->comp_var_ref[bit];
@@ -541,36 +541,36 @@ static void read_ref_frames(AV1_COMMON *const cm, MACROBLOCKD *const xd,
     } else if (mode == SINGLE_REFERENCE) {
 #if CONFIG_EXT_REFS
       const int ctx0 = av1_get_pred_context_single_ref_p1(xd);
-      const int bit0 = aom_read(r, fc->single_ref_prob[ctx0][0]);
+      const int bit0 = aom_read(r, fc->single_ref_prob[ctx0][0], AOM_ACCT_DEFAULT_VALUE);
       if (counts) ++counts->single_ref[ctx0][0][bit0];
       if (bit0) {
         const int ctx1 = av1_get_pred_context_single_ref_p2(xd);
-        const int bit1 = aom_read(r, fc->single_ref_prob[ctx1][1]);
+        const int bit1 = aom_read(r, fc->single_ref_prob[ctx1][1], AOM_ACCT_DEFAULT_VALUE);
         if (counts) ++counts->single_ref[ctx1][1][bit1];
         ref_frame[0] = bit1 ? ALTREF_FRAME : BWDREF_FRAME;
       } else {
         const int ctx2 = av1_get_pred_context_single_ref_p3(xd);
-        const int bit2 = aom_read(r, fc->single_ref_prob[ctx2][2]);
+        const int bit2 = aom_read(r, fc->single_ref_prob[ctx2][2], AOM_ACCT_DEFAULT_VALUE);
         if (counts) ++counts->single_ref[ctx2][2][bit2];
         if (!bit2) {
           const int ctx3 = av1_get_pred_context_single_ref_p4(xd);
-          const int bit3 = aom_read(r, fc->single_ref_prob[ctx3][3]);
+          const int bit3 = aom_read(r, fc->single_ref_prob[ctx3][3], AOM_ACCT_DEFAULT_VALUE);
           if (counts) ++counts->single_ref[ctx3][3][bit3];
           ref_frame[0] = bit3 ? LAST2_FRAME : LAST_FRAME;
         } else {
           const int ctx4 = av1_get_pred_context_single_ref_p5(xd);
-          const int bit4 = aom_read(r, fc->single_ref_prob[ctx4][4]);
+          const int bit4 = aom_read(r, fc->single_ref_prob[ctx4][4], AOM_ACCT_DEFAULT_VALUE);
           if (counts) ++counts->single_ref[ctx4][4][bit4];
           ref_frame[0] = bit4 ? GOLDEN_FRAME : LAST3_FRAME;
         }
       }
 #else
       const int ctx0 = av1_get_pred_context_single_ref_p1(xd);
-      const int bit0 = aom_read(r, fc->single_ref_prob[ctx0][0]);
+      const int bit0 = aom_read(r, fc->single_ref_prob[ctx0][0], AOM_ACCT_DEFAULT_VALUE);
       if (counts) ++counts->single_ref[ctx0][0][bit0];
       if (bit0) {
         const int ctx1 = av1_get_pred_context_single_ref_p2(xd);
-        const int bit1 = aom_read(r, fc->single_ref_prob[ctx1][1]);
+        const int bit1 = aom_read(r, fc->single_ref_prob[ctx1][1], AOM_ACCT_DEFAULT_VALUE);
         if (counts) ++counts->single_ref[ctx1][1][bit1];
         ref_frame[0] = bit1 ? ALTREF_FRAME : GOLDEN_FRAME;
       } else {
@@ -600,7 +600,7 @@ static INLINE InterpFilter read_switchable_interp_filter(AV1_COMMON *const cm,
               r, cm->fc->switchable_interp_cdf[ctx], SWITCHABLE_FILTERS)];
 #else
       const InterpFilter type = (InterpFilter)aom_read_tree(
-          r, av1_switchable_interp_tree, cm->fc->switchable_interp_prob[ctx]);
+          r, av1_switchable_interp_tree, cm->fc->switchable_interp_prob[ctx], AOM_ACCT_DEFAULT_VALUE);
 #endif
       FRAME_COUNTS *counts = xd->counts;
       if (counts) ++counts->switchable_interp[ctx][type];
@@ -735,7 +735,7 @@ static int read_is_inter_block(AV1_COMMON *const cm, MACROBLOCKD *const xd,
     return get_segdata(&cm->seg, segment_id, SEG_LVL_REF_FRAME) != INTRA_FRAME;
   } else {
     const int ctx = av1_get_intra_inter_context(xd);
-    const int is_inter = aom_read(r, cm->fc->intra_inter_prob[ctx]);
+    const int is_inter = aom_read(r, cm->fc->intra_inter_prob[ctx], AOM_ACCT_DEFAULT_VALUE);
     FRAME_COUNTS *counts = xd->counts;
     if (counts) ++counts->intra_inter[ctx][is_inter];
     return is_inter;
@@ -976,7 +976,7 @@ static void read_inter_frame_mode_info(AV1Decoder *const pbi,
           r, cm->fc->inter_ext_tx_cdf[mbmi->tx_size], TX_TYPES)];
 #else
       mbmi->tx_type = aom_read_tree(r, av1_ext_tx_tree,
-                                    cm->fc->inter_ext_tx_prob[mbmi->tx_size]);
+                                    cm->fc->inter_ext_tx_prob[mbmi->tx_size], AOM_ACCT_DEFAULT_VALUE);
 #endif
       if (counts) ++counts->inter_ext_tx[mbmi->tx_size][mbmi->tx_type];
     } else {
@@ -987,7 +987,7 @@ static void read_inter_frame_mode_info(AV1Decoder *const pbi,
 #else
       mbmi->tx_type =
           aom_read_tree(r, av1_ext_tx_tree,
-                        cm->fc->intra_ext_tx_prob[mbmi->tx_size][tx_type_nom]);
+                        cm->fc->intra_ext_tx_prob[mbmi->tx_size][tx_type_nom], AOM_ACCT_DEFAULT_VALUE);
 #endif
       if (counts)
         ++counts->intra_ext_tx[mbmi->tx_size][tx_type_nom][mbmi->tx_type];

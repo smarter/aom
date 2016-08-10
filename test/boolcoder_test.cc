@@ -89,7 +89,7 @@ TEST(AV1, TestBitIO) {
           } else if (bit_method == 3) {
             bit = bit_rnd(2);
           }
-          GTEST_ASSERT_EQ(aom_read(&br, probas[i]), bit)
+          GTEST_ASSERT_EQ(aom_read(&br, probas[i], AOM_ACCT_DEFAULT_VALUE), bit)
               << "pos: " << i << " / " << kBitsToTest
               << " bit_method: " << bit_method << " method: " << method;
         }
