@@ -321,6 +321,9 @@ static int pvq_theta(od_coeff *out, const od_coeff *x0, const od_coeff *r0,
   int rshift;
   /* Give more weight to gain error when calculating the total distortion. */
   gain_weight = 1.0;
+  if (pli != 0) {
+    gain_weight = 1.4;
+  }
   OD_ASSERT(n > 1);
   corr = 0;
 #if !defined(OD_FLOAT_PVQ)
@@ -712,11 +715,16 @@ int od_pvq_encode(daala_enc_ctx *enc,
   int skip_theta_value;
   /* const unsigned char *pvq_qm; */
   double dc_rate;
+  double pvq_norm_lambda;
 #if !OD_SIGNAL_Q_SCALING
   OD_UNUSED(q_scaling);
   OD_UNUSED(bx);
   OD_UNUSED(by);
 #endif
+  pvq_norm_lambda = enc->pvq_norm_lambda;
+  if (pli != 0) {
+    pvq_norm_lambda *= 1.26;
+  }
   /* pvq_qm = &enc->state.pvq_qm_q4[pli][0]; */
   exg = &enc->state.adapt.pvq.pvq_exg[pli][bs][0];
   ext = enc->state.adapt.pvq.pvq_ext + bs*PVQ_MAX_PARTITIONS;
@@ -756,7 +764,7 @@ int od_pvq_encode(daala_enc_ctx *enc,
     qg[i] = pvq_theta(out + off[i], in + off[i], ref + off[i], size[i],
      q, y + off[i], &theta[i], &max_theta[i],
      &k[i], beta[i], &skip_diff, robust, is_keyframe, pli, &enc->state.adapt,
-     qm + off[i], qm_inv + off[i], enc->pvq_norm_lambda);
+     qm + off[i], qm_inv + off[i], pvq_norm_lambda);
   }
   od_encode_checkpoint(enc, &buf);
   if (is_keyframe) out[0] = 0;
@@ -782,7 +790,7 @@ int od_pvq_encode(daala_enc_ctx *enc,
       od_encode_rollback(enc, &dc_buf);
 
       out[0] = od_rdo_quant(in[0] - ref[0], dc_quant, dc_rate,
-       enc->pvq_norm_lambda);
+       pvq_norm_lambda);
     }
   }
   tell = od_ec_enc_tell_frac(&enc->ec);
@@ -859,7 +867,7 @@ int od_pvq_encode(daala_enc_ctx *enc,
     }
     tell -= (int)floor(.5+8*skip_rate);
   }
-  if (nb_bands == 0 || skip_diff <= enc->pvq_norm_lambda/8*tell) {
+  if (nb_bands == 0 || skip_diff <= pvq_norm_lambda/8*tell) {
     if (is_keyframe) out[0] = 0;
     else {
       int n;
@@ -883,7 +891,7 @@ int od_pvq_encode(daala_enc_ctx *enc,
         od_encode_rollback(enc, &dc_buf);
 
         out[0] = od_rdo_quant(in[0] - ref[0], dc_quant, dc_rate,
-         enc->pvq_norm_lambda);
+         pvq_norm_lambda);
       }
    }
     /* We decide to skip, roll back everything as it was before. */
