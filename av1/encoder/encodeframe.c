@@ -2793,7 +2793,7 @@ void av1_encode_tile(AV1_COMP *cpi, ThreadData *td, int tile_row,
     /* td->mb.daala_enc.pvq_norm_lambda = OD_PVQ_LAMBDA; */
     td->mb.daala_enc.pvq_norm_lambda = (double)rdmult * (64 / 16) / (q_ac*q_ac*(1 << RDDIV_BITS));
     td->mb.daala_enc.pvq_norm_lambda_dc = (double)rdmult * (64 / 16) / (q_dc*q_dc*(1 << RDDIV_BITS));
-    printf("%f\n", td->mb.daala_enc.pvq_norm_lambda);
+    //printf("%f\n", td->mb.daala_enc.pvq_norm_lambda);
   }
 
   od_init_qm(td->mb.daala_enc.state.qm, td->mb.daala_enc.state.qm_inv,
