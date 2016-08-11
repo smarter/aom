@@ -25,10 +25,23 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 #if !defined(_zigzag_H)
 # define _zigzag_H (1)
 
-extern const unsigned char OD_ZIGZAG4[15][2];
-extern const unsigned char OD_ZIGZAG8[48][2];
-extern const unsigned char OD_ZIGZAG16[192][2];
-extern const unsigned char OD_ZIGZAG32[768][2];
-extern const unsigned char OD_ZIGZAG64[3072][2];
+extern const unsigned char OD_ZIGZAG4_DCT_DCT[15][2];
+extern const unsigned char OD_ZIGZAG4_ADST_DCT[15][2];
+extern const unsigned char OD_ZIGZAG4_DCT_ADST[15][2];
+extern const unsigned char OD_ZIGZAG4_ADST_ADST[15][2];
+
+extern const unsigned char OD_ZIGZAG8_DCT_DCT[48][2];
+extern const unsigned char OD_ZIGZAG8_ADST_DCT[48][2];
+extern const unsigned char OD_ZIGZAG8_DCT_ADST[48][2];
+extern const unsigned char OD_ZIGZAG8_ADST_ADST[48][2];
+
+extern const unsigned char OD_ZIGZAG16_DCT_DCT[192][2];
+extern const unsigned char OD_ZIGZAG16_ADST_DCT[192][2];
+extern const unsigned char OD_ZIGZAG16_DCT_ADST[192][2];
+extern const unsigned char OD_ZIGZAG16_ADST_ADST[192][2];
+
+extern const unsigned char OD_ZIGZAG32_DCT_DCT[768][2];
+
+extern const unsigned char OD_ZIGZAG64_DCT_DCT[3072][2];
 
 #endif

@@ -299,6 +299,9 @@ int od_qm_offset(int bs, int xydec)
    functions to be smaller, so they would end up being quantized too finely
    (the same error in the quantized domain would result in a smaller pixel
    domain error). */
+// Note: When varying scan orders for hybrid transform is used by PVQ,
+// since AOM does not use magnitude compensation (i.e. simplay x16 for all coeffs),
+// we don't need seperate qm and qm_inv for each transform type.
 void od_init_qm(int16_t *x, int16_t *x_inv, const int *qm) {
   int i;
   int j;

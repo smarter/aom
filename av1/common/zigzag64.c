@@ -3,7 +3,7 @@
    y=0.33*sqrt(a'*a) .+ 0.67*(a'+a)./2;
    gen_zigzag64(1./y(:),'zigzag64.c') */
 #include "odintrin.h"
-OD_EXTERN const unsigned char OD_ZIGZAG64[3072][2] = {
+OD_EXTERN const unsigned char OD_ZIGZAG64_DCT_DCT[3072][2] = {
   { 32, 0 }, { 33, 0 }, { 34, 0 }, { 35, 0 },
   { 32, 1 }, { 36, 0 }, { 33, 1 }, { 37, 0 },
   { 34, 1 }, { 32, 2 }, { 38, 0 }, { 35, 1 },

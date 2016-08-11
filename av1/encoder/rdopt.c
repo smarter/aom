@@ -755,8 +755,7 @@ static void choose_largest_tx_size(const AV1_COMP *const cpi, MACROBLOCK *x,
 #endif
 
   if (mbmi->tx_size < TX_32X32 && !xd->lossless[mbmi->segment_id]) {
-    //for (tx_type = 0; tx_type < TX_TYPES; ++tx_type) {
-    for (tx_type = 0; tx_type < 1; ++tx_type) {
+    for (tx_type = DCT_DCT; tx_type < TX_TYPES; ++tx_type) {
       mbmi->tx_type = tx_type;
       txfm_rd_in_plane(x, &r, &d, &s, &psse, ref_best_rd, 0, bs, mbmi->tx_size,
                        cpi->sf.use_fast_coef_costing);
@@ -861,8 +860,7 @@ static void choose_tx_size_from_rd(const AV1_COMP *const cpi, MACROBLOCK *x,
     od_encode_checkpoint(&x->daala_enc, &buf);
 #endif
 
-  //for (tx_type = DCT_DCT; tx_type < TX_TYPES; ++tx_type) {
-  for (tx_type = DCT_DCT; tx_type < DCT_DCT + 1; ++tx_type) {
+  for (tx_type = DCT_DCT; tx_type < TX_TYPES; ++tx_type) {
 #if CONFIG_REF_MV
     if (mbmi->ref_mv_idx > 0 && tx_type != DCT_DCT) continue;
 #endif
@@ -1196,7 +1194,7 @@ static int64_t rd_pick_intra4x4block(const AV1_COMP *const cpi, MACROBLOCK *x,
 #else
           skip = pvq_encode_helper(&x->daala_enc, coeff, ref_coeff, dqcoeff,
               &p->eobs[block], pd->dequant,
-              0, TX_4X4, &rate_pvq, NULL);
+              0, TX_4X4, tx_type, &rate_pvq, NULL);
           ratey += rate_pvq;
 #endif
           if (RDCOST(x->rdmult, x->rddiv, ratey, distortion) >= best_rd)
@@ -1226,7 +1224,7 @@ static int64_t rd_pick_intra4x4block(const AV1_COMP *const cpi, MACROBLOCK *x,
 #else
           skip = pvq_encode_helper(&x->daala_enc, coeff, ref_coeff, dqcoeff,
               &p->eobs[block], pd->dequant,
-              0, TX_4X4, &rate_pvq, NULL);
+              0, TX_4X4, tx_type, &rate_pvq, NULL);
           ratey += rate_pvq;
 #endif
           // No need for av1_block_error2_c because the ssz is unused
@@ -1312,7 +1310,7 @@ static int64_t rd_pick_intra4x4block(const AV1_COMP *const cpi, MACROBLOCK *x,
 
       skip = pvq_encode_helper(&x->daala_enc, coeff, ref_coeff, dqcoeff,
           &p->eobs[block], pd->dequant,
-          0, TX_4X4, &rate_pvq, NULL);
+          0, TX_4X4, tx_type, &rate_pvq, NULL);
 
       if (lossless) {
         if (!skip) {
@@ -2160,8 +2158,8 @@ static int64_t encode_inter_mb_segment(const AV1_COMP *const cpi, MACROBLOCK *x,
       &pd->dst.buf[av1_raster_block_offset(BLOCK_8X8, i, pd->dst.stride)];
   int64_t thisdistortion = 0, thissse = 0;
   int thisrate = 0;
-#if !CONFIG_PVQ
   TX_TYPE tx_type = get_tx_type(PLANE_TYPE_Y, xd, i);
+#if !CONFIG_PVQ
   const SCAN_ORDER *scan_order = get_scan(TX_4X4, tx_type);
 #else
   (void) cpi;
@@ -2243,7 +2241,7 @@ static int64_t encode_inter_mb_segment(const AV1_COMP *const cpi, MACROBLOCK *x,
 
       pvq_encode_helper(&x->daala_enc, coeff, ref_coeff, dqcoeff,
           &p->eobs[k], pd->dequant,
-          0, TX_4X4, &rate_pvq, NULL);
+          0, TX_4X4, tx_type, &rate_pvq, NULL);
 #endif
 
 #if CONFIG_AOM_HIGHBITDEPTH

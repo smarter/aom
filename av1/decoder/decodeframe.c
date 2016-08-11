@@ -399,6 +399,7 @@ static int pvq_decode_helper(
     int16_t *quant,
     int pli,
     int bs,
+    TX_TYPE tx_type,
     int xdec,
     int ac_dc_coded) {
   unsigned int flags; // used for daala's stream analyzer.
@@ -422,7 +423,7 @@ static int pvq_decode_helper(
 
   /*Safely initialize d since some coeffs are skipped by PVQ.*/
   //od_init_skipped_coeffs(dqcoeff, ref_coeff, 0, 0, blk_size, blk_size);
-  od_raster_to_coding_order(ref_coeff_pvq, blk_size, ref_coeff, blk_size);
+  od_raster_to_coding_order(ref_coeff_pvq, blk_size, tx_type, ref_coeff, blk_size);
 
   if (lossless) pvq_dc_quant = 1;
   else {
@@ -459,7 +460,7 @@ static int pvq_decode_helper(
   }
   dqcoeff_pvq[0] = dqcoeff_pvq[0]*pvq_dc_quant + ref_coeff_pvq[0];
 
-  od_coding_order_to_raster(dqcoeff, blk_size, dqcoeff_pvq, blk_size);
+  od_coding_order_to_raster(dqcoeff, blk_size, tx_type, dqcoeff_pvq, blk_size);
 
   // Mark last nonzero coeff position.
   //for (j = 0; j < blk_size * blk_size; j++)
@@ -547,6 +548,7 @@ static void predict_and_reconstruct_intra_block(MACROBLOCKD *const xd,
         quant,
         plane,
         tx_size,
+        tx_type,
         xdec,
         ac_dc_coded);
 
@@ -638,6 +640,7 @@ static int reconstruct_inter_block(MACROBLOCKD *const xd, aom_reader *r,
       quant,
       plane,
       tx_size,
+      tx_type,
       xdec,
       ac_dc_coded);
 

@@ -29,6 +29,42 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 #include "odintrin.h"
 #include "partition.h"
 #include "zigzag.h"
+#include "enums.h"
+
+OD_EXTERN const index_pair *OD_ZIGZAG4[4] = {
+  OD_ZIGZAG4_DCT_DCT,
+  OD_ZIGZAG4_ADST_DCT,
+  OD_ZIGZAG4_DCT_ADST,
+  OD_ZIGZAG4_ADST_ADST
+};
+
+OD_EXTERN const index_pair *OD_ZIGZAG8[4] = {
+  OD_ZIGZAG8_DCT_DCT,
+  OD_ZIGZAG8_ADST_DCT,
+  OD_ZIGZAG8_DCT_ADST,
+  OD_ZIGZAG8_ADST_ADST
+};
+
+OD_EXTERN const index_pair *OD_ZIGZAG16[4] = {
+  OD_ZIGZAG16_DCT_DCT,
+  OD_ZIGZAG16_ADST_DCT,
+  OD_ZIGZAG16_DCT_ADST,
+  OD_ZIGZAG16_ADST_ADST
+};
+
+OD_EXTERN const index_pair *OD_ZIGZAG32[4] = {
+  OD_ZIGZAG32_DCT_DCT,
+  OD_ZIGZAG32_DCT_DCT,
+  OD_ZIGZAG32_DCT_DCT,
+  OD_ZIGZAG32_DCT_DCT
+};
+
+OD_EXTERN const index_pair *OD_ZIGZAG64[4] = {
+  OD_ZIGZAG64_DCT_DCT,
+  OD_ZIGZAG64_DCT_DCT,
+  OD_ZIGZAG64_DCT_DCT,
+  OD_ZIGZAG64_DCT_DCT
+};
 
 /* The tables below specify how coefficient blocks are translated to
    and from PVQ partition coding scan order for 4x4, 8x8 and 16x16 */
@@ -99,12 +135,12 @@ const int *const OD_BAND_OFFSETS[OD_NBSIZES + 1] = {
  * @param [int]    int     source vector row stride
  */
 static void od_band_from_raster(const band_layout *layout, int16_t *dst,
- const int16_t *src, int stride) {
+ const int16_t *src, int stride, TX_TYPE tx_type) {
   int i;
   int len;
   len = layout->band_offsets[layout->nb_bands];
   for (i = 0; i < len; i++) {
-    dst[i] = src[layout->dst_table[i][1]*stride + layout->dst_table[i][0]];
+    dst[i] = src[layout->dst_table[tx_type][i][1]*stride + layout->dst_table[tx_type][i][0]];
   }
 }
 
@@ -117,12 +153,12 @@ static void od_band_from_raster(const band_layout *layout, int16_t *dst,
  * @param [int]    stride  destination vector row stride
  */
 static void od_raster_from_band(const band_layout *layout, int16_t *dst,
- int stride, const int16_t *src) {
+ int stride, TX_TYPE tx_type, const int16_t *src) {
   int i;
   int len;
   len = layout->band_offsets[layout->nb_bands];
   for (i = 0; i < len; i++) {
-    dst[layout->dst_table[i][1]*stride + layout->dst_table[i][0]] = src[i];
+    dst[layout->dst_table[tx_type][i][1]*stride + layout->dst_table[tx_type][i][0]] = src[i];
   }
 }
 
@@ -138,14 +174,15 @@ static const band_layout *const OD_LAYOUTS[] = {&OD_LAYOUT4, &OD_LAYOUT8,
  *
  * @param [out]    dst        destination vector
  * @param [in]     n          block size (along one side)
+ * @param [in]     ty_type    transfrom type
  * @param [in]     src        source coefficient block
  * @param [in]     stride     source vector row stride
  */
-void od_raster_to_coding_order(int16_t *dst, int n, const int16_t *src,
- int stride) {
+void od_raster_to_coding_order(int16_t *dst, int n, TX_TYPE ty_type,
+ const int16_t *src, int stride) {
   int bs;
   /* dst + 1 because DC is not included for 4x4 blocks. */
-  od_band_from_raster(OD_LAYOUTS[0], dst + 1, src, stride);
+  od_band_from_raster(OD_LAYOUTS[0], dst + 1, src, stride, ty_type);
   for (bs = 1; bs < OD_NBSIZES; bs++) {
     int size;
     int offset;
@@ -155,7 +192,7 @@ void od_raster_to_coding_order(int16_t *dst, int n, const int16_t *src,
     offset = 1 << 2*(OD_LOG_BSIZE0 - 1 + bs);
     if (n >= size) {
       /* 3 16x16 bands come after 3 8x8 bands, which come after 2 4x4 bands. */
-      od_band_from_raster(OD_LAYOUTS[bs], dst + offset, src, stride);
+      od_band_from_raster(OD_LAYOUTS[bs], dst + offset, src, stride, ty_type);
     }
   }
   dst[0] = src[0];
@@ -173,11 +210,11 @@ void od_raster_to_coding_order(int16_t *dst, int n, const int16_t *src,
  * @param [in]     src        source vector
  * @param [in]     n          block size (along one side)
  */
-void od_coding_order_to_raster(int16_t *dst, int stride, const int16_t *src,
- int n) {
+void od_coding_order_to_raster(int16_t *dst, int stride, TX_TYPE ty_type,
+ const int16_t *src, int n) {
   int bs;
   /* src + 1 because DC is not included for 4x4 blocks. */
-  od_raster_from_band(OD_LAYOUTS[0], dst, stride, src + 1);
+  od_raster_from_band(OD_LAYOUTS[0], dst, stride, ty_type, src + 1);
   for (bs = 1; bs < OD_NBSIZES; bs++) {
     int size;
     int offset;
@@ -187,7 +224,7 @@ void od_coding_order_to_raster(int16_t *dst, int stride, const int16_t *src,
     offset = 1 << 2*(OD_LOG_BSIZE0 - 1 + bs);
     if (n >= size) {
       /* 3 16x16 bands come after 3 8x8 bands, which come after 2 4x4 bands. */
-      od_raster_from_band(OD_LAYOUTS[bs], dst, stride, src + offset);
+      od_raster_from_band(OD_LAYOUTS[bs], dst, stride, ty_type, src + offset);
     }
   }
   dst[0] = src[0];
@@ -207,7 +244,7 @@ static void od_band_from_raster_16(const band_layout *layout, int16_t *dst,
   int len;
   len = layout->band_offsets[layout->nb_bands];
   for (i = 0; i < len; i++) {
-    dst[i] = src[layout->dst_table[i][1]*stride + layout->dst_table[i][0]];
+    dst[i] = src[layout->dst_table[DCT_DCT][i][1]*stride + layout->dst_table[DCT_DCT][i][0]];
   }
 }
 

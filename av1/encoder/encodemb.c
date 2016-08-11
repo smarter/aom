@@ -558,6 +558,7 @@ void av1_xform_quant_fp(MACROBLOCK *x, int plane, int block, int blk_row,
                              pd->dequant,    // aom's quantizers
                              plane,          // image plane
                              tx_size,        // block size in log_2 - 2
+                             tx_type,
                              &x->rate,       // rate measured
                              pvq_info);      // PVQ info for a block
 
@@ -865,6 +866,7 @@ void av1_xform_quant(MACROBLOCK *x, int plane, int block, int blk_row,
                              pd->dequant,    // aom's quantizers
                              plane,          // image plane
                              tx_size,        // block size in log_2 - 2
+                             tx_type,
                              &x->rate,       // rate measured
                              pvq_info);      // PVQ info for a block
 
@@ -1311,6 +1313,7 @@ void av1_encode_block_intra(int plane, int block, int blk_row, int blk_col,
                              pd->dequant,    // aom's quantizers
                              plane,          // image plane
                              tx_size,        // block size in log_2 - 2
+                             tx_type,
                              &x->rate,       // rate measured
                              pvq_info);       // PVQ info for a block
 
@@ -1371,7 +1374,7 @@ int pvq_encode_helper(daala_enc_ctx *daala_enc,
     tran_low_t *const coeff, tran_low_t *ref_coeff,
     tran_low_t *const dqcoeff,
     uint16_t *eob, const int16_t *quant,
-    int plane, int tx_size, int *rate, PVQ_INFO *pvq_info) {
+    int plane, int tx_size, TX_TYPE tx_type, int *rate, PVQ_INFO *pvq_info) {
   const int tx_blk_size = 1 << (tx_size + 2);
   int skip;
   // TODO: Enable this later, if pvq_qm_q4 is available in AOM.
@@ -1397,8 +1400,8 @@ int pvq_encode_helper(daala_enc_ctx *daala_enc,
   tell = od_ec_enc_tell(&daala_enc->ec);
 
   // Change coefficient ordering for pvq encoding.
-  od_raster_to_coding_order(coeff_pvq, tx_blk_size, coeff, tx_blk_size);
-  od_raster_to_coding_order(ref_coeff_pvq, tx_blk_size, ref_coeff, tx_blk_size);
+  od_raster_to_coding_order(coeff_pvq, tx_blk_size, tx_type, coeff, tx_blk_size);
+  od_raster_to_coding_order(ref_coeff_pvq, tx_blk_size, tx_type, ref_coeff, tx_blk_size);
 
   //copy int16 inputs to int32
   for (i = 0; i < tx_blk_size * tx_blk_size; i++) {
@@ -1457,7 +1460,7 @@ int pvq_encode_helper(daala_enc_ctx *daala_enc,
   //od_init_skipped_coeffs(dqcoeff, ref_coeff, 0, 0, tx_blk_size, tx_blk_size);
 
   // Back to original coefficient order
-  od_coding_order_to_raster(dqcoeff, tx_blk_size, dqcoeff_pvq, tx_blk_size);
+  od_coding_order_to_raster(dqcoeff, tx_blk_size, tx_type, dqcoeff_pvq, tx_blk_size);
 
   *eob = tx_blk_size * tx_blk_size;
 
