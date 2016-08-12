@@ -9,7 +9,7 @@
   <link rel="stylesheet" href="lib/angular-material.min.css">
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
   <link rel="stylesheet" href="lib/angularjs-color-picker.min.css">
-
+  <link href="https://fonts.googleapis.com/css?family=Roboto+Mono:500" rel="stylesheet">
   <style type="text/css">
     html {
       line-height: 1.4;
@@ -29,7 +29,7 @@
     }
     md-list-item {
       font-size: 14px;
-      min-height: 38px;
+      min-height: 30px;
       height: 24px;
       margin: 0px;
     }
@@ -50,6 +50,14 @@
     .md-button.md-fab.md-overlay-primary {
       background-color: #555555;
       opacity: 0.5;
+    }
+    .key {
+      font-size: 12px;
+      font-family: 'Roboto Mono', monospace;
+    }
+    .value {
+      font-size: 12px;
+      font-family: 'Roboto Mono', monospace;
     }
   </style>
 </head>
@@ -147,13 +155,13 @@
         <md-list>
           <md-subheader class="md-sticky">Bitstream Info</md-subheader>
           <md-list-item class="md-list-item-narrow" ng-cloak ng-repeat="(name, p) in vm.uiFrameInfoProperties">
-            <div flex="50">{{p.description}}</div>
-            <div flex="50" style="text-align: right;">{{p.value}}</div>
+            <div flex="50" class="key">{{p.description}}</div>
+            <div flex="50" class="value" style="text-align: right;">{{p.value}}</div>
           </md-list-item>
           <md-divider></md-divider>
           <md-subheader class="md-sticky">Layers</md-subheader>
           <md-list-item ng-cloak ng-repeat="(name, option) in vm.options">
-            {{option.description}} [<span class="keyShortcut">{{option.key}}</span>]
+            <div class="key">{{option.description}} [<span class="keyShortcut">{{option.key}}</span>]</div>
             <md-checkbox class="md-secondary" ng-model="option.value" ng-change="vm.uiChange()" ng-disabled="option.disabled" aria-label="name"></md-checkbox>
             <md-tooltip md-direction="right">
               {{option.detail}}
@@ -170,7 +178,7 @@
           <md-divider></md-divider>
           <md-subheader class="md-sticky">Preferences</md-subheader>
           <md-list-item ng-cloak ng-repeat="(name, option) in vm.colorOptions">
-            <div flex="100">{{option.description}}</div>
+            <div flex="100" class="key">{{option.description}}</div>
             <div>
             <color-picker color-picker-pos="'top right'" color-picker-swatch-only="true" ng-model="option.value" color-picker-on-change="vm.uiChangeColor()" ></color-picker>
             </div>
@@ -224,42 +232,27 @@
     <md-content id="right-panel" ng-hide="!vm.options.showInspector.value">
       <canvas id="zoom" oncontextmenu="event.preventDefault()" style="left: 0; bottom: 0; z-index: 1000; image-rendering: pixelated;"
             width=0 height=0></canvas>
-      <div style="background-color: white;">
-        <md-subheader class="md-sticky">Frame Statistics</md-subheader>
-        <canvas id="chart" oncontextmenu="event.preventDefault()" width=0 height=0></canvas>
-      </div>
       <md-tabs md-dynamic-height md-border-bottom>
         <md-tab label="Block Info">
           <md-content class="md-padding">
             <md-list>
-              <md-list-item class="md-list-item-narrow" ng-cloak ng-repeat="(name, p) in vm.uiBlockInfoProperties" style="color: {{p.color}};">
-                <div flex="50">{{p.description}}</div>
-                <div flex="50" style="text-align: right;">{{p.value}}</div>
+              <md-list-item class="md-list-item-narrow" ng-cloak ng-repeat="(name, p) in vm.uiBlockProperties" style="color: {{p.color}};">
+                <div flex="50" class="key">{{p.description}}</div>
+                <div flex="50" class="value" style="text-align: right;">{{p.value}}</div>
               </md-list-item>
             </md-list>
           </md-content>
         </md-tab>
-        <md-tab label="Frame Info">
+        <md-tab label="Bit Accounting">
           <md-content class="md-padding">
             <md-list>
-              <md-list-item class="md-list-item-narrow" ng-cloak ng-repeat="(name, p) in vm.uiFrameInfoProperties" style="color: {{p.color}};">
-                <div flex="50">{{p.description}}</div>
-                <div flex="50" style="text-align: right;">{{p.value}}</div>
+              <md-list-item class="md-list-item-narrow" ng-cloak ng-repeat="(name, p) in vm.uiAccountingBlockProperties" style="color: {{p.color}};">
+                <div flex="40" class="key">{{p.description}}</div>
+                <div flex="20" class="value" style="text-align: right;">{{p.value[0]}}</div>
+                <div flex="20" class="value" style="text-align: right;">{{p.value[1]}}</div>
+                <div flex="20" class="value" style="text-align: right;">{{p.value[2]}}</div>
               </md-list-item>
             </md-list>
-          </md-content>
-        </md-tab>
-        <md-tab label="Frame Statistcs">
-          <md-content class="md-padding">
-          <md-list>
-            <md-list-item ng-cloak ng-repeat="(name, statistic) in vm.frameStatistics">
-              {{statistic.description}}
-            <md-checkbox class="md-secondary" ng-model="statistic.show" ng-change="vm.drawFrameStatistics()" aria-label="name"}></md-checkbox>
-            <md-tooltip md-direction="top">
-              {{statistic.detail}}
-            </md-tooltip>
-            </md-list-item>
-          </md-list>
           </md-content>
         </md-tab>
         <md-tab label="Help">
@@ -326,6 +319,47 @@
             <p class="md-body-1">
               You can share your current analyzer state with someone by sending them the sharing link.
             </p>
+          </md-content>
+        </md-tab>
+      </md-tabs>
+      <div style="background-color: white;">
+        <md-subheader class="md-sticky">Frame Statistics</md-subheader>
+        <canvas id="chart" oncontextmenu="event.preventDefault()" width=0 height=0></canvas>
+      </div>
+      <md-tabs md-dynamic-height md-border-bottom>
+        <md-tab label="Frame Info">
+          <md-content class="md-padding">
+            <md-list>
+              <md-list-item class="md-list-item-narrow" ng-cloak ng-repeat="(name, p) in vm.uiFrameProperties" style="color: {{p.color}};">
+                <div flex="50" class="key">{{p.description}}</div>
+                <div flex="50" class="value" style="text-align: right;">{{p.value}}</div>
+              </md-list-item>
+            </md-list>
+          </md-content>
+        </md-tab>
+        <md-tab label="Bit Accounting">
+          <md-content class="md-padding">
+            <md-list>
+              <md-list-item class="md-list-item-narrow" ng-cloak ng-repeat="(name, p) in vm.uiAccountingFrameProperties" style="color: {{p.color}};">
+                <div flex="40" class="key">{{p.description}}</div>
+                <div flex="20" class="value" style="text-align: right;">{{p.value[0]}}</div>
+                <div flex="20" class="value" style="text-align: right;">{{p.value[1]}}</div>
+                <div flex="20" class="value" style="text-align: right;">{{p.value[2]}}</div>
+              </md-list-item>
+            </md-list>
+          </md-content>
+        </md-tab>
+        <md-tab label="Frame Statistcs">
+          <md-content class="md-padding">
+          <md-list>
+            <md-list-item ng-cloak ng-repeat="(name, statistic) in vm.frameStatistics">
+              <div class="key">{{statistic.description}}</div>
+            <md-checkbox class="md-secondary" ng-model="statistic.show" ng-change="vm.drawFrameStatistics()" aria-label="name"}></md-checkbox>
+            <md-tooltip md-direction="top">
+              {{statistic.detail}}
+            </md-tooltip>
+            </md-list-item>
+          </md-list>
           </md-content>
         </md-tab>
       </md-tabs>

@@ -116,6 +116,14 @@ enum MIProperty {
   GET_MI_BITS
 }
 
+enum AccountingProperty {
+  GET_ACCCOUNTING_SYMBOL_COUNT,
+  GET_ACCCOUNTING_SYMBOL_NAME,
+  GET_ACCCOUNTING_SYMBOL_BITS,
+  GET_ACCCOUNTING_SYMBOL_CONTEXT_X,
+  GET_ACCCOUNTING_SYMBOL_CONTEXT_Y
+}
+
 enum AOMAnalyzerTransformMode {
   ONLY_4X4       = 0,
   ALLOW_8X8      = 1,
@@ -167,6 +175,50 @@ const BLOCK_SIZES = [
   [6, 6]
 ];
 
+class AccountingSymbol {
+  constructor(public name: string, public bits: number, public samples: number, public x: number, public y: number) {
+    // ...
+  }
+}
+
+type AccountingSymbolMap = { [name: string]: AccountingSymbol };
+
+class Accounting {
+  symbols: AccountingSymbol [] = null;
+  frameSymbols: AccountingSymbolMap = Object.create(null);
+  constructor(symbols: AccountingSymbol [] = []) {
+    this.symbols = symbols;
+  }
+  createFrameSymbols() {
+    this.frameSymbols = Accounting.flatten(this.symbols);
+  }
+  createBlockSymbols(mi: Vector) {
+    return Accounting.flatten(this.symbols.filter(symbol => {
+      return symbol.x === mi.x && symbol.y === mi.y;
+    }));
+  }
+
+  static flatten(sybmols: AccountingSymbol []): AccountingSymbolMap {
+    let map = Object.create(null);
+    sybmols.forEach(symbol => {
+      let s = map[symbol.name];
+      if (!s) {
+        s = map[symbol.name] = new AccountingSymbol(symbol.name, 0, 0, symbol.x, symbol.y);
+      }
+      s.bits += symbol.bits;
+      s.samples += symbol.samples;
+    });
+    let ret = Object.create(null);
+    let names = [];
+    for (let name in map) names.push(name);
+    names.sort();
+    names.forEach(name => {
+      ret[name] = map[name];
+    });
+    return ret;
+  }
+}
+
 interface AOMInternal {
   _read_frame (): number;
   _get_plane (pli: number): number;
@@ -181,6 +233,7 @@ interface AOMInternal {
   _open_file(): number;
 
   _get_property(p: Property): number;
+  _get_accounting_property(p: AccountingProperty, i: number): number;
   _get_mi_property(p: MIProperty, mi_col: number, mi_row: number, i: number): number;
 
   _get_predicted_plane_buffer(pli: number): number;
@@ -196,40 +249,43 @@ class AOM {
   constructor () {
 
   }
-  open_file () {
+  openFile() {
     return this.native._open_file();
   }
-  read_frame () {
+  readFrame() {
     return this.native._read_frame();
   }
-  get_plane (pli: number): number {
+  getPlane(pli: number): number {
     return this.native._get_plane(pli);
   }
-  get_plane_stride (pli: number): number {
+  getPlaneStride(pli: number): number {
     return this.native._get_plane_stride(pli);
   }
-  get_plane_width (pli: number): number {
+  getPlaneWidth(pli: number): number {
     return this.native._get_plane_width(pli);
   }
-  get_plane_height (pli: number): number {
+  getPlaneHeight(pli: number): number {
     return this.native._get_plane_height(pli);
   }
-  get_property(p: Property) {
+  getProperty(p: Property) {
     return this.native._get_property(p);
   }
-  getStringProperty(p: Property): string {
-    return this.native.UTF8ToString(this.get_property(p));
+  getAccountingProperty(p: AccountingProperty, i: number = 0) {
+    return this.native._get_accounting_property(p, i);
   }
-  get_mi_property(p: MIProperty, mi_col: number, mi_row: number, i: number = 0) {
+  getString(i: number): string {
+    return this.native.UTF8ToString(i);
+  }
+  getMIProperty(p: MIProperty, mi_col: number, mi_row: number, i: number = 0) {
     return this.native._get_mi_property(p, mi_col, mi_row, i);
   }
-  get_predicted_plane_buffer(pli: number): number {
+  getPredictedPlaneBuffer(pli: number): number {
     return this.native._get_predicted_plane_buffer(pli);
   }
-  get_predicted_plane_stride(pli: number): number {
+  getPredictedPlaneStride(pli: number): number {
     return this.native._get_predicted_plane_stride(pli);
   }
-  get_frame_count(): number {
+  getFrameCount(): number {
     return this.native._get_frame_count();
   }
   getFrameSize(): Size {
@@ -781,10 +837,10 @@ class AppCtrl {
   $interval: any;
   $mdSidenav: any;
 
-  uiFrameInfoProperties: any;
-  createUIFrameInfoProperties() {
+  uiFrameProperties: any;
+  createUIFrameProperties() {
     let self = this;
-    this.uiFrameInfoProperties = {
+    this.uiFrameProperties = {
       frameNumber: {
         description: "Frame Number",
         get value() {
@@ -833,32 +889,32 @@ class AppCtrl {
       clpfStrength: {
         description: "CLPF Strength",
         get value() {
-          return self.aom.get_property(Property.GET_CLPF_STRENGTH);
+          return self.aom.getProperty(Property.GET_CLPF_STRENGTH);
         }
       },
       deringLevel: {
         description: "Dering Level",
         get value() {
-          return self.aom.get_property(Property.GET_DERING_LEVEL);
+          return self.aom.getProperty(Property.GET_DERING_LEVEL);
         }
       }
     };
   }
 
-  uiBlockInfoProperties: any;
-  createUIBlockInfoProperties() {
+  uiBlockProperties: any;
+  createUIBlockProperties() {
     let self = this;
     function withMIUnderMouse(fn) {
       if (!self.aom) return;
       let mi = self.getMIUnderMouse();
       return fn(mi);
     }
-    this.uiBlockInfoProperties = {
+    this.uiBlockProperties = {
       blockSize: {
         description: "Block Size",
         get value() {
           return withMIUnderMouse(mi => {
-            return AOMAnalyzerBlockSize[self.aom.get_mi_property(MIProperty.GET_MI_BLOCK_SIZE, mi.x, mi.y)];
+            return AOMAnalyzerBlockSize[self.aom.getMIProperty(MIProperty.GET_MI_BLOCK_SIZE, mi.x, mi.y)];
           });
         }
       },
@@ -866,7 +922,7 @@ class AppCtrl {
         description: "Block Skip",
         get value() {
           return withMIUnderMouse(mi => {
-            self.aom.get_mi_property(MIProperty.GET_MI_SKIP, mi.x, mi.y);
+            self.aom.getMIProperty(MIProperty.GET_MI_SKIP, mi.x, mi.y);
           });
         }
       },
@@ -874,7 +930,7 @@ class AppCtrl {
         description: "Prediction Mode",
         get value() {
           return withMIUnderMouse(mi => {
-            return AOMAnalyzerPredictionMode[self.aom.get_mi_property(MIProperty.GET_MI_MODE, mi.x, mi.y)];
+            return AOMAnalyzerPredictionMode[self.aom.getMIProperty(MIProperty.GET_MI_MODE, mi.x, mi.y)];
           });
         }
       },
@@ -882,7 +938,7 @@ class AppCtrl {
         description: "Dering Gain",
         get value() {
           return withMIUnderMouse(mi => {
-            return String(self.aom.get_mi_property(MIProperty.GET_MI_DERING_GAIN, mi.x, mi.y));
+            return String(self.aom.getMIProperty(MIProperty.GET_MI_DERING_GAIN, mi.x, mi.y));
           });
         }
       },
@@ -914,8 +970,8 @@ class AppCtrl {
         description: "Reference Frames",
         get value() {
           return withMIUnderMouse(mi => {
-            return self.aom.get_mi_property(MIProperty.GET_MI_MV_REFERENCE_FRAME, mi.x, mi.y, 0) + ", " +
-                   self.aom.get_mi_property(MIProperty.GET_MI_MV_REFERENCE_FRAME, mi.x, mi.y, 1);
+            return self.aom.getMIProperty(MIProperty.GET_MI_MV_REFERENCE_FRAME, mi.x, mi.y, 0) + ", " +
+                   self.aom.getMIProperty(MIProperty.GET_MI_MV_REFERENCE_FRAME, mi.x, mi.y, 1);
           });
         }
       },
@@ -923,7 +979,7 @@ class AppCtrl {
         description: "Transform Type",
         get value() {
           return withMIUnderMouse(mi => {
-            return AOMAnalyzerTransformType[self.aom.get_mi_property(MIProperty.GET_MI_TRANSFORM_TYPE, mi.x, mi.y)];
+            return AOMAnalyzerTransformType[self.aom.getMIProperty(MIProperty.GET_MI_TRANSFORM_TYPE, mi.x, mi.y)];
           });
         }
       },
@@ -931,7 +987,7 @@ class AppCtrl {
         description: "Transform Size",
         get value() {
           return withMIUnderMouse(mi => {
-            return AOMAnalyzerTransformSize[self.aom.get_mi_property(MIProperty.GET_MI_TRANSFORM_SIZE, mi.x, mi.y)];
+            return AOMAnalyzerTransformSize[self.aom.getMIProperty(MIProperty.GET_MI_TRANSFORM_SIZE, mi.x, mi.y)];
           });
         }
       },
@@ -939,7 +995,7 @@ class AppCtrl {
         description: "Bits",
         get value() {
           return withMIUnderMouse(mi => {
-            return self.aom.get_mi_property(MIProperty.GET_MI_BITS, mi.x, mi.y);
+            return self.aom.getMIProperty(MIProperty.GET_MI_BITS, mi.x, mi.y);
           });
         },
         get color() {
@@ -956,6 +1012,15 @@ class AppCtrl {
         }
       }
     };
+  }
+
+  uiAccountingFrameProperties: any;
+  uiAccountingBlockProperties: any;
+
+  createUIAccountingProperties() {
+    let self = this;
+    this.uiAccountingFrameProperties = { }
+    this.uiAccountingBlockProperties = { }
   }
 
   constructor($scope, $interval, $mdSidenav) {
@@ -1034,8 +1099,9 @@ class AppCtrl {
 
     this.installKeyboardShortcuts();
 
-    this.createUIFrameInfoProperties();
-    this.createUIBlockInfoProperties();
+    this.createUIFrameProperties();
+    this.createUIBlockProperties();
+    this.createUIAccountingProperties();
     this.loadOptions();
 
     let parameters = getUrlParameters();
@@ -1148,12 +1214,13 @@ class AppCtrl {
       );
     }
     this.mousePosition = getMousePosition(this.overlayCanvas, event);
+    this.updateBlockAccounting();
     this.options.showInspector.value && this.drawInfo();
     this.uiApply();
   }
 
   getMIBlockSize(c: number, r: number, miMinBlockSize: AOMAnalyzerBlockSize = AOMAnalyzerBlockSize.BLOCK_4X4): Size {
-    let miBlockSize = this.aom.get_mi_property(MIProperty.GET_MI_BLOCK_SIZE, c, r);
+    let miBlockSize = this.aom.getMIProperty(MIProperty.GET_MI_BLOCK_SIZE, c, r);
     if (miBlockSize >= BLOCK_SIZES.length) {
       // TODO: This should not happen, figure out what is going on.
       return new Size(0, 0);
@@ -1189,7 +1256,7 @@ class AppCtrl {
 
   getMIBits(c: number, r: number): number {
     let mi = this.getMI(c, r);
-    return this.aom.get_mi_property(MIProperty.GET_MI_BITS, mi.x, mi.y);
+    return this.aom.getMIProperty(MIProperty.GET_MI_BITS, mi.x, mi.y);
   }
 
   loadDecoder(decoder: string, next: () => any) {
@@ -1265,7 +1332,7 @@ class AppCtrl {
     this.fileBytes = buffer;
     this.fileSize = buffer.length;
     FS.writeFile("/tmp/input.ivf", buffer, { encoding: "binary" });
-    this.aom.open_file();
+    this.aom.openFile();
     this.frameNumber = -1;
     this.frameSize = this.aom.getFrameSize();
     this.resetCanvases();
@@ -1450,7 +1517,7 @@ class AppCtrl {
   playFrame(count: number = 1) {
     for (let i = 0; i < count; i++) {
       let s = performance.now();
-      if (this.aom.read_frame()) {
+      if (this.aom.readFrame()) {
         return false;
       }
       this.processFrame();
@@ -1479,16 +1546,80 @@ class AppCtrl {
     }
   };
 
+  lastAccounting: Accounting = null;
+
   processFrame() {
     let {cols, rows} = this.aom.getMIGridSize();
     let miTotalBits = 0;
     for (let c = 0; c < cols; c++) {
       for (let r = 0; r < rows; r++) {
-        miTotalBits += this.aom.get_mi_property(MIProperty.GET_MI_BITS, c, r);
+        miTotalBits += this.aom.getMIProperty(MIProperty.GET_MI_BITS, c, r);
       }
     }
     this.frameStatistics.bits.values.push(miTotalBits);
     this.frameStatistics.errors.values.push(this.getFrameError());
+
+    this.lastAccounting = this.accounting;
+    this.accounting = this.getAccounting();
+    this.updateBlockAccounting()
+    this.updateFrameAccounting();
+  }
+
+  accounting: Accounting = null;
+
+  getAccounting(): Accounting {
+    var aom = this.aom;
+    var accounting = new Accounting();
+    let count = aom.getAccountingProperty(AccountingProperty.GET_ACCCOUNTING_SYMBOL_COUNT);
+    let nameMap = [];
+    for (let i = 0; i < count; i++) {
+      let nameAddress = aom.getAccountingProperty(AccountingProperty.GET_ACCCOUNTING_SYMBOL_NAME, i);
+      if (nameMap[nameAddress] === undefined) {
+        nameMap[nameAddress] = aom.getString(nameAddress);
+      }
+      let name = nameMap[nameAddress];
+      let bits = aom.getAccountingProperty(AccountingProperty.GET_ACCCOUNTING_SYMBOL_BITS, i);
+      let x = aom.getAccountingProperty(AccountingProperty.GET_ACCCOUNTING_SYMBOL_CONTEXT_X, i);
+      let y = aom.getAccountingProperty(AccountingProperty.GET_ACCCOUNTING_SYMBOL_CONTEXT_Y, i);
+      accounting.symbols.push(new AccountingSymbol(name, bits, 1, x, y));
+    }
+    return accounting;
+  }
+
+  updateFrameAccounting() {
+    let accounting = this.accounting;
+    accounting.createFrameSymbols();
+    for (let name in accounting.frameSymbols) {
+      let symbol = accounting.frameSymbols[name];
+      let lastSymbol = this.lastAccounting ? this.lastAccounting.frameSymbols[name] : null;
+      this.uiAccountingFrameProperties[symbol.name] = {
+        description: symbol.name,
+        value: [
+          symbol.bits,
+          symbol.samples,
+          lastSymbol ? " " + (symbol.bits - lastSymbol.bits) : ""
+        ]
+      }
+    }
+  }
+
+  updateBlockAccounting() {
+    let accounting = this.accounting;
+    if (!accounting) {
+      return;
+    }
+    let mi = this.getMIUnderMouse();
+    let blockSymbols = accounting.createBlockSymbols(mi);
+    for (let name in blockSymbols) {
+      let symbol = blockSymbols[name];
+      this.uiAccountingBlockProperties[symbol.name] = {
+        description: symbol.name,
+        value: [
+          symbol.bits,
+          symbol.samples
+        ]
+      }
+    }
   }
 
   uiZoom(value: number) {
@@ -1744,24 +1875,24 @@ class AppCtrl {
   }
 
   drawDecodedImage(compositeOperation: string = "source-over") {
-    let Yp = this.aom.get_plane(0);
-    let Ys = this.aom.get_plane_stride(0);
-    let Up = this.aom.get_plane(1);
-    let Us = this.aom.get_plane_stride(1);
-    let Vp = this.aom.get_plane(2);
-    let Vs = this.aom.get_plane_stride(2);
+    let Yp = this.aom.getPlane(0);
+    let Ys = this.aom.getPlaneStride(0);
+    let Up = this.aom.getPlane(1);
+    let Us = this.aom.getPlaneStride(1);
+    let Vp = this.aom.getPlane(2);
+    let Vs = this.aom.getPlaneStride(2);
     this.drawImage(this.aom.HEAPU8, Yp, Ys, Up, Us, Vp, Vs, compositeOperation);
   }
 
   drawPredictedImage(compositeOperation: string = "source-over") {
-    let Yp = this.aom.get_predicted_plane_buffer(0);
-    let Ys = this.aom.get_predicted_plane_stride(0);
+    let Yp = this.aom.getPredictedPlaneBuffer(0);
+    let Ys = this.aom.getPredictedPlaneStride(0);
 
-    let Up = this.aom.get_predicted_plane_buffer(1);
-    let Us = this.aom.get_predicted_plane_stride(1);
+    let Up = this.aom.getPredictedPlaneBuffer(1);
+    let Us = this.aom.getPredictedPlaneStride(1);
 
-    let Vp = this.aom.get_predicted_plane_buffer(2);
-    let Vs = this.aom.get_predicted_plane_stride(2);
+    let Vp = this.aom.getPredictedPlaneBuffer(2);
+    let Vs = this.aom.getPredictedPlaneStride(2);
     this.drawImage(this.aom.HEAPU8, Yp, Ys, Up, Us, Vp, Vs, compositeOperation);
   }
 
@@ -1856,7 +1987,7 @@ class AppCtrl {
     ctx.lineWidth = lineWidth;
     this.visitBlocks(BlockVisitorMode.BLOCK, (blockSize, coordinates, subCoordinates, bounds) => {
       bounds.multiplyScalar(scale);
-      let i = this.aom.get_mi_property(MIProperty.GET_MI_MODE, coordinates.c, coordinates.r);
+      let i = this.aom.getMIProperty(MIProperty.GET_MI_MODE, coordinates.c, coordinates.r);
       mode(i, bounds);
     });
 
@@ -1951,7 +2082,7 @@ class AppCtrl {
 
   drawDering(ctx: CanvasRenderingContext2D, src: Rectangle, dst: Rectangle) {
     this.drawFillBlock(BlockVisitorMode.SUPER_BLOCK, ctx, src, dst, (coordinates, subCoordinates) => {
-      let i = this.aom.get_mi_property(MIProperty.GET_MI_DERING_GAIN, coordinates.c, coordinates.r);
+      let i = this.aom.getMIProperty(MIProperty.GET_MI_DERING_GAIN, coordinates.c, coordinates.r);
       if (i == 0) return false;
       ctx.fillStyle = "rgba(33,33,33," + (i / 4) + ")";
       return true;
@@ -1960,7 +2091,7 @@ class AppCtrl {
 
   drawSkip(ctx: CanvasRenderingContext2D, src: Rectangle, dst: Rectangle) {
     this.drawFillBlock(BlockVisitorMode.BLOCK, ctx, src, dst, (coordinates, subCoordinates) => {
-      let i = this.aom.get_mi_property(MIProperty.GET_MI_SKIP, coordinates.c, coordinates.r);
+      let i = this.aom.getMIProperty(MIProperty.GET_MI_SKIP, coordinates.c, coordinates.r);
       if (i == 0) return false;
       ctx.fillStyle = this.colorOptions.skipColor.value;
       return true;
@@ -1999,7 +2130,7 @@ class AppCtrl {
   }
 
   getMotionVector(c: number, r: number, i: number): Vector {
-    let mv = this.aom.get_mi_property(MIProperty.GET_MI_MV, c, r, i);
+    let mv = this.aom.getMIProperty(MIProperty.GET_MI_MV, c, r, i);
     let y = (mv >> 16);
     let x = (((mv & 0xFFFF) << 16) >> 16);
     return new Vector(x, y);
@@ -2016,8 +2147,8 @@ class AppCtrl {
     let AYs = file.size.w;
     let AH = file.buffer;
 
-    let BYp = this.aom.get_plane(0);
-    let BYs = this.aom.get_plane_stride(0);
+    let BYp = this.aom.getPlane(0);
+    let BYs = this.aom.getPlaneStride(0);
     let BH = this.aom.HEAPU8;
 
     let h = this.frameSize.h;
@@ -2047,8 +2178,8 @@ class AppCtrl {
     let AYs = file.size.w;
     let AH = file.buffer;
 
-    let BYp = this.aom.get_plane(0);
-    let BYs = this.aom.get_plane_stride(0);
+    let BYp = this.aom.getPlane(0);
+    let BYs = this.aom.getPlaneStride(0);
     let BH = this.aom.HEAPU8;
     let size = this.getMIBlockSize(mi.x, mi.y);
     let Ap = AYp + mi.y * BLOCK_SIZE * AYs + mi.x * BLOCK_SIZE;
@@ -2079,7 +2210,7 @@ class AppCtrl {
         let dr = 1 << (BLOCK_SIZES[i][1] - 3);
         for (let c = 0; c < cols; c += dc) {
           for (let r = 0; r < rows; r += dr) {
-            let size = this.aom.get_mi_property(MIProperty.GET_MI_BLOCK_SIZE, c, r);
+            let size = this.aom.getMIProperty(MIProperty.GET_MI_BLOCK_SIZE, c, r);
             let w = (1 << BLOCK_SIZES[size][0]);
             let h = (1 << BLOCK_SIZES[size][1]);
             if (size == i) {
@@ -2091,7 +2222,7 @@ class AppCtrl {
       // Visit blocks < 8x8.
       for (let c = 0; c < cols; c++) {
         for (let r = 0; r < rows; r++) {
-          let size = this.aom.get_mi_property(MIProperty.GET_MI_BLOCK_SIZE, c, r);
+          let size = this.aom.getMIProperty(MIProperty.GET_MI_BLOCK_SIZE, c, r);
           let w = (1 << BLOCK_SIZES[size][0]);
           let h = (1 << BLOCK_SIZES[size][1]);
           coordinates.set(c, r);
@@ -2122,7 +2253,7 @@ class AppCtrl {
         let dr = 1 << (TRANSFORM_SIZES[i][1] - 3);
         for (let c = 0; c < cols; c += dc) {
           for (let r = 0; r < rows; r += dr) {
-            let size = this.aom.get_mi_property(MIProperty.GET_MI_TRANSFORM_SIZE, c, r);
+            let size = this.aom.getMIProperty(MIProperty.GET_MI_TRANSFORM_SIZE, c, r);
             let w = (1 << TRANSFORM_SIZES[size][0]);
             let h = (1 << TRANSFORM_SIZES[size][1]);
             if (size == i) {
@@ -2134,7 +2265,7 @@ class AppCtrl {
       // Visit blocks < 4x4.
       for (let c = 0; c < cols; c++) {
         for (let r = 0; r < rows; r++) {
-          let size = this.aom.get_mi_property(MIProperty.GET_MI_TRANSFORM_SIZE, c, r);
+          let size = this.aom.getMIProperty(MIProperty.GET_MI_TRANSFORM_SIZE, c, r);
           if (size != 0) {
             continue;
           }

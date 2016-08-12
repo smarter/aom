@@ -11,6 +11,7 @@
 #ifndef AOM_ACCOUNTING_H_
 #define AOM_ACCOUNTING_H_
 #include <stdlib.h>
+#include <stdint.h>
 
 #define AOM_ACCOUNTING_HASH_SIZE (1021)
 
