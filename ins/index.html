@@ -153,12 +153,6 @@
       </div>
       <md-content flex>
         <md-list>
-          <md-subheader class="md-sticky">Bitstream Info</md-subheader>
-          <md-list-item class="md-list-item-narrow" ng-cloak ng-repeat="(name, p) in vm.uiFrameInfoProperties">
-            <div flex="50" class="key">{{p.description}}</div>
-            <div flex="50" class="value" style="text-align: right;">{{p.value}}</div>
-          </md-list-item>
-          <md-divider></md-divider>
           <md-subheader class="md-sticky">Layers</md-subheader>
           <md-list-item ng-cloak ng-repeat="(name, option) in vm.options">
             <div class="key">{{option.description}} [<span class="keyShortcut">{{option.key}}</span>]</div>
@@ -243,7 +237,7 @@
             </md-list>
           </md-content>
         </md-tab>
-        <md-tab label="Bit Accounting">
+        <md-tab label="Block Accounting">
           <md-content class="md-padding">
             <md-list>
               <md-list-item class="md-list-item-narrow" ng-cloak ng-repeat="(name, p) in vm.uiAccountingBlockProperties" style="color: {{p.color}};">
@@ -337,7 +331,7 @@
             </md-list>
           </md-content>
         </md-tab>
-        <md-tab label="Bit Accounting">
+        <md-tab label="Frame Accounting">
           <md-content class="md-padding">
             <md-list>
               <md-list-item class="md-list-item-narrow" ng-cloak ng-repeat="(name, p) in vm.uiAccountingFrameProperties" style="color: {{p.color}};">
