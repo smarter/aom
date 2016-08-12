@@ -94,6 +94,7 @@
 #include "./aom_config.h"
 #include "av1/av1_dx_iface.c"
 #include "../av1/common/onyxc_int.h"
+#include "../av1/common/accounting.h"
 #include "../av1/analyzer/analyzer.h"
 #include "../video_common.h"
 
@@ -113,6 +114,7 @@ const AvxInterface *decoder = NULL;
 const AvxVideoInfo *info = NULL;
 aom_image_t *img = NULL;
 AV1_COMMON *cm = NULL;
+struct AV1Decoder *pbi;
 
 int read_frame();
 
@@ -212,8 +214,41 @@ int read_frame() {
   AVxWorker *const worker = &t->frame_workers[0];
   FrameWorkerData *const frame_worker_data = (FrameWorkerData *)worker->data1;
   cm = &frame_worker_data->pbi->common;
-
+  pbi = frame_worker_data->pbi;
   return EXIT_SUCCESS;
+}
+
+typedef enum {
+  GET_ACCOUNTING_SYMBOL_COUNT,
+  GET_ACCOUNTING_SYMBOL_NAME,
+  GET_ACCOUNTING_SYMBOL_BITS,
+  GET_ACCCOUNTING_SYMBOL_CONTEXT_X,
+  GET_ACCCOUNTING_SYMBOL_CONTEXT_Y
+} GetAccountingProperty;
+
+EMSCRIPTEN_KEEPALIVE
+const int get_accounting_property(GetAccountingProperty v, int i) {
+  AOMAccounting *accounting = &pbi->accounting;
+  switch (v) {
+    case GET_ACCOUNTING_SYMBOL_COUNT:
+      return accounting->syms.num_syms;
+    case GET_ACCOUNTING_SYMBOL_NAME: {
+      AOMAccountingSymbol *sym = &accounting->syms.syms[i];
+      return accounting->syms.dictionary.strs[sym->id];
+    }
+    case GET_ACCOUNTING_SYMBOL_BITS: {
+      AOMAccountingSymbol *sym = &accounting->syms.syms[i];
+      return sym->bits;
+    }
+    case GET_ACCCOUNTING_SYMBOL_CONTEXT_X: {
+      AOMAccountingSymbol *sym = &accounting->syms.syms[i];
+      return sym->context.x;
+    }
+    case GET_ACCCOUNTING_SYMBOL_CONTEXT_Y: {
+      AOMAccountingSymbol *sym = &accounting->syms.syms[i];
+      return sym->context.y;
+    }
+  }
 }
 
 EMSCRIPTEN_KEEPALIVE

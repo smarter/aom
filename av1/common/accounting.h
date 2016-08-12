@@ -11,6 +11,7 @@
 #ifndef AOM_ACCOUNTING_H_
 #define AOM_ACCOUNTING_H_
 #include <stdlib.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
