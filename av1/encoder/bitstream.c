@@ -42,6 +42,9 @@
 #include "av1/encoder/segmentation.h"
 #include "av1/encoder/subexp.h"
 #include "av1/encoder/tokenize.h"
+#if CONFIG_PVQ
+#include "av1/encoder/pvq_encoder.c"
+#endif
 
 static struct av1_token intra_mode_encodings[INTRA_MODES];
 static struct av1_token switchable_interp_encodings[SWITCHABLE_FILTERS];
@@ -618,6 +621,7 @@ static void pack_inter_mode_mvs(AV1_COMP *cpi, const MODE_INFO *mi,
       int idx, idy;
       const int num_4x4_w = num_4x4_blocks_wide_lookup[bsize];
       const int num_4x4_h = num_4x4_blocks_high_lookup[bsize];
+
       for (idy = 0; idy < 2; idy += num_4x4_h) {
         for (idx = 0; idx < 2; idx += num_4x4_w) {
           const PREDICTION_MODE b_mode = mi->bmi[idy * 2 + idx].as_mode;
@@ -792,6 +796,16 @@ static void write_mb_modes_kf(const AV1_COMMON *cm, const MACROBLOCKD *xd,
   }
 }
 
+#if CONFIG_PVQ
+PVQ_INFO *get_pvq_block(PVQ_QUEUE *pvq_q) {
+  PVQ_INFO* pvq;
+
+  pvq = pvq_q->buf + pvq_q->curr_pos;
+  ++pvq_q->curr_pos;
+  return pvq;
+}
+#endif
+
 static void write_modes_b(AV1_COMP *cpi, const TileInfo *const tile,
                           aom_writer *w, TOKENEXTRA **tok,
                           const TOKENEXTRA *const tok_end, int mi_row,
@@ -800,21 +814,48 @@ static void write_modes_b(AV1_COMP *cpi, const TileInfo *const tile,
   MACROBLOCKD *const xd = &cpi->td.mb.e_mbd;
   MODE_INFO *m;
   int plane;
+#if CONFIG_PVQ
+  MB_MODE_INFO *mbmi;
+  BLOCK_SIZE bsize;
+  od_adapt_ctx *adapt;
+#if CONFIG_PVQ && DEBUG_PVQ
+  int tell = od_ec_enc_tell(&w->ec);
+#endif
 
+  (void) tok;
+  (void) tok_end;
+#endif
   xd->mi = cm->mi_grid_visible + (mi_row * cm->mi_stride + mi_col);
   m = xd->mi[0];
-
   cpi->td.mb.mbmi_ext = cpi->mbmi_ext_base + (mi_row * cm->mi_cols + mi_col);
 
   set_mi_row_col(xd, tile, mi_row, num_8x8_blocks_high_lookup[m->mbmi.sb_type],
                  mi_col, num_8x8_blocks_wide_lookup[m->mbmi.sb_type],
                  cm->mi_rows, cm->mi_cols);
+#if CONFIG_PVQ
+  mbmi = &m->mbmi;
+  bsize = mbmi->sb_type;
+  adapt = &cpi->td.mb.daala_enc.state.adapt;
+#endif
+
+#if CONFIG_PVQ && DEBUG_PVQ
+  assert(m->mbmi.sb_type != BLOCK_4X8 && m->mbmi.sb_type != BLOCK_8X4);
+
+  printf("enc-bitstream: frame# %d (%2d, %2d): bsize %d, tx_size %d, tx_type %d, skip %d mode %d, %d - ",
+      cpi->common.current_video_frame, mi_row, mi_col, bsize, mbmi->tx_size,
+      mbmi->tx_type, mbmi->skip, mbmi->mode, mbmi->uv_mode);
+  if (is_inter_block(mbmi)) printf("inter\n");
+  else printf("intra\n");
+#endif
+
   if (frame_is_intra_only(cm)) {
     write_mb_modes_kf(cm, xd, xd->mi, w);
   } else {
     pack_inter_mode_mvs(cpi, m, w);
   }
 
+#if !CONFIG_PVQ
+  //NOTE: if pvq encoder is used, this should not be called.
   if (!m->mbmi.skip) {
     assert(*tok < tok_end);
     for (plane = 0; plane < MAX_MB_PLANE; ++plane) {
@@ -825,6 +866,111 @@ static void write_modes_b(AV1_COMP *cpi, const TileInfo *const tile,
       (*tok)++;
     }
   }
+#else
+  // PVQ writes its tokens (i.e. symbols) here.
+  if (!m->mbmi.skip) {
+    for (plane = 0; plane < MAX_MB_PLANE; ++plane) {
+      PVQ_INFO* pvq;
+      TX_SIZE tx_size =
+          plane ? get_uv_tx_size(&m->mbmi, &xd->plane[plane]) : m->mbmi.tx_size;
+      int idx, idy;
+      const struct macroblockd_plane *const pd = &xd->plane[plane];
+      int num_4x4_w;
+      int num_4x4_h;
+      int max_blocks_wide;
+      int max_blocks_high;
+      int step = (1 << tx_size);
+      const int step_xy = 1 << (tx_size << 1);
+      int block = 0;
+
+      if (tx_size == TX_4X4 && bsize <= BLOCK_8X8) {
+        num_4x4_w = 2 >> xd->plane[plane].subsampling_x;
+        num_4x4_h = 2 >> xd->plane[plane].subsampling_y;
+      } else {
+        num_4x4_w = num_4x4_blocks_wide_lookup[bsize] >>
+            xd->plane[plane].subsampling_x;
+        num_4x4_h = num_4x4_blocks_high_lookup[bsize] >>
+            xd->plane[plane].subsampling_y;
+      }
+      //TODO: Do we need below for 4x4,4x8,8x4 cases as well?
+      max_blocks_wide =
+          num_4x4_w + (xd->mb_to_right_edge >= 0 ? 0
+                           : xd->mb_to_right_edge >> (5 + pd->subsampling_x));
+      max_blocks_high =
+          num_4x4_h + (xd->mb_to_bottom_edge >= 0 ? 0
+                           : xd->mb_to_bottom_edge >> (5 + pd->subsampling_y));
+
+      for (idy = 0; idy < max_blocks_high; idy += step) {
+        for (idx = 0; idx < max_blocks_wide; idx += step) {
+          const int is_keyframe = 0;
+          const int encode_flip = 0;
+          const int flip = 0;
+          const int robust = 1;
+          int i;
+          const int has_dc_skip = 1;
+          int *exg = &adapt->pvq.pvq_exg[plane][tx_size][0];
+          int *ext = adapt->pvq.pvq_ext + tx_size*PVQ_MAX_PARTITIONS;
+          generic_encoder *model = adapt->pvq.pvq_param_model;
+
+          pvq = get_pvq_block(cpi->td.mb.pvq_q);
+
+          // encode block skip info
+          od_encode_cdf_adapt(&w->ec, pvq->ac_dc_coded,
+           adapt->skip_cdf[2*tx_size + (plane != 0)], 4,
+           adapt->skip_increment);
+
+          // AC coeffs coded?
+          if (pvq->ac_dc_coded & 0x02) {
+            assert(pvq->bs <= tx_size);
+            for (i = 0; i < pvq->nb_bands; i++) {
+              if (i == 0 || (!pvq->skip_rest &&
+               !(pvq->skip_dir & (1 << ((i - 1)%3))))) {
+                pvq_encode_partition(&w->ec, pvq->qg[i], pvq->theta[i],
+                 pvq->max_theta[i], pvq->y + pvq->off[i],
+                 pvq->size[i], pvq->k[i], model, adapt,
+                 exg + i, ext + i,
+                 robust || is_keyframe, (plane != 0)*OD_NBSIZES*PVQ_MAX_PARTITIONS
+                 + pvq->bs*PVQ_MAX_PARTITIONS + i, is_keyframe,
+                 i == 0 && (i < pvq->nb_bands - 1),
+                 pvq->skip_rest, encode_flip, flip);
+              }
+              if (i == 0 && !pvq->skip_rest && pvq->bs > 0) {
+                od_encode_cdf_adapt(&w->ec, pvq->skip_dir,
+                 &adapt->pvq.pvq_skip_dir_cdf[(plane != 0) + 2*(pvq->bs - 1)][0], 7,
+                 adapt->pvq.pvq_skip_dir_increment);
+              }
+            }
+          }
+          // Encode residue of DC coeff, if exist.
+          if (!has_dc_skip || (pvq->ac_dc_coded & 1)) {  // DC coded?
+            generic_encode(&w->ec, &adapt->model_dc[plane],
+             abs(pvq->dq_dc_residue) - has_dc_skip, -1,
+             &adapt->ex_dc[plane][pvq->bs][0], 2);
+          }
+          if ((pvq->ac_dc_coded & 1)) {  // DC coded?
+            od_ec_enc_bits(&w->ec, pvq->dq_dc_residue < 0, 1);
+          }
+#if CONFIG_PVQ && DEBUG_PVQ
+          printf("row,col = %d, %d, plane %d : ac_dc_coded %d, ",
+                idy, idx, plane, pvq->ac_dc_coded);
+          if (pvq->ac_dc_coded & 2) { // AC coded?
+            int i;
+            for (i = 0; i < pvq->nb_bands; i++)
+              printf("[%d, %d] ", pvq->k[i], pvq->theta[i] == -1);
+            printf("\n");
+          }
+          else
+            printf("\n");
+#endif
+          block += step_xy;
+        }
+      }//for (idy = 0;
+    }//for (plane =
+  }//if (!m->mbmi.skip)
+#if CONFIG_PVQ && DEBUG_PVQ
+  printf("%d bits / partition\n", od_ec_enc_tell(&w->ec) - tell);
+#endif
+#endif
 }
 
 static void write_partition(const AV1_COMMON *const cm,
@@ -925,13 +1071,28 @@ static void write_modes(AV1_COMP *cpi, const TileInfo *const tile,
   MACROBLOCKD *const xd = &cpi->td.mb.e_mbd;
   int mi_row, mi_col;
 
+#if CONFIG_PVQ
+  assert(cpi->td.mb.pvq_q->curr_pos == 0);
+#endif
+
   for (mi_row = tile->mi_row_start; mi_row < tile->mi_row_end;
        mi_row += MI_BLOCK_SIZE) {
     av1_zero(xd->left_seg_context);
     for (mi_col = tile->mi_col_start; mi_col < tile->mi_col_end;
-         mi_col += MI_BLOCK_SIZE)
+         mi_col += MI_BLOCK_SIZE) {
+#if CONFIG_PVQ && DEBUG_PVQ
+      printf("------------------------------------------------------\n");
+#endif
       write_modes_sb(cpi, tile, w, tok, tok_end, mi_row, mi_col, BLOCK_64X64);
+    }
   }
+#if CONFIG_PVQ
+  // check # of pvq blocks that are encoded and written to bitstream
+  // are the same
+  assert(cpi->td.mb.pvq_q->curr_pos == cpi->td.mb.pvq_q->last_pos);
+  // Reset curr_pos in case we repack the bitstream
+  cpi->td.mb.pvq_q->curr_pos = 0;
+#endif
 }
 
 static void build_tree_distribution(AV1_COMP *cpi, TX_SIZE tx_size,
@@ -1458,6 +1619,9 @@ static size_t encode_tiles(AV1_COMP *cpi, uint8_t *data_ptr,
       const int tile_idx = tile_row * tile_cols + tile_col;
       const int is_last_tile = tile_idx == tile_rows * tile_cols - 1;
       unsigned int tile_size;
+#if CONFIG_PVQ
+      TileDataEnc *this_tile = &cpi->tile_data[tile_idx];
+#endif
       TOKENEXTRA *tok = cpi->tile_tok[tile_row][tile_col];
 
       tok_end = cpi->tile_tok[tile_row][tile_col] +
@@ -1474,11 +1638,19 @@ static size_t encode_tiles(AV1_COMP *cpi, uint8_t *data_ptr,
 #else
       aom_start_encode(&residual_bc, data_ptr + total_size + 4 * !is_last_tile);
 
+#if CONFIG_PVQ
+      //NOTE: This will not work with CONFIG_ANS turned on.
+      od_adapt_ctx_reset(&cpi->td.mb.daala_enc.state.adapt, 0);
+      cpi->td.mb.pvq_q = &this_tile->pvq_q;
+#endif
       write_modes(cpi, &cpi->tile_data[tile_idx].tile_info, &residual_bc, &tok,
                   tok_end);
       assert(tok == tok_end);
       aom_stop_encode(&residual_bc);
       tile_size = residual_bc.pos - CONFIG_MISC_FIXES;
+#endif
+#if CONFIG_PVQ
+      cpi->td.mb.pvq_q = NULL;
 #endif
       assert(tile_size > 0);
       if (!is_last_tile) {
@@ -1791,7 +1963,10 @@ static size_t write_compressed_header(AV1_COMP *cpi, uint8_t *data) {
 #else
   update_txfm_probs(cm, header_bc, counts);
 #endif
+
+#if !CONFIG_PVQ
   update_coef_probs(cpi, header_bc);
+#endif
   update_skip_probs(cm, header_bc, counts);
 #if CONFIG_MISC_FIXES
   update_seg_probs(cpi, header_bc);

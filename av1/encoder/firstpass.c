@@ -485,6 +485,9 @@ void av1_first_pass(AV1_COMP *cpi, const struct lookahead_entry *source) {
   double intra_factor;
   double brightness_factor;
   BufferPool *const pool = cm->buffer_pool;
+#if CONFIG_PVQ
+  PVQ_QUEUE pvq_q;
+#endif
 
   // First pass code requires valid last and new frame buffers.
   assert(new_yv12 != NULL);
@@ -519,10 +522,41 @@ void av1_first_pass(AV1_COMP *cpi, const struct lookahead_entry *source) {
 
   av1_frame_init_quantizer(cpi);
 
+#if CONFIG_PVQ
+  // For pass 1 of 2-pass encoding, init here for PVQ for now.
+  {
+  od_adapt_ctx *adapt;
+
+  pvq_q.buf_len = 5000;
+  pvq_q.buf = aom_calloc(pvq_q.buf_len, sizeof(PVQ_INFO));
+  pvq_q.curr_pos = 0;
+
+  x->pvq_q = &pvq_q;
+
+  x->daala_enc.state.qm =
+      (int16_t *)aom_calloc(OD_QM_BUFFER_SIZE, sizeof(x->daala_enc.state.qm[0]));
+  x->daala_enc.state.qm_inv =
+      (int16_t *)aom_calloc(OD_QM_BUFFER_SIZE, sizeof(x->daala_enc.state.qm_inv[0]));
+  x->daala_enc.qm = OD_FLAT_QM;  // Hard coded. Enc/dec required to sync.
+  x->daala_enc.pvq_norm_lambda = OD_PVQ_LAMBDA;
+
+  od_init_qm(x->daala_enc.state.qm, x->daala_enc.state.qm_inv,
+      x->daala_enc.qm == OD_HVS_QM ? OD_QM8_Q4_HVS : OD_QM8_Q4_FLAT);
+  od_ec_enc_init(&x->daala_enc.ec, 65025);
+
+  adapt = &x->daala_enc.state.adapt;
+  od_ec_enc_reset(&x->daala_enc.ec);
+  od_adapt_ctx_reset(adapt, 0);
+  }
+#endif
+
   for (i = 0; i < MAX_MB_PLANE; ++i) {
     p[i].coeff = ctx->coeff_pbuf[i][1];
     p[i].qcoeff = ctx->qcoeff_pbuf[i][1];
     pd[i].dqcoeff = ctx->dqcoeff_pbuf[i][1];
+#if CONFIG_PVQ
+    pd[i].pvq_ref_coeff = ctx->pvq_ref_coeff_pbuf[i][1];
+#endif
     p[i].eobs = ctx->eobs_pbuf[i][1];
   }
 
@@ -907,6 +941,18 @@ void av1_first_pass(AV1_COMP *cpi, const struct lookahead_entry *source) {
 
     aom_clear_system_state();
   }
+
+#if CONFIG_PVQ
+  aom_free(x->daala_enc.state.qm);
+  aom_free(x->daala_enc.state.qm_inv);
+  od_ec_enc_clear(&x->daala_enc.ec);
+
+  x->pvq_q->last_pos = x->pvq_q->curr_pos;
+  x->pvq_q->curr_pos = 0;
+  x->pvq_q = NULL;
+
+  aom_free(pvq_q.buf);
+#endif
 
   // Clamp the image start to rows/2. This number of rows is discarded top
   // and bottom as dead data so rows / 2 means the frame is blank.

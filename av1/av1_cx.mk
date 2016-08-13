@@ -87,6 +87,16 @@ AV1_CX_SRCS-yes += encoder/clpf_rdo.c
 AV1_CX_SRCS-yes += encoder/clpf_rdo.h
 endif
 
+ifeq ($(CONFIG_PVQ),yes)
+# PVQ from daala
+AV1_CX_SRCS-yes += encoder/daala_compat_enc.c
+AV1_CX_SRCS-yes += encoder/pvq_encoder.c
+AV1_CX_SRCS-yes += encoder/pvq_encoder.h
+AV1_CX_SRCS-yes += encoder/encint.h
+AV1_CX_SRCS-yes += encoder/generic_encoder.c
+AV1_CX_SRCS-yes += encoder/laplace_encoder.c
+endif
+
 AV1_CX_SRCS-$(HAVE_SSE2) += encoder/x86/temporal_filter_apply_sse2.asm
 AV1_CX_SRCS-$(HAVE_SSE2) += encoder/x86/quantize_sse2.c
 ifeq ($(CONFIG_AOM_HIGHBITDEPTH),yes)

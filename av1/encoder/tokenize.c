@@ -494,6 +494,39 @@ int av1_has_high_freq_in_plane(MACROBLOCK *x, BLOCK_SIZE bsize, int plane) {
   return result;
 }
 
+#if CONFIG_PVQ
+void add_pvq_block(MACROBLOCK *const x, PVQ_INFO *pvq) {
+
+  PVQ_QUEUE *q = x->pvq_q;
+  if (q->curr_pos >= q->buf_len) {
+    q->buf_len *= 2;
+    q->buf = aom_realloc(q->buf, q->buf_len * sizeof(PVQ_INFO));
+  }
+  memcpy(q->buf + q->curr_pos, pvq, sizeof(PVQ_INFO));
+  ++q->curr_pos;
+}
+
+// NOTE : not really generate tokens but save the pvq info for each block
+//        in buffer in encoding order, which later at packing stage
+//        is then written to bitstream via write_modes_b().
+static void tokenize_pvq(int plane, int block, int blk_row, int blk_col,
+                       BLOCK_SIZE plane_bsize, TX_SIZE tx_size, void *arg) {
+  struct tokenize_b_args *const args = arg;
+  ThreadData *const td = args->td;
+  MACROBLOCK *const x = &td->mb;
+  PVQ_INFO *pvq_info;
+
+  (void) block;
+  (void) blk_row;
+  (void) blk_col;
+  (void) plane_bsize;
+  (void) tx_size;
+
+  pvq_info = &x->pvq[block][plane];
+  add_pvq_block(x, pvq_info);
+}
+#endif
+
 void av1_tokenize_sb(const AV1_COMP *cpi, ThreadData *td, TOKENEXTRA **t,
                      int dry_run, BLOCK_SIZE bsize) {
   const AV1_COMMON *const cm = &cpi->common;
@@ -510,11 +543,11 @@ void av1_tokenize_sb(const AV1_COMP *cpi, ThreadData *td, TOKENEXTRA **t,
     return;
   }
 
+#if !CONFIG_PVQ
   if (!dry_run) {
     int plane;
 
     td->counts->skip[ctx][0] += skip_inc;
-
     for (plane = 0; plane < MAX_MB_PLANE; ++plane) {
       av1_foreach_transformed_block_in_plane(xd, bsize, plane, tokenize_b,
                                              &arg);
@@ -524,4 +557,15 @@ void av1_tokenize_sb(const AV1_COMP *cpi, ThreadData *td, TOKENEXTRA **t,
   } else {
     av1_foreach_transformed_block(xd, bsize, set_entropy_context_b, &arg);
   }
+#else
+  if (!dry_run) {
+    int plane;
+
+    td->counts->skip[ctx][0] += skip_inc;
+
+    for (plane = 0; plane < MAX_MB_PLANE; ++plane)
+      av1_foreach_transformed_block_in_plane(xd, bsize, plane, tokenize_pvq,
+                                              &arg);
+  }
+#endif
 }

@@ -47,6 +47,10 @@
 #include "av1/encoder/segmentation.h"
 #include "av1/encoder/tokenize.h"
 
+#if CONFIG_PVQ
+#include "av1/encoder/pvq_encoder.h"
+#endif
+
 static void encode_superblock(const AV1_COMP *const cpi, ThreadData *td,
                               TOKENEXTRA **t, int output_enabled, int mi_row,
                               int mi_col, BLOCK_SIZE bsize,
@@ -953,6 +957,9 @@ static void update_state(const AV1_COMP *const cpi, ThreadData *td,
     p[i].coeff = ctx->coeff_pbuf[i][1];
     p[i].qcoeff = ctx->qcoeff_pbuf[i][1];
     pd[i].dqcoeff = ctx->dqcoeff_pbuf[i][1];
+#if CONFIG_PVQ
+    pd[i].pvq_ref_coeff = ctx->pvq_ref_coeff_pbuf[i][1];
+#endif
     p[i].eobs = ctx->eobs_pbuf[i][1];
   }
 
@@ -960,6 +967,9 @@ static void update_state(const AV1_COMP *const cpi, ThreadData *td,
     p[i].coeff = ctx->coeff_pbuf[i][2];
     p[i].qcoeff = ctx->qcoeff_pbuf[i][2];
     pd[i].dqcoeff = ctx->dqcoeff_pbuf[i][2];
+#if CONFIG_PVQ
+    pd[i].pvq_ref_coeff = ctx->pvq_ref_coeff_pbuf[i][2];
+#endif
     p[i].eobs = ctx->eobs_pbuf[i][2];
   }
 
@@ -1098,6 +1108,9 @@ static void rd_pick_sb_modes(const AV1_COMP *const cpi, TileDataEnc *tile_data,
     p[i].coeff = ctx->coeff_pbuf[i][0];
     p[i].qcoeff = ctx->qcoeff_pbuf[i][0];
     pd[i].dqcoeff = ctx->dqcoeff_pbuf[i][0];
+#if CONFIG_PVQ
+    pd[i].pvq_ref_coeff = ctx->pvq_ref_coeff_pbuf[i][0];
+#endif
     p[i].eobs = ctx->eobs_pbuf[i][0];
   }
 
@@ -1441,6 +1454,12 @@ static void encode_sb(const AV1_COMP *const cpi, ThreadData *td,
 
   if (mi_row >= cm->mi_rows || mi_col >= cm->mi_cols) return;
 
+#if CONFIG_PVQ && DEBUG_PVQ
+  if (output_enabled)
+  if (bsize == BLOCK_64X64)
+    printf("------------------------------------------------------\n");
+#endif
+
   if (bsize >= BLOCK_8X8) {
     ctx = partition_plane_context(xd, mi_row, mi_col, bsize);
     subsize = get_subsize(bsize, pc_tree->partitioning);
@@ -1592,6 +1611,13 @@ static void rd_use_partition(AV1_COMP *cpi, ThreadData *td,
   BLOCK_SIZE bs_type = mi_8x8[0]->mbmi.sb_type;
   int do_partition_search = 1;
   PICK_MODE_CONTEXT *ctx_none = &pc_tree->none;
+#if CONFIG_PVQ
+  od_rollback_buffer pre_rdo_buf;
+  uint32_t pre_rdo_offset;
+
+  if (bsize == BLOCK_64X64)
+    pre_rdo_offset = x->daala_enc.ec.offs;
+#endif
 
   if (mi_row >= cm->mi_rows || mi_col >= cm->mi_cols) return;
 
@@ -1607,7 +1633,9 @@ static void rd_use_partition(AV1_COMP *cpi, ThreadData *td,
 
   pc_tree->partitioning = partition;
   save_context(x, mi_row, mi_col, a, l, sa, sl, bsize);
-
+#if CONFIG_PVQ
+  od_encode_checkpoint(&x->daala_enc, &pre_rdo_buf);
+#endif
   if (bsize == BLOCK_16X16 && cpi->oxcf.aq_mode) {
     set_offsets(cpi, tile_info, x, mi_row, mi_col, bsize);
     x->mb_energy = av1_block_energy(cpi, x, bsize);
@@ -1647,6 +1675,9 @@ static void rd_use_partition(AV1_COMP *cpi, ThreadData *td,
       }
 
       restore_context(x, mi_row, mi_col, a, l, sa, sl, bsize);
+#if CONFIG_PVQ
+      od_encode_rollback(&x->daala_enc, &pre_rdo_buf);
+#endif
       mi_8x8[0]->mbmi.sb_type = bs_type;
       pc_tree->partitioning = partition;
     }
@@ -1709,6 +1740,7 @@ static void rd_use_partition(AV1_COMP *cpi, ThreadData *td,
       last_part_rdc.rate = 0;
       last_part_rdc.dist = 0;
       last_part_rdc.rdcost = 0;
+
       for (i = 0; i < 4; i++) {
         int x_idx = (i & 1) * (mi_step >> 1);
         int y_idx = (i >> 1) * (mi_step >> 1);
@@ -1751,6 +1783,9 @@ static void rd_use_partition(AV1_COMP *cpi, ThreadData *td,
     chosen_rdc.rate = 0;
     chosen_rdc.dist = 0;
     restore_context(x, mi_row, mi_col, a, l, sa, sl, bsize);
+#if CONFIG_PVQ
+    od_encode_rollback(&x->daala_enc, &pre_rdo_buf);
+#endif
     pc_tree->partitioning = PARTITION_SPLIT;
 
     // Split partition.
@@ -1760,18 +1795,25 @@ static void rd_use_partition(AV1_COMP *cpi, ThreadData *td,
       RD_COST tmp_rdc;
       ENTROPY_CONTEXT l2[16 * MAX_MB_PLANE], a2[16 * MAX_MB_PLANE];
       PARTITION_CONTEXT sl2[8], sa2[8];
-
+#if CONFIG_PVQ
+      od_rollback_buffer buf;
+#endif
       if ((mi_row + y_idx >= cm->mi_rows) || (mi_col + x_idx >= cm->mi_cols))
         continue;
 
       save_context(x, mi_row, mi_col, a2, l2, sa2, sl2, bsize);
+#if CONFIG_PVQ
+      od_encode_checkpoint(&x->daala_enc, &buf);
+#endif
       pc_tree->split[i]->partitioning = PARTITION_NONE;
       rd_pick_sb_modes(cpi, tile_data, x, mi_row + y_idx, mi_col + x_idx,
                        &tmp_rdc, split_subsize, &pc_tree->split[i]->none,
                        INT64_MAX);
 
       restore_context(x, mi_row, mi_col, a2, l2, sa2, sl2, bsize);
-
+#if CONFIG_PVQ
+      od_encode_rollback(&x->daala_enc, &buf);
+#endif
       if (tmp_rdc.rate == INT_MAX || tmp_rdc.dist == INT64_MAX) {
         av1_rd_cost_reset(&chosen_rdc);
         break;
@@ -1788,6 +1830,7 @@ static void rd_use_partition(AV1_COMP *cpi, ThreadData *td,
                                    split_subsize);
       chosen_rdc.rate += cpi->partition_cost[pl][PARTITION_NONE];
     }
+
     pl = partition_plane_context(xd, mi_row, mi_col, bsize);
     if (chosen_rdc.rate < INT_MAX) {
       chosen_rdc.rate += cpi->partition_cost[pl][PARTITION_SPLIT];
@@ -1809,6 +1852,10 @@ static void rd_use_partition(AV1_COMP *cpi, ThreadData *td,
   }
 
   restore_context(x, mi_row, mi_col, a, l, sa, sl, bsize);
+#if CONFIG_PVQ
+  // if partitioning rdo is done, rollback to pre rdo state.
+  od_encode_rollback(&x->daala_enc, &pre_rdo_buf);
+#endif
 
   // We must have chosen a partitioning and encoding or we'll fail later on.
   // No other opportunities for success.
@@ -1817,6 +1864,11 @@ static void rd_use_partition(AV1_COMP *cpi, ThreadData *td,
 
   if (do_recon) {
     int output_enabled = (bsize == BLOCK_64X64);
+#if CONFIG_PVQ
+    (void) pre_rdo_offset;
+    if (output_enabled)
+      assert(pre_rdo_offset == x->daala_enc.ec.offs);
+#endif
     encode_sb(cpi, td, tile_info, tp, mi_row, mi_col, output_enabled, bsize,
               pc_tree);
   }
@@ -2100,6 +2152,15 @@ static void rd_pick_partition(const AV1_COMP *const cpi, ThreadData *td,
       !force_vert_split && yss <= xss && bsize_at_least_8x8;
   int partition_vert_allowed =
       !force_horz_split && xss <= yss && bsize_at_least_8x8;
+
+#if CONFIG_PVQ
+  od_rollback_buffer pre_rdo_buf;
+  uint32_t pre_rdo_offset;
+
+  if (bsize == BLOCK_64X64)
+    pre_rdo_offset = x->daala_enc.ec.offs;
+#endif
+
   (void)*tp_orig;
 
   assert(num_8x8_blocks_wide_lookup[bsize] ==
@@ -2142,6 +2203,9 @@ static void rd_pick_partition(const AV1_COMP *const cpi, ThreadData *td,
   }
 
   save_context(x, mi_row, mi_col, a, l, sa, sl, bsize);
+#if CONFIG_PVQ
+  od_encode_checkpoint(&x->daala_enc, &pre_rdo_buf);
+#endif
 
 #if CONFIG_FP_MB_STATS
   if (cpi->use_fp_mb_stats) {
@@ -2287,6 +2351,9 @@ static void rd_pick_partition(const AV1_COMP *const cpi, ThreadData *td,
       }
     }
     restore_context(x, mi_row, mi_col, a, l, sa, sl, bsize);
+#if CONFIG_PVQ
+    od_encode_rollback(&x->daala_enc, &pre_rdo_buf);
+#endif
   }
 
   // store estimated motion vector
@@ -2350,6 +2417,9 @@ static void rd_pick_partition(const AV1_COMP *const cpi, ThreadData *td,
       do_rectangular_split &= !partition_none_allowed;
     }
     restore_context(x, mi_row, mi_col, a, l, sa, sl, bsize);
+#if CONFIG_PVQ
+    od_encode_rollback(&x->daala_enc, &pre_rdo_buf);
+#endif
   }
 
   // PARTITION_HORZ
@@ -2398,7 +2468,11 @@ static void rd_pick_partition(const AV1_COMP *const cpi, ThreadData *td,
       }
     }
     restore_context(x, mi_row, mi_col, a, l, sa, sl, bsize);
+#if CONFIG_PVQ
+    od_encode_rollback(&x->daala_enc, &pre_rdo_buf);
+#endif
   }
+
   // PARTITION_VERT
   if (partition_vert_allowed &&
       (do_rectangular_split || av1_active_v_edge(cpi, mi_col, mi_step))) {
@@ -2445,6 +2519,9 @@ static void rd_pick_partition(const AV1_COMP *const cpi, ThreadData *td,
       }
     }
     restore_context(x, mi_row, mi_col, a, l, sa, sl, bsize);
+#if CONFIG_PVQ
+    od_encode_rollback(&x->daala_enc, &pre_rdo_buf);
+#endif
   }
 
   // TODO(jbb): This code added so that we avoid static analysis
@@ -2457,12 +2534,23 @@ static void rd_pick_partition(const AV1_COMP *const cpi, ThreadData *td,
   if (best_rdc.rate < INT_MAX && best_rdc.dist < INT64_MAX &&
       pc_tree->index != 3) {
     int output_enabled = (bsize == BLOCK_64X64);
+#if CONFIG_PVQ
+    (void) pre_rdo_offset;
+    if (output_enabled)
+      assert(pre_rdo_offset == x->daala_enc.ec.offs);
+#endif
     encode_sb(cpi, td, tile_info, tp, mi_row, mi_col, output_enabled, bsize,
               pc_tree);
   }
 
   if (bsize == BLOCK_64X64) {
+#if !CONFIG_PVQ
+    // TODO: Can enable this later, if pvq actually generates tokens
+    // in aom format, otherwise pvq don't really need to use aom's token format
+    // but directly writes to bitstream in packing and keep below assert
+    // disabled.
     assert(tp_orig < *tp || (tp_orig == *tp && xd->mi[0]->mbmi.skip));
+#endif
     assert(best_rdc.rate < INT_MAX);
     assert(best_rdc.dist < INT64_MAX);
   } else {
@@ -2645,6 +2733,13 @@ void av1_init_tile_data(AV1_COMP *cpi) {
             tile_data->mode_map[i][j] = j;
           }
         }
+#if CONFIG_PVQ
+        // This will be dynamically increased as more pvq block is encoded.
+        tile_data->pvq_q.buf_len = 5000;
+        tile_data->pvq_q.buf =
+            aom_calloc(tile_data->pvq_q.buf_len, sizeof(PVQ_INFO));
+        tile_data->pvq_q.curr_pos = 0;
+#endif
       }
   }
 
@@ -2657,6 +2752,9 @@ void av1_init_tile_data(AV1_COMP *cpi) {
       cpi->tile_tok[tile_row][tile_col] = pre_tok + tile_tok;
       pre_tok = cpi->tile_tok[tile_row][tile_col];
       tile_tok = allocated_tokens(*tile_info);
+#if CONFIG_PVQ
+      cpi->tile_data[tile_row * tile_cols + tile_col].pvq_q.curr_pos = 0;
+#endif
     }
   }
 }
@@ -2669,10 +2767,43 @@ void av1_encode_tile(AV1_COMP *cpi, ThreadData *td, int tile_row,
   const TileInfo *const tile_info = &this_tile->tile_info;
   TOKENEXTRA *tok = cpi->tile_tok[tile_row][tile_col];
   int mi_row;
+#if CONFIG_PVQ
+  od_adapt_ctx *adapt;
+#endif
 
   // Set up pointers to per thread motion search counters.
   td->mb.m_search_count_ptr = &td->rd_counts.m_search_count;
   td->mb.ex_search_count_ptr = &td->rd_counts.ex_search_count;
+
+  #if CONFIG_PVQ
+  td->mb.pvq_q = &this_tile->pvq_q;
+
+  td->mb.daala_enc.state.qm =
+      (int16_t *)aom_calloc(OD_QM_BUFFER_SIZE, sizeof(td->mb.daala_enc.state.qm[0]));
+  td->mb.daala_enc.state.qm_inv =
+      (int16_t *)aom_calloc(OD_QM_BUFFER_SIZE, sizeof(td->mb.daala_enc.state.qm_inv[0]));
+  td->mb.daala_enc.qm = OD_FLAT_QM;  // Hard coded. Enc/dec required to sync.
+  {
+    // FIXME: Multiple segments support
+    int segment_id = 0;
+    int rdmult = set_segment_rdmult(cpi, &td->mb, segment_id);
+    int qindex = av1_get_qindex(&cm->seg, segment_id, cm->base_qindex);
+    int64_t q_ac = av1_ac_quant(qindex, 0, cpi->common.bit_depth);
+    int64_t q_dc = av1_dc_quant(qindex, 0, cpi->common.bit_depth);
+    /* td->mb.daala_enc.pvq_norm_lambda = OD_PVQ_LAMBDA; */
+    td->mb.daala_enc.pvq_norm_lambda = (double)rdmult * (64 / 16) / (q_ac*q_ac*(1 << RDDIV_BITS));
+    td->mb.daala_enc.pvq_norm_lambda_dc = (double)rdmult * (64 / 16) / (q_dc*q_dc*(1 << RDDIV_BITS));
+    //printf("%f\n", td->mb.daala_enc.pvq_norm_lambda);
+  }
+
+  od_init_qm(td->mb.daala_enc.state.qm, td->mb.daala_enc.state.qm_inv,
+      td->mb.daala_enc.qm == OD_HVS_QM ? OD_QM8_Q4_HVS : OD_QM8_Q4_FLAT);
+  od_ec_enc_init(&td->mb.daala_enc.ec, 65025);
+
+  adapt = &td->mb.daala_enc.state.adapt;
+  od_ec_enc_reset(&td->mb.daala_enc.ec);
+  od_adapt_ctx_reset(adapt, 0);
+  #endif
 
   for (mi_row = tile_info->mi_row_start; mi_row < tile_info->mi_row_end;
        mi_row += MI_BLOCK_SIZE) {
@@ -2682,6 +2813,18 @@ void av1_encode_tile(AV1_COMP *cpi, ThreadData *td, int tile_row,
       (unsigned int)(tok - cpi->tile_tok[tile_row][tile_col]);
   assert(tok - cpi->tile_tok[tile_row][tile_col] <=
          allocated_tokens(*tile_info));
+#if CONFIG_PVQ
+  aom_free(td->mb.daala_enc.state.qm);
+  aom_free(td->mb.daala_enc.state.qm_inv);
+  od_ec_enc_clear(&td->mb.daala_enc.ec);
+
+  td->mb.pvq_q->last_pos = td->mb.pvq_q->curr_pos;
+  // rewind current position so that bitstream can be written
+  // from the 1st pvq block
+  td->mb.pvq_q->curr_pos = 0;
+
+  td->mb.pvq_q = NULL;
+#endif
 }
 
 static void encode_tiles(AV1_COMP *cpi) {
@@ -3061,5 +3204,12 @@ static void encode_superblock(const AV1_COMP *const cpi, ThreadData *td,
                                                 [mbmi->mode]][mbmi->tx_type];
       }
     }
+#if CONFIG_PVQ && DEBUG_PVQ
+    printf("enc: frame# %d (%2d, %2d): bsize %d, tx_size %d, tx_type %d, skip %d mode %d, %d - ",
+        cpi->common.current_video_frame, mi_row, mi_col, bsize, mbmi->tx_size,
+        mbmi->tx_type, mbmi->skip, mbmi->mode, mbmi->uv_mode);
+    if (is_inter_block(mbmi)) printf("inter\n");
+    else printf("intra\n");
+#endif
   }
 }

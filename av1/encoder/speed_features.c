@@ -574,6 +574,11 @@ void av1_set_speed_features_framesize_independent(AV1_COMP *cpi) {
   x->optimize = 0;
 #endif
 
+  if (oxcf->pass != 1) {
+    sf->optimize_coefficients = 1;
+    x->optimize = 1;
+  }
+
   x->min_partition_size = sf->default_min_partition_size;
   x->max_partition_size = sf->default_max_partition_size;
 

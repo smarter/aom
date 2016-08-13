@@ -265,6 +265,7 @@ EXPERIMENT_LIST="
     ans
     rans
     daala_ec
+    pvq
     parallel_deblocking
 "
 CONFIG_LIST="

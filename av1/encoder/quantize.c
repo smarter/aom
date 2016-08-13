@@ -386,6 +386,7 @@ void av1_init_plane_quantizers(const AV1_COMP *cpi, MACROBLOCK *x) {
   const int rdmult = av1_compute_rd_mult(cpi, qindex + cm->y_dc_delta_q);
   int i;
 #if CONFIG_AOM_QM
+  const int lossless = xd->lossless[segment_id];
   int minqm = cm->min_qmlevel;
   int maxqm = cm->max_qmlevel;
   // Quant matrix only depends on the base QP so there is only one set per frame

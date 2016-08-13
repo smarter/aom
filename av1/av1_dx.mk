@@ -32,4 +32,13 @@ AV1_DX_SRCS-yes += decoder/decoder.h
 AV1_DX_SRCS-yes += decoder/dsubexp.c
 AV1_DX_SRCS-yes += decoder/dsubexp.h
 
+ifeq ($(CONFIG_PVQ),yes)
+# PVQ fro daala
+AV1_DX_SRCS-yes += decoder/pvq_decoder.c
+AV1_DX_SRCS-yes += decoder/pvq_decoder.h
+AV1_DX_SRCS-yes += decoder/decint.h
+AV1_DX_SRCS-yes += decoder/generic_decoder.c
+AV1_DX_SRCS-yes += decoder/laplace_decoder.c
+endif
+
 AV1_DX_SRCS-yes := $(filter-out $(AV1_DX_SRCS_REMOVE-yes),$(AV1_DX_SRCS-yes))
