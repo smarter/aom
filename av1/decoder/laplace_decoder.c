@@ -32,14 +32,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 #include "aom_dsp/entdec.h"
 #include "av1/common/pvq.h"
 
-#if OD_ACCOUNTING
-# define od_decode_pvq_split(ec, adapt, sum, ctx, str) od_decode_pvq_split_(ec, adapt, sum, ctx, str)
-#else
-# define od_decode_pvq_split(ec, adapt, sum, ctx, str) od_decode_pvq_split_(ec, adapt, sum, ctx)
-#endif
-
-static int od_decode_pvq_split_(od_ec_dec *ec, od_pvq_codeword_ctx *adapt,
- int sum, int ctx OD_ACC_STR) {
+static int od_decode_pvq_split(od_ec_dec *ec, od_pvq_codeword_ctx *adapt,
+ int sum, int ctx) {
   int shift;
   int count;
   int msbs;
@@ -49,8 +43,8 @@ static int od_decode_pvq_split_(od_ec_dec *ec, od_pvq_codeword_ctx *adapt,
   shift = OD_MAXI(0, OD_ILOG(sum) - 3);
   fctx = 7*ctx + (sum >> shift) - 1;
   msbs = od_decode_cdf_adapt(ec, adapt->pvq_split_cdf[fctx],
-   (sum >> shift) + 1, adapt->pvq_split_increment, acc_str);
-  if (shift) count = od_ec_dec_bits(ec, shift, acc_str);
+   (sum >> shift) + 1, adapt->pvq_split_increment, "pvq:k_msb");
+  if (shift) count = od_ec_dec_bits(ec, shift, "pvq:k_rest");
   count += msbs << shift;
   if (count > sum) {
     count = sum;
@@ -80,8 +74,7 @@ void od_decode_band_pvq_splits(od_ec_dec *ec, od_pvq_codeword_ctx *adapt,
   }
   else {
     mid = n >> 1;
-    count_right = od_decode_pvq_split(ec, adapt, k, od_pvq_size_ctx(n),
-     "pvq:split");
+    count_right = od_decode_pvq_split(ec, adapt, k, od_pvq_size_ctx(n));
     od_decode_band_pvq_splits(ec, adapt, y, mid, k - count_right, level + 1);
     od_decode_band_pvq_splits(ec, adapt, y + mid, n - mid, count_right,
      level + 1);
