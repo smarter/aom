@@ -228,6 +228,9 @@ typedef enum {
 
 EMSCRIPTEN_KEEPALIVE
 const int get_accounting_property(GetAccountingProperty v, int i) {
+#if !CONFIG_ACCOUNTING
+  return 0;
+#else
   AOMAccounting *accounting = &pbi->accounting;
   switch (v) {
     case GET_ACCOUNTING_SYMBOL_COUNT:
@@ -249,6 +252,7 @@ const int get_accounting_property(GetAccountingProperty v, int i) {
       return sym->context.y;
     }
   }
+#endif
 }
 
 EMSCRIPTEN_KEEPALIVE
