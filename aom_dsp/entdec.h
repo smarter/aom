@@ -27,7 +27,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 #include <limits.h>
 #include "aom_dsp/entcode.h"
 #if OD_ACCOUNTING
-#include "./accounting.h"
+#include "av1/common/accounting.h"
 #endif
 
 #ifdef __cplusplus
@@ -36,8 +36,10 @@ extern "C" {
 
 typedef struct od_ec_dec od_ec_dec;
 
+#define AOM_ACCT_DEFAULT_VALUE __func__
+
 #if OD_ACCOUNTING
-#define OD_ACC_STR , char *acc_str
+#define AOM_ACCT_STR_PARAM , const char *acct_str
 #define od_ec_decode_bool(dec, fz, ft, str) od_ec_decode_bool_(dec, fz, ft, str)
 #define od_ec_decode_bool_q15(dec, fz, str) od_ec_decode_bool_q15_(dec, fz, str)
 #define od_ec_decode_cdf(dec, cdf, nsyms, str) \
@@ -51,7 +53,7 @@ typedef struct od_ec_dec od_ec_dec;
 #define od_ec_dec_uint(dec, ft, str) od_ec_dec_uint_(dec, ft, str)
 #define od_ec_dec_bits(dec, ftb, str) od_ec_dec_bits_(dec, ftb, str)
 #else
-#define OD_ACC_STR
+#define AOM_ACCT_STR_PARAM
 #define od_ec_decode_bool(dec, fz, ft, str) od_ec_decode_bool_(dec, fz, ft)
 #define od_ec_decode_bool_q15(dec, fz, str) od_ec_decode_bool_q15_(dec, fz)
 #define od_ec_decode_cdf(dec, cdf, nsyms, str) \
@@ -65,6 +67,9 @@ typedef struct od_ec_dec od_ec_dec;
 #define od_ec_dec_uint(dec, ft, str) od_ec_dec_uint_(dec, ft)
 #define od_ec_dec_bits(dec, ftb, str) od_ec_dec_bits_(dec, ftb)
 #endif
+
+#define OD_ACC_STR AOM_ACCT_STR_PARAM
+#define acc_str acct_str
 
 /*The entropy decoder context.*/
 struct od_ec_dec {
@@ -95,7 +100,7 @@ struct od_ec_dec {
   /*Nonzero if an error occurred.*/
   int error;
 #if OD_ACCOUNTING
-  od_accounting_internal *acct;
+  AOMAccounting *accounting;
 #endif
 };
 

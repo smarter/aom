@@ -30,7 +30,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 
 # define GENERIC_TABLES 12
 
-#if OD_ACCOUNTING
+#if CONFIG_ACCOUNTING
 # define generic_decode(dec, model, max, ex_q16, integration, str) generic_decode_(dec, model, max, ex_q16, integration, str)
 # define od_decode_cdf_adapt_q15(ec, cdf, n, count, rate, str) od_decode_cdf_adapt_q15_(ec, cdf, n, count, rate, str)
 # define od_decode_cdf_adapt(ec, cdf, n, increment, str) od_decode_cdf_adapt_(ec, cdf, n, increment, str)

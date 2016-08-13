@@ -898,7 +898,7 @@ static PARTITION_TYPE read_partition(AV1_COMMON *cm, MACROBLOCKD *xd,
   if (has_rows && has_cols)
 #if CONFIG_DAALA_EC
     p = (PARTITION_TYPE)aom_read_tree_cdf(r, cm->fc->partition_cdf[ctx],
-                                          PARTITION_TYPES);
+                                          PARTITION_TYPES, AOM_ACCT_DEFAULT_VALUE);
 #else
     p = (PARTITION_TYPE)aom_read_tree(r, av1_partition_tree, probs, AOM_ACCT_DEFAULT_VALUE);
 #endif
@@ -1609,7 +1609,11 @@ static const uint8_t *decode_tiles(AV1Decoder *pbi, const uint8_t *data,
                           &tile_data->bit_reader, pbi->decrypt_cb,
                           pbi->decrypt_state);
 #if CONFIG_ACCOUNTING
+#if CONFIG_DAALA_EC
+      tile_data->bit_reader.ec.accounting = &pbi->accounting;
+#else
       tile_data->bit_reader.accounting = &pbi->accounting;
+#endif
 #endif
 #if !CONFIG_PVQ
       av1_init_macroblockd(cm, &tile_data->xd, tile_data->dqcoeff);

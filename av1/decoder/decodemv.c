@@ -597,7 +597,7 @@ static INLINE InterpFilter read_switchable_interp_filter(AV1_COMMON *const cm,
 #if CONFIG_DAALA_EC
       const InterpFilter type =
           (InterpFilter)av1_switchable_interp_inv[aom_read_tree_cdf(
-              r, cm->fc->switchable_interp_cdf[ctx], SWITCHABLE_FILTERS)];
+              r, cm->fc->switchable_interp_cdf[ctx], SWITCHABLE_FILTERS, AOM_ACCT_DEFAULT_VALUE)];
 #else
       const InterpFilter type = (InterpFilter)aom_read_tree(
           r, av1_switchable_interp_tree, cm->fc->switchable_interp_prob[ctx], AOM_ACCT_DEFAULT_VALUE);
@@ -973,7 +973,7 @@ static void read_inter_frame_mode_info(AV1Decoder *const pbi,
     if (inter_block) {
 #if CONFIG_DAALA_EC
       mbmi->tx_type = av1_ext_tx_inv[aom_read_tree_cdf(
-          r, cm->fc->inter_ext_tx_cdf[mbmi->tx_size], TX_TYPES)];
+          r, cm->fc->inter_ext_tx_cdf[mbmi->tx_size], TX_TYPES, AOM_ACCT_DEFAULT_VALUE)];
 #else
       mbmi->tx_type = aom_read_tree(r, av1_ext_tx_tree,
                                     cm->fc->inter_ext_tx_prob[mbmi->tx_size], AOM_ACCT_DEFAULT_VALUE);
@@ -983,7 +983,7 @@ static void read_inter_frame_mode_info(AV1Decoder *const pbi,
       const TX_TYPE tx_type_nom = intra_mode_to_tx_type_context[mbmi->mode];
 #if CONFIG_DAALA_EC
       mbmi->tx_type = av1_ext_tx_inv[aom_read_tree_cdf(
-          r, cm->fc->intra_ext_tx_cdf[mbmi->tx_size][tx_type_nom], TX_TYPES)];
+          r, cm->fc->intra_ext_tx_cdf[mbmi->tx_size][tx_type_nom], TX_TYPES, AOM_ACCT_DEFAULT_VALUE)];
 #else
       mbmi->tx_type =
           aom_read_tree(r, av1_ext_tx_tree,

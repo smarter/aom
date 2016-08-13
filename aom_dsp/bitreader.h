@@ -43,15 +43,13 @@ typedef struct daala_reader aom_reader;
 typedef struct aom_dk_reader aom_reader;
 #endif
 
-#define AOM_ACCT_DEFAULT_VALUE __func__
-
 #if CONFIG_ACCOUNTING
-# define AOM_ACCT_STR_PARAM , const char *acct_str
 # define aom_read(r, prob, str) aom_read_(r, prob, str)
 # define aom_read_bit(r, str) aom_read_bit_(r, str)
 # define aom_read_tree(r, tree, probs, str) aom_read_tree_(r, tree, probs, str)
 # define aom_read_literal(r, bits, str) aom_read_literal_(r, bits, str)
 # define aom_read_tree_bits(r, tree, probs, str) aom_read_tree_bits_(r, tree, probs, str)
+# define aom_read_tree_cdf(r, cdf, nsymbs, str) aom_read_tree_cdf_(r, cdf, nsymbs, str)
 #else
 # define AOM_ACCT_STR_PARAM
 # define aom_read(r, prob, str) aom_read_(r, prob)
@@ -59,6 +57,7 @@ typedef struct aom_dk_reader aom_reader;
 # define aom_read_tree(r, tree, probs, str) aom_read_tree_(r, tree, probs)
 # define aom_read_literal(r, bits, str) aom_read_literal_(r, bits)
 # define aom_read_tree_bits(r, tree, probs, str) aom_read_tree_bits_(r, tree, probs)
+# define aom_read_tree_cdf(r, cdf, nsymbs, str) aom_read_tree_cdf_(r, cdf, nsymbs)
 #endif
 
 static INLINE int aom_reader_init(aom_reader *r, const uint8_t *buffer,
@@ -108,7 +107,19 @@ static INLINE ptrdiff_t aom_reader_tell(const aom_reader *r) {
 #endif
 }
 
-#if CONFIG_ACCOUNTING
+#if CONFIG_ACCOUNTING && CONFIG_DAALA_EC
+static INLINE void od_process_accounting(od_ec_dec *dec, const char *str) {
+  if (dec->accounting != NULL) {
+    uint32_t tell;
+    tell = od_ec_dec_tell_frac(dec);
+    OD_ASSERT(tell >= dec->accounting->last_tell);
+    aom_accounting_record(dec->accounting, str, tell - dec->accounting->last_tell);
+    dec->accounting->last_tell = tell;
+  }
+}
+#endif
+
+#if CONFIG_ACCOUNTING && !CONFIG_DAALA_EC
 static INLINE void aom_process_accounting(aom_reader *r, const char *str) {
   if (r->accounting != NULL) {
     uint32_t tell;
@@ -124,11 +135,11 @@ static INLINE int aom_read_(aom_reader *r, int prob AOM_ACCT_STR_PARAM) {
 #if CONFIG_ANS
   ret = uabs_read(r, prob);
 #elif CONFIG_DAALA_EC
-  ret = aom_daala_read(r, prob);
+  ret = aom_daala_read(r, prob, acct_str);
 #else
   ret = aom_dk_read(r, prob);
 #endif
-#if CONFIG_ACCOUNTING
+#if CONFIG_ACCOUNTING && !CONFIG_DAALA_EC
   aom_process_accounting(r, acct_str);
 #endif
   return ret;
@@ -162,19 +173,19 @@ static INLINE int aom_read_tree_bits_(aom_reader *r, const aom_tree_index *tree,
 static INLINE int aom_read_tree_(aom_reader *r, const aom_tree_index *tree,
                                 const aom_prob *probs AOM_ACCT_STR_PARAM) {
 #if CONFIG_DAALA_EC
-  return daala_read_tree_bits(r, tree, probs);
+  return daala_read_tree_bits(r, tree, probs, acct_str);
 #else
   return aom_read_tree_bits(r, tree, probs, acct_str);
 #endif
 }
 
-static INLINE int aom_read_tree_cdf(aom_reader *r, const uint16_t *cdf,
-                                    int nsymbs) {
+static INLINE int aom_read_tree_cdf_(aom_reader *r, const uint16_t *cdf,
+                                    int nsymbs AOM_ACCT_STR_PARAM) {
 #if CONFIG_RANS
   (void)nsymbs;
   return rans_read(r, cdf);
 #elif CONFIG_DAALA_EC
-  return daala_read_tree_cdf(r, cdf, nsymbs);
+  return daala_read_tree_cdf(r, cdf, nsymbs, acct_str);
 #else
   (void)r;
   (void)cdf;

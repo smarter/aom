@@ -32,6 +32,8 @@ extern "C" {
 #  define M_LN2 (0.69314718055994530941723212145818)
 # endif
 
+#define OD_ACCOUNTING CONFIG_ACCOUNTING
+
 /*Smallest blocks are 4x4*/
 #define OD_LOG_BSIZE0 (2)
 /*There are 5 block sizes total (4x4, 8x8, 16x16, 32x32 and 64x64).*/

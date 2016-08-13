@@ -28,7 +28,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 
 #include "aom_dsp/entdec.h"
 #if OD_ACCOUNTING
-#include "./accounting.h"
+#include "./bitreader.h"
 #endif
 
 /*A range decoder.
@@ -89,15 +89,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 #if OD_ACCOUNTING
 #define od_ec_dec_normalize(dec, dif, rng, ret, str) \
   od_ec_dec_normalize_(dec, dif, rng, ret, str)
-static void od_process_accounting(od_ec_dec *dec, char *str) {
-  if (dec->acct != NULL) {
-    uint32_t tell;
-    tell = od_ec_dec_tell_frac(dec);
-    OD_ASSERT(tell >= dec->acct->last_tell);
-    od_accounting_record(dec->acct, str, tell - dec->acct->last_tell);
-    dec->acct->last_tell = tell;
-  }
-}
 #else
 #define od_ec_dec_normalize(dec, dif, rng, ret, str) \
   od_ec_dec_normalize_(dec, dif, rng, ret)
@@ -174,7 +165,7 @@ void od_ec_dec_init(od_ec_dec *dec, const unsigned char *buf,
   dec->error = 0;
   od_ec_dec_refill(dec);
 #if OD_ACCOUNTING
-  dec->acct = NULL;
+  dec->accounting = NULL;
 #endif
 }
 
