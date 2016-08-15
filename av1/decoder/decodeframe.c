@@ -440,7 +440,7 @@ static int pvq_decode_helper(
 
   od_pvq_decode(dec, ref_int32, out_int32, (int)quant[1] >> quant_shift, pli, bs,
    OD_PVQ_BETA[use_activity_masking][pli][bs],
-   1, //OD_ROBUST_STREAM
+   0, //OD_ROBUST_STREAM
    is_keyframe,
    &flags,
    ac_dc_coded,

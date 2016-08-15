@@ -1418,7 +1418,7 @@ int pvq_encode_helper(daala_enc_ctx *daala_enc,
           (int)quant[1] >> quant_shift,//scale/quantizer
           plane, tx_size,
           OD_PVQ_BETA[0/*use_activity_masking*/][plane][tx_size],
-          1,//OD_ROBUST_STREAM
+          0,//OD_ROBUST_STREAM
           0, //is_keyframe,
           0, 0, 0, //q_scaling, bx, by,
           daala_enc->state.qm + off, daala_enc->state.qm_inv + off, pvq_info);
