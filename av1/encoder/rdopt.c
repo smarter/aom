@@ -2138,7 +2138,7 @@ static int set_and_cost_bmi_mvs(const AV1_COMP *const cpi, MACROBLOCK *x,
 }
 
 static int64_t encode_inter_mb_segment(const AV1_COMP *const cpi, MACROBLOCK *x,
-                                       int64_t best_yrd, int i, int *labelyrate,
+                                       int64_t best_yrd, int block_idx, int *labelyrate,
                                        int64_t *distortion, int64_t *sse,
                                        ENTROPY_CONTEXT *ta, ENTROPY_CONTEXT *tl,
                                        int ir, int ic, int mi_row, int mi_col) {
@@ -2153,12 +2153,12 @@ static int64_t encode_inter_mb_segment(const AV1_COMP *const cpi, MACROBLOCK *x,
   int idx, idy;
   void (*fwd_txm4x4)(const int16_t *input, tran_low_t *output, int stride);
   const uint8_t *const src =
-      &p->src.buf[av1_raster_block_offset(BLOCK_8X8, i, p->src.stride)];
+      &p->src.buf[av1_raster_block_offset(BLOCK_8X8, block_idx, p->src.stride)];
   uint8_t *const dst =
-      &pd->dst.buf[av1_raster_block_offset(BLOCK_8X8, i, pd->dst.stride)];
+      &pd->dst.buf[av1_raster_block_offset(BLOCK_8X8, block_idx, pd->dst.stride)];
   int64_t thisdistortion = 0, thissse = 0;
   int thisrate = 0;
-  TX_TYPE tx_type = get_tx_type(PLANE_TYPE_Y, xd, i);
+  TX_TYPE tx_type = get_tx_type(PLANE_TYPE_Y, xd, block_idx);
 #if !CONFIG_PVQ
   const SCAN_ORDER *scan_order = get_scan(TX_4X4, tx_type);
 #else
@@ -2167,7 +2167,7 @@ static int64_t encode_inter_mb_segment(const AV1_COMP *const cpi, MACROBLOCK *x,
   (void) tl;
 #endif
 
-  av1_build_inter_predictor_sub8x8(xd, 0, i, ir, ic, mi_row, mi_col);
+  av1_build_inter_predictor_sub8x8(xd, 0, block_idx, ir, ic, mi_row, mi_col);
 
 #if CONFIG_AOM_HIGHBITDEPTH
   if (xd->cur_buf->flags & YV12_FLAG_HIGHBITDEPTH) {
@@ -2198,7 +2198,7 @@ static int64_t encode_inter_mb_segment(const AV1_COMP *const cpi, MACROBLOCK *x,
 #endif  // CONFIG_AOM_HIGHBITDEPTH
 #endif  // !CONFIG_PVQ
 
-  k = i;
+  k = block_idx;
   for (idy = 0; idy < height / 4; ++idy) {
     for (idx = 0; idx < width / 4; ++idx) {
       int64_t ssz, rd, rd1, rd2;
