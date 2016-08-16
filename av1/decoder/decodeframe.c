@@ -517,9 +517,7 @@ static void predict_and_reconstruct_intra_block(MACROBLOCKD *const xd,
     ac_dc_coded = od_decode_cdf_adapt(xd->daala_dec.ec,
      xd->daala_dec.state.adapt.skip_cdf[2*tx_size + (plane != 0)], 4,
      xd->daala_dec.state.adapt.skip_increment, "skip");
-#if CONFIG_PVQ && DEBUG_PVQ
-    printf("row,col = %d, %d : ac_dc_coded %d, ",  row, col, ac_dc_coded);
-#endif
+
     if (ac_dc_coded) {
       int eob = 0;
       int xdec = pd->subsampling_x;
@@ -565,9 +563,6 @@ static void predict_and_reconstruct_intra_block(MACROBLOCKD *const xd,
 #if CONFIG_PVQ
 			}
     }
-#if CONFIG_PVQ && DEBUG_PVQ
-    printf("\n");
-#endif
 #endif
   }
 }
@@ -598,10 +593,6 @@ static int reconstruct_inter_block(MACROBLOCKD *const xd, aom_reader *r,
   ac_dc_coded = od_decode_cdf_adapt(xd->daala_dec.ec,
    xd->daala_dec.state.adapt.skip_cdf[2*tx_size + (plane != 0)], 4,
    xd->daala_dec.state.adapt.skip_increment, "skip");
-
-#if CONFIG_PVQ && DEBUG_PVQ
-  printf("row,col = %d, %d, plane %d : ac_dc_coded %d, ",  row, col, plane, ac_dc_coded);
-#endif
 
   if (ac_dc_coded) {
     // transform block size in pixels
@@ -658,9 +649,6 @@ static int reconstruct_inter_block(MACROBLOCKD *const xd, aom_reader *r,
 #if CONFIG_PVQ
 		}
   }
-#if CONFIG_PVQ && DEBUG_PVQ
-  printf("\n");
-#endif
 #endif
   return eob;
 }
@@ -720,9 +708,7 @@ static void decode_block(AV1Decoder *const pbi, MACROBLOCKD *const xd,
 
   MB_MODE_INFO *mbmi = set_offsets(cm, xd, bsize, mi_row, mi_col, bw, bh, x_mis,
                                    y_mis, bwl, bhl);
-#if CONFIG_PVQ && DEBUG_PVQ
-  int tell = od_ec_dec_tell(&r->ec);
-#endif
+
   if (bsize >= BLOCK_8X8 && (cm->subsampling_x || cm->subsampling_y)) {
     const BLOCK_SIZE uv_subsize =
         ss_size_lookup[bsize][cm->subsampling_x][cm->subsampling_y];
@@ -736,14 +722,6 @@ static void decode_block(AV1Decoder *const pbi, MACROBLOCKD *const xd,
   if (mbmi->skip) {
     dec_reset_skip_context(xd);
   }
-
-#if CONFIG_PVQ && DEBUG_PVQ
-  printf("dec: frame# %d (%2d, %2d): bsize %d, tx_size %d, tx_type %d, skip %d mode %d, %d - ",
-      pbi->common.current_video_frame, mi_row, mi_col, bsize, mbmi->tx_size,
-      mbmi->tx_type, mbmi->skip, mbmi->mode, mbmi->uv_mode);
-  if (is_inter_block(mbmi)) printf("inter\n");
-  else printf("intra\n");
-#endif
 
   if (!is_inter_block(mbmi)) {
     int plane;
@@ -814,9 +792,7 @@ static void decode_block(AV1Decoder *const pbi, MACROBLOCKD *const xd,
 #endif
     }
   }
-#if CONFIG_PVQ && DEBUG_PVQ
-  printf("%d bits / partition\n", od_ec_dec_tell(&r->ec) - tell);
-#endif
+
   xd->corrupted |= aom_reader_has_error(r);
 }
 
@@ -962,6 +938,7 @@ static void setup_token_decoder(const uint8_t *data, const uint8_t *data_end,
                        "Failed to allocate bool decoder %d", 1);
 }
 
+#if !CONFIG_PVQ
 static void read_coef_probs_common(av1_coeff_probs_model *coef_probs,
                                    aom_reader *r) {
   int i, j, k, l, m;
@@ -984,6 +961,7 @@ static void read_coef_probs(FRAME_CONTEXT *fc, TX_MODE tx_mode, aom_reader *r) {
   av1_coef_pareto_cdfs(fc);
 #endif  // CONFIG_RANS
 }
+#endif
 
 static void setup_segmentation(AV1_COMMON *const cm,
                                struct aom_read_bit_buffer *rb) {
@@ -1589,9 +1567,6 @@ static const uint8_t *decode_tiles(AV1Decoder *pbi, const uint8_t *data,
         av1_zero(tile_data->xd.left_seg_context);
         for (mi_col = tile.mi_col_start; mi_col < tile.mi_col_end;
              mi_col += MI_BLOCK_SIZE) {
-#if CONFIG_PVQ && DEBUG_PVQ
-          printf("------------------------------------------------------\n");
-#endif
           decode_partition(pbi, &tile_data->xd, mi_row, mi_col,
                            &tile_data->bit_reader, BLOCK_64X64, 4);
         }

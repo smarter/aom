@@ -1454,12 +1454,6 @@ static void encode_sb(const AV1_COMP *const cpi, ThreadData *td,
 
   if (mi_row >= cm->mi_rows || mi_col >= cm->mi_cols) return;
 
-#if CONFIG_PVQ && DEBUG_PVQ
-  if (output_enabled)
-  if (bsize == BLOCK_64X64)
-    printf("------------------------------------------------------\n");
-#endif
-
   if (bsize >= BLOCK_8X8) {
     ctx = partition_plane_context(xd, mi_row, mi_col, bsize);
     subsize = get_subsize(bsize, pc_tree->partitioning);
@@ -3204,12 +3198,5 @@ static void encode_superblock(const AV1_COMP *const cpi, ThreadData *td,
                                                 [mbmi->mode]][mbmi->tx_type];
       }
     }
-#if CONFIG_PVQ && DEBUG_PVQ
-    printf("enc: frame# %d (%2d, %2d): bsize %d, tx_size %d, tx_type %d, skip %d mode %d, %d - ",
-        cpi->common.current_video_frame, mi_row, mi_col, bsize, mbmi->tx_size,
-        mbmi->tx_type, mbmi->skip, mbmi->mode, mbmi->uv_mode);
-    if (is_inter_block(mbmi)) printf("inter\n");
-    else printf("intra\n");
-#endif
   }
 }

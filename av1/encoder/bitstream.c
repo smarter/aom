@@ -323,6 +323,7 @@ static void update_ext_tx_probs(AV1_COMMON *cm, aom_writer *w) {
   }
 }
 
+#if !CONFIG_PVQ
 static void pack_mb_tokens(aom_writer *w, TOKENEXTRA **tp,
                            const TOKENEXTRA *const stop,
                            aom_bit_depth_t bit_depth, const TX_SIZE tx) {
@@ -428,6 +429,7 @@ static void pack_mb_tokens(aom_writer *w, TOKENEXTRA **tp,
 
   *tp = p;
 }
+#endif
 
 static void write_segment_id(aom_writer *w, const struct segmentation *seg,
                              const struct segmentation_probs *segp,
@@ -818,9 +820,6 @@ static void write_modes_b(AV1_COMP *cpi, const TileInfo *const tile,
   MB_MODE_INFO *mbmi;
   BLOCK_SIZE bsize;
   od_adapt_ctx *adapt;
-#if CONFIG_PVQ && DEBUG_PVQ
-  int tell = od_ec_enc_tell(&w->ec);
-#endif
 
   (void) tok;
   (void) tok_end;
@@ -836,16 +835,6 @@ static void write_modes_b(AV1_COMP *cpi, const TileInfo *const tile,
   mbmi = &m->mbmi;
   bsize = mbmi->sb_type;
   adapt = &cpi->td.mb.daala_enc.state.adapt;
-#endif
-
-#if CONFIG_PVQ && DEBUG_PVQ
-  assert(m->mbmi.sb_type != BLOCK_4X8 && m->mbmi.sb_type != BLOCK_8X4);
-
-  printf("enc-bitstream: frame# %d (%2d, %2d): bsize %d, tx_size %d, tx_type %d, skip %d mode %d, %d - ",
-      cpi->common.current_video_frame, mi_row, mi_col, bsize, mbmi->tx_size,
-      mbmi->tx_type, mbmi->skip, mbmi->mode, mbmi->uv_mode);
-  if (is_inter_block(mbmi)) printf("inter\n");
-  else printf("intra\n");
 #endif
 
   if (frame_is_intra_only(cm)) {
@@ -950,26 +939,11 @@ static void write_modes_b(AV1_COMP *cpi, const TileInfo *const tile,
           if ((pvq->ac_dc_coded & 1)) {  // DC coded?
             od_ec_enc_bits(&w->ec, pvq->dq_dc_residue < 0, 1);
           }
-#if CONFIG_PVQ && DEBUG_PVQ
-          printf("row,col = %d, %d, plane %d : ac_dc_coded %d, ",
-                idy, idx, plane, pvq->ac_dc_coded);
-          if (pvq->ac_dc_coded & 2) { // AC coded?
-            int i;
-            for (i = 0; i < pvq->nb_bands; i++)
-              printf("[%d, %d] ", pvq->k[i], pvq->theta[i] == -1);
-            printf("\n");
-          }
-          else
-            printf("\n");
-#endif
           block += step_xy;
         }
       }//for (idy = 0;
     }//for (plane =
   }//if (!m->mbmi.skip)
-#if CONFIG_PVQ && DEBUG_PVQ
-  printf("%d bits / partition\n", od_ec_enc_tell(&w->ec) - tell);
-#endif
 #endif
 }
 
@@ -1080,9 +1054,6 @@ static void write_modes(AV1_COMP *cpi, const TileInfo *const tile,
     av1_zero(xd->left_seg_context);
     for (mi_col = tile->mi_col_start; mi_col < tile->mi_col_end;
          mi_col += MI_BLOCK_SIZE) {
-#if CONFIG_PVQ && DEBUG_PVQ
-      printf("------------------------------------------------------\n");
-#endif
       write_modes_sb(cpi, tile, w, tok, tok_end, mi_row, mi_col, BLOCK_64X64);
     }
   }
@@ -1095,6 +1066,7 @@ static void write_modes(AV1_COMP *cpi, const TileInfo *const tile,
 #endif
 }
 
+#if !CONFIG_PVQ
 static void build_tree_distribution(AV1_COMP *cpi, TX_SIZE tx_size,
                                     av1_coeff_stats *coef_branch_ct,
                                     av1_coeff_probs_model *coef_probs) {
@@ -1280,6 +1252,7 @@ static void update_coef_probs(AV1_COMP *cpi, aom_writer *w) {
     }
   }
 }
+#endif
 
 static void encode_loopfilter(struct loopfilter *lf,
                               struct aom_write_bit_buffer *wb) {
