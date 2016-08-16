@@ -69,6 +69,7 @@ typedef struct av1_token_state {
   short qc;
 } av1_token_state;
 
+#if !CONFIG_PVQ
 // TODO(jimbankoski): experiment to find optimal RD numbers.
 static const int plane_rd_mult[PLANE_TYPES] = { 4, 2 };
 
@@ -82,7 +83,6 @@ static const int plane_rd_mult[PLANE_TYPES] = { 4, 2 };
     }                                                   \
   }
 
-#if !CONFIG_PVQ
 // This function is a place holder for now but may ultimately need
 // to scan previous tokens to work out the correct context.
 static int trellis_get_coeff_context(const int16_t *scan, const int16_t *nb,

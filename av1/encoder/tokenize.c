@@ -506,9 +506,10 @@ void add_pvq_block(MACROBLOCK *const x, PVQ_INFO *pvq) {
   ++q->curr_pos;
 }
 
-// NOTE : not really generate tokens but save the pvq info for each block
-//        in buffer in encoding order, which later at packing stage
-//        is then written to bitstream via write_modes_b().
+// NOTE : Not really generate tokens but store the pvq's encoding decision
+//        for each block in buffer in encoding order,
+//        which, later at packing stage,
+//        is written to bitstream via write_modes_b().
 static void tokenize_pvq(int plane, int block, int blk_row, int blk_col,
                        BLOCK_SIZE plane_bsize, TX_SIZE tx_size, void *arg) {
   struct tokenize_b_args *const args = arg;

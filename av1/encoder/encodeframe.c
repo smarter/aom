@@ -1606,10 +1606,6 @@ static void rd_use_partition(AV1_COMP *cpi, ThreadData *td,
   PICK_MODE_CONTEXT *ctx_none = &pc_tree->none;
 #if CONFIG_PVQ
   od_rollback_buffer pre_rdo_buf;
-  uint32_t pre_rdo_offset;
-
-  if (bsize == BLOCK_64X64)
-    pre_rdo_offset = x->daala_enc.ec.offs;
 #endif
 
   if (mi_row >= cm->mi_rows || mi_col >= cm->mi_cols) return;
@@ -1857,11 +1853,7 @@ static void rd_use_partition(AV1_COMP *cpi, ThreadData *td,
 
   if (do_recon) {
     int output_enabled = (bsize == BLOCK_64X64);
-#if CONFIG_PVQ
-    (void) pre_rdo_offset;
-    if (output_enabled)
-      assert(pre_rdo_offset == x->daala_enc.ec.offs);
-#endif
+
     encode_sb(cpi, td, tile_info, tp, mi_row, mi_col, output_enabled, bsize,
               pc_tree);
   }
@@ -2148,10 +2140,6 @@ static void rd_pick_partition(const AV1_COMP *const cpi, ThreadData *td,
 
 #if CONFIG_PVQ
   od_rollback_buffer pre_rdo_buf;
-  uint32_t pre_rdo_offset;
-
-  if (bsize == BLOCK_64X64)
-    pre_rdo_offset = x->daala_enc.ec.offs;
 #endif
 
   (void)*tp_orig;
@@ -2527,11 +2515,7 @@ static void rd_pick_partition(const AV1_COMP *const cpi, ThreadData *td,
   if (best_rdc.rate < INT_MAX && best_rdc.dist < INT64_MAX &&
       pc_tree->index != 3) {
     int output_enabled = (bsize == BLOCK_64X64);
-#if CONFIG_PVQ
-    (void) pre_rdo_offset;
-    if (output_enabled)
-      assert(pre_rdo_offset == x->daala_enc.ec.offs);
-#endif
+
     encode_sb(cpi, td, tile_info, tp, mi_row, mi_col, output_enabled, bsize,
               pc_tree);
   }
@@ -2768,7 +2752,7 @@ void av1_encode_tile(AV1_COMP *cpi, ThreadData *td, int tile_row,
   td->mb.m_search_count_ptr = &td->rd_counts.m_search_count;
   td->mb.ex_search_count_ptr = &td->rd_counts.ex_search_count;
 
-  #if CONFIG_PVQ
+#if CONFIG_PVQ
   td->mb.pvq_q = &this_tile->pvq_q;
 
   td->mb.daala_enc.state.qm =
@@ -2796,7 +2780,7 @@ void av1_encode_tile(AV1_COMP *cpi, ThreadData *td, int tile_row,
   adapt = &td->mb.daala_enc.state.adapt;
   od_ec_enc_reset(&td->mb.daala_enc.ec);
   od_adapt_ctx_reset(adapt, 0);
-  #endif
+#endif
 
   for (mi_row = tile_info->mi_row_start; mi_row < tile_info->mi_row_end;
        mi_row += MAX_MIB_SIZE) {
