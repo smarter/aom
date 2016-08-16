@@ -297,7 +297,11 @@ typedef enum {
   GET_MI_TRANSFORM_TYPE,
   GET_MI_TRANSFORM_SIZE,
   GET_MI_DERING_GAIN,
-  GET_MI_BITS
+  GET_MI_BITS,
+  GET_MI_AC_Y_DEQUANT,
+  GET_MI_DC_Y_DEQUANT,
+  GET_MI_AC_UV_DEQUANT,
+  GET_MI_DC_UV_DEQUANT
 } GetMIProperty;
 
 EMSCRIPTEN_KEEPALIVE
@@ -323,6 +327,14 @@ int get_mi_property(GetMIProperty v, int c, int r, int i) {
       return mi->dering_gain;
     case GET_MI_BITS:
       return mi->bits;
+    case GET_MI_AC_Y_DEQUANT:
+      return analyzer_data.y_dequant[mi->segment_id][0];
+    case GET_MI_DC_Y_DEQUANT:
+      return analyzer_data.y_dequant[mi->segment_id][1];
+    case GET_MI_AC_UV_DEQUANT:
+      return analyzer_data.uv_dequant[mi->segment_id][0];
+    case GET_MI_DC_UV_DEQUANT:
+      return analyzer_data.uv_dequant[mi->segment_id][1];
   }
 }
 

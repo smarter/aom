@@ -71,6 +71,13 @@ AnalyzerError analyzer_record_frame(struct AV1Decoder *pbi) {
 #if CONFIG_DERING
   pbi->analyzer_data->dering_level = cm->dering_level;
 #endif
+  int i;
+  for (i = 0; i < ANALYZER_MAX_SEGMENTS; i++) {
+    pbi->analyzer_data->y_dequant[i][0] = cm->y_dequant[i][0];
+    pbi->analyzer_data->y_dequant[i][1] = cm->y_dequant[i][1];
+    pbi->analyzer_data->uv_dequant[i][0] = cm->uv_dequant[i][0];
+    pbi->analyzer_data->uv_dequant[i][1] = cm->uv_dequant[i][1];
+  }
   // Save mode info.
   AnalyzerMIBuffer mi_grid = pbi->analyzer_data->mi_grid;
   if (mi_grid.length > 0) {
@@ -82,6 +89,8 @@ AnalyzerError analyzer_record_frame(struct AV1Decoder *pbi) {
         const MB_MODE_INFO *mbmi =
           &cm->mi_grid_visible[r * cm->mi_stride + c]->mbmi;
         AnalyzerMI *mi = &mi_grid.buffer[r * mi_cols + c];
+        // Segment
+        mi->segment_id = mbmi->segment_id;
         // MVs
         mi->mv[0].col = mbmi->mv[0].as_mv.col;
         mi->mv[0].row = mbmi->mv[0].as_mv.row;
