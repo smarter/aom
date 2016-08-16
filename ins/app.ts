@@ -3,6 +3,22 @@ declare let FS: any;
 declare let Mousetrap: any;
 declare let tinycolor: any;
 declare let tinygradient: any;
+function assert(condition: boolean, message = "") {
+  if (!condition) {
+    throw new Error(message);
+  }
+}
+function forEachValue(o: any, fn: (v: any) => void) {
+  for (let n in o) {
+    fn(o[n]);
+  }
+}
+function toPercent(v: number) {
+  return (v * 100).toFixed(2) + "%";
+}
+function withCommas(v: number) {
+  return v.toLocaleString();
+}
 class Y4MFile {
   constructor(public size: Size, public buffer: Uint8Array, public frames: Y4MFrame []) {
     // ...
@@ -211,7 +227,8 @@ class Accounting {
     let ret = Object.create(null);
     let names = [];
     for (let name in map) names.push(name);
-    names.sort();
+    // Sort by bits.
+    names.sort((a, b) => map[b].bits - map[a].bits);
     names.forEach(name => {
       ret[name] = map[name];
     });
@@ -1019,8 +1036,8 @@ class AppCtrl {
 
   createUIAccountingProperties() {
     let self = this;
-    this.uiAccountingFrameProperties = { }
-    this.uiAccountingBlockProperties = { }
+    this.uiAccountingFrameProperties = { };
+    this.uiAccountingBlockProperties = { };
   }
 
   constructor($scope, $interval, $mdSidenav) {
@@ -1589,14 +1606,20 @@ class AppCtrl {
   updateFrameAccounting() {
     let accounting = this.accounting;
     accounting.createFrameSymbols();
+    let total = 0;
+    forEachValue(accounting.frameSymbols, (symbol) => {
+      total += symbol.bits;
+    });
+    this.uiAccountingFrameProperties = { };
     for (let name in accounting.frameSymbols) {
       let symbol = accounting.frameSymbols[name];
       let lastSymbol = this.lastAccounting ? this.lastAccounting.frameSymbols[name] : null;
       this.uiAccountingFrameProperties[symbol.name] = {
         description: symbol.name,
         value: [
-          symbol.bits,
-          symbol.samples,
+          withCommas(symbol.bits),
+          toPercent(symbol.bits / total),
+          withCommas(symbol.samples),
           lastSymbol ? " " + (symbol.bits - lastSymbol.bits) : ""
         ]
       }
@@ -1610,13 +1633,20 @@ class AppCtrl {
     }
     let mi = this.getMIUnderMouse();
     let blockSymbols = accounting.createBlockSymbols(mi);
+    let total = 0;
+    forEachValue(blockSymbols, (symbol) => {
+      total += symbol.bits;
+    });
+    this.uiAccountingBlockProperties = { };
     for (let name in blockSymbols) {
       let symbol = blockSymbols[name];
+      assert(symbol.bits >= 0);
       this.uiAccountingBlockProperties[symbol.name] = {
         description: symbol.name,
         value: [
-          symbol.bits,
-          symbol.samples
+          withCommas(symbol.bits),
+          toPercent(symbol.bits / total),
+          withCommas(symbol.samples)
         ]
       }
     }

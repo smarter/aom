@@ -35,6 +35,10 @@
     }
     .md-list-item-narrow {
       min-height: 20px;
+      height: 20px;
+    }
+    .md-list-header {
+      font-weight: bold;
     }
     .color-picker-swatch {
       width: 8px !important;
@@ -228,7 +232,7 @@
             width=0 height=0></canvas>
       <md-tabs md-dynamic-height md-border-bottom>
         <md-tab label="Block Info">
-          <md-content class="md-padding">
+          <md-content>
             <md-list>
               <md-list-item class="md-list-item-narrow" ng-cloak ng-repeat="(name, p) in vm.uiBlockProperties" style="color: {{p.color}};">
                 <div flex="50" class="key">{{p.description}}</div>
@@ -238,8 +242,14 @@
           </md-content>
         </md-tab>
         <md-tab label="Block Accounting">
-          <md-content class="md-padding">
+          <md-content>
             <md-list>
+              <md-list-item class="md-list-item-narrow md-list-header">
+                <div flex="40" class="key">Symbol</div>
+                <div flex="20" class="value" style="text-align: right;">Bits</div>
+                <div flex="20" class="value" style="text-align: right;">Percent</div>
+                <div flex="20" class="value" style="text-align: right;">Samples</div>
+              </md-list-item>
               <md-list-item class="md-list-item-narrow" ng-cloak ng-repeat="(name, p) in vm.uiAccountingBlockProperties" style="color: {{p.color}};">
                 <div flex="40" class="key">{{p.description}}</div>
                 <div flex="20" class="value" style="text-align: right;">{{p.value[0]}}</div>
@@ -322,7 +332,7 @@
       </div>
       <md-tabs md-dynamic-height md-border-bottom>
         <md-tab label="Frame Info">
-          <md-content class="md-padding">
+          <md-content>
             <md-list>
               <md-list-item class="md-list-item-narrow" ng-cloak ng-repeat="(name, p) in vm.uiFrameProperties" style="color: {{p.color}};">
                 <div flex="50" class="key">{{p.description}}</div>
@@ -332,8 +342,14 @@
           </md-content>
         </md-tab>
         <md-tab label="Frame Accounting">
-          <md-content class="md-padding">
+          <md-content>
             <md-list>
+              <md-list-item class="md-list-item-narrow md-list-header">
+                <div flex="40" class="key">Symbol</div>
+                <div flex="20" class="value" style="text-align: right;">Bits</div>
+                <div flex="20" class="value" style="text-align: right;">Percent</div>
+                <div flex="20" class="value" style="text-align: right;">Samples</div>
+              </md-list-item>
               <md-list-item class="md-list-item-narrow" ng-cloak ng-repeat="(name, p) in vm.uiAccountingFrameProperties" style="color: {{p.color}};">
                 <div flex="40" class="key">{{p.description}}</div>
                 <div flex="20" class="value" style="text-align: right;">{{p.value[0]}}</div>
@@ -344,7 +360,7 @@
           </md-content>
         </md-tab>
         <md-tab label="Frame Statistcs">
-          <md-content class="md-padding">
+          <md-content>
           <md-list>
             <md-list-item ng-cloak ng-repeat="(name, statistic) in vm.frameStatistics">
               <div class="key">{{statistic.description}}</div>
