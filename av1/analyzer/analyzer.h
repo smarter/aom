@@ -44,6 +44,7 @@ typedef struct AnalyzerMI {
   int8_t dering_gain;
   int8_t skip;
   uint8_t block_size;
+  int8_t segment_id;
 
   AnalyzerTransformType transform_type;
   AnalyzerTransformSize transform_size;
@@ -54,6 +55,8 @@ typedef struct AnalyzerMIBuffer {
   AnalyzerMI *buffer;
   uint32_t length;
 } AnalyzerMIBuffer;
+
+#define ANALYZER_MAX_SEGMENTS 8
 
 /**
  * Holds everything that is needed by the stream analyzer.
@@ -68,6 +71,9 @@ typedef struct AnalyzerData {
   uint32_t tile_cols_log2;
   uint32_t clpf_strength;
   uint32_t dering_level;
+  int16_t y_dequant[ANALYZER_MAX_SEGMENTS][2];
+  int16_t uv_dequant[ANALYZER_MAX_SEGMENTS][2];
+
 } AnalyzerData;
 
 AnalyzerError analyzer_record_predicted_block(struct AV1Decoder *pbi,

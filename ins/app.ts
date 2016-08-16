@@ -129,7 +129,11 @@ enum MIProperty {
   GET_MI_TRANSFORM_TYPE,
   GET_MI_TRANSFORM_SIZE,
   GET_MI_DERING_GAIN,
-  GET_MI_BITS
+  GET_MI_BITS,
+  GET_MI_AC_Y_DEQUANT,
+  GET_MI_DC_Y_DEQUANT,
+  GET_MI_AC_UV_DEQUANT,
+  GET_MI_DC_UV_DEQUANT
 }
 
 enum AccountingProperty {
@@ -1025,6 +1029,24 @@ class AppCtrl {
           return withMIUnderMouse(mi => {
             let error = self.getMIError(mi);
             return error ? error.toString() : "N/A";
+          });
+        }
+      },
+      yDequant: {
+        description: "Y Dequant",
+        get value() {
+          return withMIUnderMouse(mi => {
+            return self.aom.getMIProperty(MIProperty.GET_MI_DC_Y_DEQUANT, mi.x, mi.y) + "/" +
+                   self.aom.getMIProperty(MIProperty.GET_MI_AC_Y_DEQUANT, mi.x, mi.y);
+          });
+        }
+      },
+      uvDequant: {
+        description: "UV Dequant",
+        get value() {
+          return withMIUnderMouse(mi => {
+            return self.aom.getMIProperty(MIProperty.GET_MI_DC_UV_DEQUANT, mi.x, mi.y) + "/" +
+                   self.aom.getMIProperty(MIProperty.GET_MI_AC_UV_DEQUANT, mi.x, mi.y);
           });
         }
       }
