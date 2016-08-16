@@ -304,6 +304,7 @@ struct tokenize_b_args {
   TOKENEXTRA **tp;
 };
 
+#if !CONFIG_PVQ
 static void set_entropy_context_b(int plane, int block, int blk_row,
                                   int blk_col, BLOCK_SIZE plane_bsize,
                                   TX_SIZE tx_size, void *arg) {
@@ -447,6 +448,7 @@ static void tokenize_b(int plane, int block, int blk_row, int blk_col,
 
   av1_set_contexts(xd, pd, tx_size, c > 0, blk_col, blk_row);
 }
+#endif
 
 struct is_skippable_args {
   uint16_t *eobs;
