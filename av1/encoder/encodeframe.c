@@ -1116,7 +1116,6 @@ static void rd_pick_sb_modes(const AV1_COMP *const cpi, TileDataEnc *tile_data,
 
   for (i = 0; i < 2; ++i) pd[i].color_index_map = ctx->color_index_map[i];
 
-  ctx->is_coded = 0;
   ctx->skippable = 0;
   ctx->pred_pixel_ready = 0;
 
@@ -1384,14 +1383,14 @@ static void restore_context(MACROBLOCK *const x, int mi_row, int mi_col,
            (sizeof(ENTROPY_CONTEXT) * num_4x4_blocks_wide) >>
                xd->plane[p].subsampling_x);
     memcpy(xd->left_context[p] +
-               ((mi_row & MI_MASK) * 2 >> xd->plane[p].subsampling_y),
+               ((mi_row & MAX_MIB_MASK) * 2 >> xd->plane[p].subsampling_y),
            l + num_4x4_blocks_high * p,
            (sizeof(ENTROPY_CONTEXT) * num_4x4_blocks_high) >>
                xd->plane[p].subsampling_y);
   }
   memcpy(xd->above_seg_context + mi_col, sa,
          sizeof(*xd->above_seg_context) * mi_width);
-  memcpy(xd->left_seg_context + (mi_row & MI_MASK), sl,
+  memcpy(xd->left_seg_context + (mi_row & MAX_MIB_MASK), sl,
          sizeof(xd->left_seg_context[0]) * mi_height);
 }
 
@@ -1415,13 +1414,13 @@ static void save_context(MACROBLOCK *const x, int mi_row, int mi_col,
                xd->plane[p].subsampling_x);
     memcpy(l + num_4x4_blocks_high * p,
            xd->left_context[p] +
-               ((mi_row & MI_MASK) * 2 >> xd->plane[p].subsampling_y),
+               ((mi_row & MAX_MIB_MASK) * 2 >> xd->plane[p].subsampling_y),
            (sizeof(ENTROPY_CONTEXT) * num_4x4_blocks_high) >>
                xd->plane[p].subsampling_y);
   }
   memcpy(sa, xd->above_seg_context + mi_col,
          sizeof(*xd->above_seg_context) * mi_width);
-  memcpy(sl, xd->left_seg_context + (mi_row & MI_MASK),
+  memcpy(sl, xd->left_seg_context + (mi_row & MAX_MIB_MASK),
          sizeof(xd->left_seg_context[0]) * mi_height);
 }
 
@@ -1534,9 +1533,9 @@ static void set_partial_b64x64_partition(MODE_INFO *mi, int mis, int bh_in,
                                          MODE_INFO **mi_8x8) {
   int bh = bh_in;
   int r, c;
-  for (r = 0; r < MI_BLOCK_SIZE; r += bh) {
+  for (r = 0; r < MAX_MIB_SIZE; r += bh) {
     int bw = bw_in;
-    for (c = 0; c < MI_BLOCK_SIZE; c += bw) {
+    for (c = 0; c < MAX_MIB_SIZE; c += bw) {
       const int index = r * mis + c;
       mi_8x8[index] = mi + index;
       mi_8x8[index]->mbmi.sb_type = find_partition_size(
@@ -1565,10 +1564,10 @@ static void set_fixed_partitioning(AV1_COMP *cpi, const TileInfo *const tile,
   assert((row8x8_remaining > 0) && (col8x8_remaining > 0));
 
   // Apply the requested partition size to the SB64 if it is all "in image"
-  if ((col8x8_remaining >= MI_BLOCK_SIZE) &&
-      (row8x8_remaining >= MI_BLOCK_SIZE)) {
-    for (block_row = 0; block_row < MI_BLOCK_SIZE; block_row += bh) {
-      for (block_col = 0; block_col < MI_BLOCK_SIZE; block_col += bw) {
+  if ((col8x8_remaining >= MAX_MIB_SIZE) &&
+      (row8x8_remaining >= MAX_MIB_SIZE)) {
+    for (block_row = 0; block_row < MAX_MIB_SIZE; block_row += bh) {
+      for (block_col = 0; block_col < MAX_MIB_SIZE; block_col += bw) {
         int index = block_row * mis + block_col;
         mi_8x8[index] = mi_upper_left + index;
         mi_8x8[index]->mbmi.sb_type = bsize;
@@ -1894,8 +1893,8 @@ static void get_sb_partition_size_range(MACROBLOCKD *xd, MODE_INFO **mi_8x8,
                                         BLOCK_SIZE *min_block_size,
                                         BLOCK_SIZE *max_block_size,
                                         int bs_hist[BLOCK_SIZES]) {
-  int sb_width_in_blocks = MI_BLOCK_SIZE;
-  int sb_height_in_blocks = MI_BLOCK_SIZE;
+  int sb_width_in_blocks = MAX_MIB_SIZE;
+  int sb_height_in_blocks = MAX_MIB_SIZE;
   int i, j;
   int index = 0;
 
@@ -1952,13 +1951,13 @@ static void rd_auto_partition_range(AV1_COMP *cpi, const TileInfo *const tile,
     }
     // Find the min and max partition sizes used in the left SB64
     if (left_in_image) {
-      MODE_INFO **left_sb64_mi = &mi[-MI_BLOCK_SIZE];
+      MODE_INFO **left_sb64_mi = &mi[-MAX_MIB_SIZE];
       get_sb_partition_size_range(xd, left_sb64_mi, &min_size, &max_size,
                                   bs_hist);
     }
     // Find the min and max partition sizes used in the above SB64.
     if (above_in_image) {
-      MODE_INFO **above_sb64_mi = &mi[-xd->mi_stride * MI_BLOCK_SIZE];
+      MODE_INFO **above_sb64_mi = &mi[-xd->mi_stride * MAX_MIB_SIZE];
       get_sb_partition_size_range(xd, above_sb64_mi, &min_size, &max_size,
                                   bs_hist);
     }
@@ -2568,7 +2567,7 @@ static void encode_rd_sb_row(AV1_COMP *cpi, ThreadData *td,
 
   // Code each SB in the row
   for (mi_col = tile_info->mi_col_start; mi_col < tile_info->mi_col_end;
-       mi_col += MI_BLOCK_SIZE) {
+       mi_col += MAX_MIB_SIZE) {
     const struct segmentation *const seg = &cm->seg;
     int dummy_rate;
     int64_t dummy_dist;
@@ -2800,7 +2799,7 @@ void av1_encode_tile(AV1_COMP *cpi, ThreadData *td, int tile_row,
   #endif
 
   for (mi_row = tile_info->mi_row_start; mi_row < tile_info->mi_row_end;
-       mi_row += MI_BLOCK_SIZE) {
+       mi_row += MAX_MIB_SIZE) {
     encode_rd_sb_row(cpi, td, this_tile, mi_row, &tok);
   }
   cpi->tok_count[tile_row][tile_col] =
@@ -3127,7 +3126,6 @@ static void encode_superblock(const AV1_COMP *const cpi, ThreadData *td,
 
   memset(x->skip_txfm, 0, sizeof(x->skip_txfm));
 
-  ctx->is_coded = 1;
   x->use_lp32x32fdct = cpi->sf.use_lp32x32fdct;
 
   if (!is_inter_block(mbmi)) {

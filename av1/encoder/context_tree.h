@@ -46,7 +46,6 @@ typedef struct {
 #endif
   uint16_t *eobs_pbuf[MAX_MB_PLANE][3];
 
-  int is_coded;
   int num_4x4_blk;
   int skip;
   int pred_pixel_ready;
