@@ -13,6 +13,9 @@ function forEachValue(o: any, fn: (v: any) => void) {
     fn(o[n]);
   }
 }
+function fractionalBitsToString(v: number) {
+  return (v / 8).toLocaleString();
+}
 function toPercent(v: number) {
   return (v * 100).toFixed(2) + "%";
 }
@@ -1639,7 +1642,7 @@ class AppCtrl {
       this.uiAccountingFrameProperties[symbol.name] = {
         description: symbol.name,
         value: [
-          withCommas(symbol.bits),
+          fractionalBitsToString(symbol.bits),
           toPercent(symbol.bits / total),
           withCommas(symbol.samples),
           lastSymbol ? " " + (symbol.bits - lastSymbol.bits) : ""
@@ -1666,7 +1669,7 @@ class AppCtrl {
       this.uiAccountingBlockProperties[symbol.name] = {
         description: symbol.name,
         value: [
-          withCommas(symbol.bits),
+          fractionalBitsToString(symbol.bits),
           toPercent(symbol.bits / total),
           withCommas(symbol.samples)
         ]
