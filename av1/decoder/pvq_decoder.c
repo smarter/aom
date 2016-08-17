@@ -263,7 +263,7 @@ static void pvq_decode_partition(od_ec_dec *ec,
     if (qg == 0) *skip = OD_PVQ_SKIP_ZERO;
   }
 
-  k = od_pvq_compute_k(qcg, itheta, theta, *noref, n, beta, nodesync);
+  k = od_pvq_compute_k(qcg, itheta, theta, *noref, n, beta, nodesync, pli);
   if (k != 0) {
     /* when noref==0, y is actually size n-1 */
     od_decode_pvq_codeword(ec, &adapt->pvq.pvq_codeword_ctx, y, n - !*noref,

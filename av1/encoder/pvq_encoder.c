@@ -427,7 +427,7 @@ static int pvq_theta(od_coeff *out, const od_coeff *x0, const od_coeff *r0,
         double sin_prod;
         od_val32 qtheta;
         qtheta = od_pvq_compute_theta(j, ts);
-        k = od_pvq_compute_k(qcg, j, qtheta, 0, n, beta, robust || is_keyframe);
+        k = od_pvq_compute_k(qcg, j, qtheta, 0, n, beta, robust || is_keyframe, pli);
         sin_prod = od_pvq_sin(theta)*OD_TRIG_SCALE_1*od_pvq_sin(qtheta)*
          OD_TRIG_SCALE_1;
         /* PVQ search, using a gain of qcg*cg*sin(theta)*sin(qtheta) since
@@ -471,7 +471,7 @@ static int pvq_theta(od_coeff *out, const od_coeff *x0, const od_coeff *r0,
       double cost;
       od_val32 qcg;
       qcg = OD_SHL(i, OD_CGAIN_SHIFT);
-      k = od_pvq_compute_k(qcg, -1, -1, 1, n, beta, robust || is_keyframe);
+      k = od_pvq_compute_k(qcg, -1, -1, 1, n, beta, robust || is_keyframe, pli);
       cos_dist = pvq_search_rdo_double(x16, n, k, y_tmp,
        qcg*(double)cg*OD_CGAIN_SCALE_2, pvq_norm_lambda);
       /* See Jmspeex' Journal of Dubious Theoretical Results. */
