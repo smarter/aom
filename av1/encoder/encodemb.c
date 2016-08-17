@@ -1378,7 +1378,7 @@ int pvq_encode_helper(daala_enc_ctx *daala_enc,
   //int pvq_dc_quant = OD_MAXI(1,
   //  quant * daala_enc->state.pvq_qm_q4[plane][od_qm_get_index(tx_size, 0)] >> 4);
   int quant_shift = tx_size == TX_32X32 ? 1 : 0;
-  int pvq_dc_quant = OD_MAXI(1, quant[0] >> quant_shift);
+  int pvq_dc_quant = OD_MAXI(1, (quant[0] + quant_shift) >> quant_shift);
   int tell;
   int has_dc_skip = 1;
   int i;
