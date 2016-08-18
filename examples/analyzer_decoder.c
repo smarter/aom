@@ -222,6 +222,7 @@ typedef enum {
   GET_ACCOUNTING_SYMBOL_COUNT,
   GET_ACCOUNTING_SYMBOL_NAME,
   GET_ACCOUNTING_SYMBOL_BITS,
+  GET_ACCOUNTING_SYMBOL_SAMPLES,
   GET_ACCCOUNTING_SYMBOL_CONTEXT_X,
   GET_ACCCOUNTING_SYMBOL_CONTEXT_Y
 } GetAccountingProperty;
@@ -242,6 +243,10 @@ const int get_accounting_property(GetAccountingProperty v, int i) {
     case GET_ACCOUNTING_SYMBOL_BITS: {
       AOMAccountingSymbol *sym = &accounting->syms.syms[i];
       return sym->bits;
+    }
+    case GET_ACCOUNTING_SYMBOL_SAMPLES: {
+      AOMAccountingSymbol *sym = &accounting->syms.syms[i];
+      return sym->samples;
     }
     case GET_ACCCOUNTING_SYMBOL_CONTEXT_X: {
       AOMAccountingSymbol *sym = &accounting->syms.syms[i];

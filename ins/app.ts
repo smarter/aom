@@ -143,6 +143,7 @@ enum AccountingProperty {
   GET_ACCCOUNTING_SYMBOL_COUNT,
   GET_ACCCOUNTING_SYMBOL_NAME,
   GET_ACCCOUNTING_SYMBOL_BITS,
+  GET_ACCCOUNTING_SYMBOL_SAMPLES,
   GET_ACCCOUNTING_SYMBOL_CONTEXT_X,
   GET_ACCCOUNTING_SYMBOL_CONTEXT_Y
 }
@@ -1140,9 +1141,6 @@ class AppCtrl {
     this.loadOptions();
 
     this.installKeyboardShortcuts();
-
-    this.createUIFrameProperties();
-    this.createUIBlockProperties();
     this.createUIAccountingProperties();
     this.loadOptions();
 
@@ -1151,7 +1149,9 @@ class AppCtrl {
 
     this.loadDecoder("default", () => {
       this.aom = new AOM();
-      let file = "media/default.ivf";
+      this.createUIFrameProperties();
+      this.createUIBlockProperties();
+      let file = parameters.file || "media/default.ivf";
       this.openFile(file, () => {
         this.playFrameAsync(frames, () => {
           this.drawFrame();
@@ -1621,9 +1621,10 @@ class AppCtrl {
       }
       let name = nameMap[nameAddress];
       let bits = aom.getAccountingProperty(AccountingProperty.GET_ACCCOUNTING_SYMBOL_BITS, i);
+      let samples = aom.getAccountingProperty(AccountingProperty.GET_ACCCOUNTING_SYMBOL_SAMPLES, i);
       let x = aom.getAccountingProperty(AccountingProperty.GET_ACCCOUNTING_SYMBOL_CONTEXT_X, i);
       let y = aom.getAccountingProperty(AccountingProperty.GET_ACCCOUNTING_SYMBOL_CONTEXT_Y, i);
-      accounting.symbols.push(new AccountingSymbol(name, bits, 1, x, y));
+      accounting.symbols.push(new AccountingSymbol(name, bits, samples, x, y));
     }
     return accounting;
   }
