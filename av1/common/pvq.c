@@ -732,7 +732,7 @@ od_val32 od_pvq_compute_theta(int t, int max_theta) {
  */
 int od_pvq_compute_k(od_val32 qcg, int itheta, od_val32 theta, int noref, int n,
  double beta, int nodesync, int pli) {
-  double factor = pli ? 9.0/10.0 : 1;
+  double factor = pli ? 5.0/10.0 : 1;
   if (noref) {
     if (qcg == 0) return 0;
     if (n == 15 && qcg == OD_CGAIN_SCALE && beta > 1.25) return 1;
