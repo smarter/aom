@@ -8,6 +8,9 @@
  * Media Patent License 1.0 was not distributed with this source code in the
  * PATENTS file, you can obtain it at www.aomedia.org/license/patent.
  */
+
+/* clang-format off */
+
 #ifndef AV1_COMMON_ODINTRIN_H_
 #define AV1_COMMON_ODINTRIN_H_
 

@@ -1,5 +1,7 @@
 /* This file is auto-generated using "gen_laplace_tables 128 7" */
 
+/* clang-format off */
+
 #ifdef HAVE_CONFIG_H
 # include "config.h"
 #endif
