@@ -98,24 +98,24 @@ typedef struct PVQ_INFO {
   int max_theta[PVQ_MAX_PARTITIONS];
   int qg[PVQ_MAX_PARTITIONS];
   int k[PVQ_MAX_PARTITIONS];
-  od_coeff y[OD_BSIZE_MAX*OD_BSIZE_MAX];
+  od_coeff y[OD_BSIZE_MAX * OD_BSIZE_MAX];
   int nb_bands;
   int off[PVQ_MAX_PARTITIONS];
   int size[PVQ_MAX_PARTITIONS];
   int skip_rest;
   int skip_dir;
-  int bs;         // log of the block size minus two,
-                  // i.e. equivalent to aom's TX_SIZE
-  int ac_dc_coded;// block skip info, indicating whether DC/AC is coded.
-                  // bit0: DC coded, bit1 : AC coded (1 means coded)
+  int bs;           // log of the block size minus two,
+                    // i.e. equivalent to aom's TX_SIZE
+  int ac_dc_coded;  // block skip info, indicating whether DC/AC is coded.
+                    // bit0: DC coded, bit1 : AC coded (1 means coded)
   tran_low_t dq_dc_residue;
 } PVQ_INFO;
 
 typedef struct PVQ_QUEUE {
-  PVQ_INFO *buf; // buffer for pvq info, stored in encoding order
-  int curr_pos; // curr position to write PVQ_INFO
-  int buf_len;  // allocated buffer length
-  int last_pos; // last written position of PVQ_INFO in a tile
+  PVQ_INFO *buf;  // buffer for pvq info, stored in encoding order
+  int curr_pos;   // curr position to write PVQ_INFO
+  int buf_len;    // allocated buffer length
+  int last_pos;   // last written position of PVQ_INFO in a tile
 } PVQ_QUEUE;
 #endif
 

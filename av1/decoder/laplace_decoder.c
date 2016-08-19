@@ -30,9 +30,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 
 #include <stdio.h>
 
-#include "pvq_decoder.h"
 #include "aom_dsp/entdec.h"
 #include "av1/common/pvq.h"
+#include "pvq_decoder.h"
 
 #if OD_ACCOUNTING
 # define od_decode_pvq_split(ec, adapt, sum, ctx, str) od_decode_pvq_split_(ec, adapt, sum, ctx, str)

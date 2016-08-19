@@ -28,10 +28,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 # include "config.h"
 #endif
 
+#include "enums.h"
 #include "odintrin.h"
 #include "partition.h"
 #include "zigzag.h"
-#include "enums.h"
 
 OD_EXTERN const index_pair *OD_ZIGZAG4[4] = {
   OD_ZIGZAG4_DCT_DCT,

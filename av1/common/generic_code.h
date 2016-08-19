@@ -27,8 +27,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 #if !defined(_generic_code_H)
 # define _generic_code_H
 
-# include "aom_dsp/entenc.h"
 # include "aom_dsp/entdec.h"
+# include "aom_dsp/entenc.h"
 
 # define GENERIC_TABLES 12
 

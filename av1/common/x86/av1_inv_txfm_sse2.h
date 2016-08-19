@@ -121,10 +121,10 @@ static INLINE void load_buffer_8x16(const int16_t *input, __m128i *in) {
   }
 #else
 // Hack to avoid adding decoded signal to dest
-#define RECON_AND_STORE(dest, in_x)                  \
-  {                                                  \
-    in_x = _mm_packus_epi16(in_x, in_x);             \
-    _mm_storel_epi64((__m128i *)(dest), in_x);       \
+#define RECON_AND_STORE(dest, in_x)            \
+  {                                            \
+    in_x = _mm_packus_epi16(in_x, in_x);       \
+    _mm_storel_epi64((__m128i *)(dest), in_x); \
   }
 #endif
 

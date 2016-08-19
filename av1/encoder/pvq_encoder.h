@@ -26,10 +26,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 
 #if !defined(_pvq_encoder_H)
 # define _pvq_encoder_H (1)
-# include "av1/common/pvq.h"
 # include "aom_dsp/entenc.h"
-# include "av1/encoder/encint.h"
 # include "av1/common/blockd.h"
+# include "av1/common/pvq.h"
+# include "av1/encoder/encint.h"
 
 void od_encode_band_pvq_splits(od_ec_enc *ec, od_pvq_codeword_ctx *adapt,
  const int *y, int n, int k, int level);

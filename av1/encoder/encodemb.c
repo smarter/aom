@@ -18,10 +18,10 @@
 #include "aom_ports/mem.h"
 
 #include "av1/common/idct.h"
+#include "av1/common/partition.h"
 #include "av1/common/reconinter.h"
 #include "av1/common/reconintra.h"
 #include "av1/common/scan.h"
-#include "av1/common/partition.h"
 
 #include "av1/encoder/encodemb.h"
 #include "av1/encoder/hybrid_fwd_txfm.h"
@@ -391,8 +391,8 @@ void av1_xform_quant_fp(MACROBLOCK *x, int plane, int block, int blk_row,
   int skip = 1;
   PVQ_INFO *pvq_info;
 
-  (void) scan_order;
-  (void) qcoeff;
+  (void)scan_order;
+  (void)qcoeff;
   pvq_info = &x->pvq[block][plane];
   dst = &pd->dst.buf[4 * (blk_row * dst_stride + blk_col)];
   src = &p->src.buf[4 * (blk_row * src_stride + blk_col)];
@@ -518,14 +518,14 @@ void av1_xform_quant_fp(MACROBLOCK *x, int plane, int block, int blk_row,
       break;
     default: assert(0); break;
   }
-#else//#if !CONFIG_PVQ
+#else   //#if !CONFIG_PVQ
   switch (tx_size) {
     case TX_32X32:
       // NOTE: Using x->use_lp32x32fdct == 1 will makes enc and dec mismatched,
       // because decoder always uses x->use_lp32x32fdct == 0,
-      //forward transform of predicted image.
+      // forward transform of predicted image.
       fdct32x32(0, pred, ref_coeff, diff_stride);
-      //forward transform of original image.
+      // forward transform of original image.
       fdct32x32(0, src_int16, coeff, diff_stride);
       break;
     case TX_16X16:
@@ -551,22 +551,21 @@ void av1_xform_quant_fp(MACROBLOCK *x, int plane, int block, int blk_row,
   // PVQ for inter mode block
   if (!x->skip_block)
     skip = pvq_encode_helper(&x->daala_enc,
-                             coeff,          // target original vector
-                             ref_coeff,      // reference vector
-                             dqcoeff,        // de-quantized vector
-                             eob,            // End of Block marker
-                             pd->dequant,    // aom's quantizers
-                             plane,          // image plane
-                             tx_size,        // block size in log_2 - 2
+                             coeff,        // target original vector
+                             ref_coeff,    // reference vector
+                             dqcoeff,      // de-quantized vector
+                             eob,          // End of Block marker
+                             pd->dequant,  // aom's quantizers
+                             plane,        // image plane
+                             tx_size,      // block size in log_2 - 2
                              tx_type,
-                             &x->rate,       // rate measured
-                             pvq_info);      // PVQ info for a block
+                             &x->rate,   // rate measured
+                             pvq_info);  // PVQ info for a block
 
   x->pvq_skip[plane] = skip;
 
-  if (!skip)
-    mbmi->skip = 0;
-#endif//#if !CONFIG_PVQ
+  if (!skip) mbmi->skip = 0;
+#endif  //#if !CONFIG_PVQ
 }
 
 void av1_xform_quant_dc(MACROBLOCK *x, int plane, int block, int blk_row,
@@ -729,8 +728,8 @@ void av1_xform_quant(MACROBLOCK *x, int plane, int block, int blk_row,
   int skip = 1;
   PVQ_INFO *pvq_info;
 
-  (void) scan_order;
-  (void) qcoeff;
+  (void)scan_order;
+  (void)qcoeff;
   pvq_info = &x->pvq[block][plane];
   dst = &pd->dst.buf[4 * (blk_row * dst_stride + blk_col)];
   src = &p->src.buf[4 * (blk_row * src_stride + blk_col)];
@@ -850,7 +849,7 @@ void av1_xform_quant(MACROBLOCK *x, int plane, int block, int blk_row,
       break;
     default: assert(0); break;
   }
-#else//#if !CONFIG_PVQ
+#else   //#if !CONFIG_PVQ
   fwd_txfm_param.rd_transform = 0;
 
   fwd_txfm(src_int16, coeff, diff_stride, &fwd_txfm_param);
@@ -859,22 +858,21 @@ void av1_xform_quant(MACROBLOCK *x, int plane, int block, int blk_row,
   // PVQ for inter mode block
   if (!x->skip_block)
     skip = pvq_encode_helper(&x->daala_enc,
-                             coeff,          // target original vector
-                             ref_coeff,      // reference vector
-                             dqcoeff,        // de-quantized vector
-                             eob,            // End of Block marker
-                             pd->dequant,    // aom's quantizers
-                             plane,          // image plane
-                             tx_size,        // block size in log_2 - 2
+                             coeff,        // target original vector
+                             ref_coeff,    // reference vector
+                             dqcoeff,      // de-quantized vector
+                             eob,          // End of Block marker
+                             pd->dequant,  // aom's quantizers
+                             plane,        // image plane
+                             tx_size,      // block size in log_2 - 2
                              tx_type,
-                             &x->rate,       // rate measured
-                             pvq_info);      // PVQ info for a block
+                             &x->rate,   // rate measured
+                             pvq_info);  // PVQ info for a block
 
   x->pvq_skip[plane] = skip;
 
-  if (!skip)
-    mbmi->skip = 0;
-#endif//#if !CONFIG_PVQ
+  if (!skip) mbmi->skip = 0;
+#endif  //#if !CONFIG_PVQ
 }
 
 static void encode_block(int plane, int block, int blk_row, int blk_col,
@@ -958,8 +956,7 @@ static void encode_block(int plane, int block, int blk_row, int blk_col,
 #else
   *a = *l = pvq_info->ac_dc_coded > 0;
 
-  if (pvq_info->ac_dc_coded)
-    *(args->skip) = 0;
+  if (pvq_info->ac_dc_coded) *(args->skip) = 0;
 
   if (!pvq_info->ac_dc_coded) return;
 
@@ -970,9 +967,9 @@ static void encode_block(int plane, int block, int blk_row, int blk_col,
   // but av1_inv_txfm_add_*x*() also does addition of predicted image to
   // inverse transformed image,
   // pass blank dummy image to av1_inv_txfm_add_*x*(), i.e. set dst as zeros
-    for (j = 0; j < tx_blk_size; j++)
-      for (i = 0; i < tx_blk_size; i++)
-        dst[j * pd->dst.stride + i] -= dst[j *  pd->dst.stride + i];
+  for (j = 0; j < tx_blk_size; j++)
+    for (i = 0; i < tx_blk_size; i++)
+      dst[j * pd->dst.stride + i] -= dst[j * pd->dst.stride + i];
 #endif
 
 #if CONFIG_AOM_HIGHBITDEPTH
@@ -1133,7 +1130,7 @@ void av1_encode_block_intra(int plane, int block, int blk_row, int blk_col,
   src_diff = &p->src_diff[4 * (blk_row * diff_stride + blk_col)];
 
 #else
-   tran_low_t *ref_coeff = BLOCK_OFFSET(pd->pvq_ref_coeff, block);
+  tran_low_t *ref_coeff = BLOCK_OFFSET(pd->pvq_ref_coeff, block);
   int16_t *src_int16;
   int tx_blk_size;
   int i, j;
@@ -1141,8 +1138,8 @@ void av1_encode_block_intra(int plane, int block, int blk_row, int blk_col,
   int skip = 1;
   PVQ_INFO *pvq_info = &x->pvq[block][plane];
 
-  (void) scan_order;
-  (void) qcoeff;
+  (void)scan_order;
+  (void)qcoeff;
   src_int16 = &p->src_int16[4 * (blk_row * diff_stride + blk_col)];
 #endif
 
@@ -1285,7 +1282,7 @@ void av1_encode_block_intra(int plane, int block, int blk_row, int blk_col,
       break;
     default: assert(0); break;
   }
-#else//#if !CONFIG_PVQ
+#else   //#if !CONFIG_PVQ
   // transform block size in pixels
   tx_blk_size = 1 << (tx_size + 2);
 
@@ -1302,25 +1299,23 @@ void av1_encode_block_intra(int plane, int block, int blk_row, int blk_col,
   fwd_txfm(src_int16, coeff, diff_stride, &fwd_txfm_param);
   fwd_txfm(pred, ref_coeff, diff_stride, &fwd_txfm_param);
 
-
   // PVQ for intra mode block
   if (!x->skip_block)
     skip = pvq_encode_helper(&x->daala_enc,
-                             coeff,          // target original vector
-                             ref_coeff,      // reference vector
-                             dqcoeff,        // de-quantized vector
-                             eob,            // End of Block marker
-                             pd->dequant,    // aom's quantizers
-                             plane,          // image plane
-                             tx_size,        // block size in log_2 - 2
+                             coeff,        // target original vector
+                             ref_coeff,    // reference vector
+                             dqcoeff,      // de-quantized vector
+                             eob,          // End of Block marker
+                             pd->dequant,  // aom's quantizers
+                             plane,        // image plane
+                             tx_size,      // block size in log_2 - 2
                              tx_type,
-                             &x->rate,       // rate measured
-                             pvq_info);       // PVQ info for a block
+                             &x->rate,   // rate measured
+                             pvq_info);  // PVQ info for a block
 
   x->pvq_skip[plane] = skip;
 
-  if (!skip)
-    mbmi->skip = 0;
+  if (!skip) mbmi->skip = 0;
 
   // Since av1 does not have separate function which does inverse transform
   // but av1_inv_txfm_add_*x*() also does addition of predicted image to
@@ -1334,7 +1329,7 @@ void av1_encode_block_intra(int plane, int block, int blk_row, int blk_col,
 
     switch (tx_size) {
       case TX_32X32:
-       av1_inv_txfm_add_32x32(dqcoeff, dst, dst_stride, *eob, tx_type);
+        av1_inv_txfm_add_32x32(dqcoeff, dst, dst_stride, *eob, tx_type);
         break;
       case TX_16X16:
         av1_inv_txfm_add_16x16(dqcoeff, dst, dst_stride, *eob, tx_type);
@@ -1347,17 +1342,17 @@ void av1_encode_block_intra(int plane, int block, int blk_row, int blk_col,
         // which is significant (not just an optimization) for the lossless
         // case.
         av1_inv_txfm_add_4x4(dqcoeff, dst, dst_stride, *eob, tx_type,
-                              xd->lossless[seg_id]);
+                             xd->lossless[seg_id]);
         break;
       default: assert(0); break;
     }
   }
-#endif//#if !CONFIG_PVQ
+#endif  //#if !CONFIG_PVQ
 
 #if !CONFIG_PVQ
   if (*eob) *(args->skip) = 0;
 #else
-  // Note : *(args->skip) == mbmi->skip
+// Note : *(args->skip) == mbmi->skip
 #endif
 }
 
@@ -1370,16 +1365,17 @@ void av1_encode_intra_block_plane(MACROBLOCK *x, BLOCK_SIZE bsize, int plane) {
 }
 
 #if CONFIG_PVQ
-int pvq_encode_helper(daala_enc_ctx *daala_enc,
-    tran_low_t *const coeff, tran_low_t *ref_coeff,
-    tran_low_t *const dqcoeff,
-    uint16_t *eob, const int16_t *quant,
-    int plane, int tx_size, TX_TYPE tx_type, int *rate, PVQ_INFO *pvq_info) {
+int pvq_encode_helper(daala_enc_ctx *daala_enc, tran_low_t *const coeff,
+                      tran_low_t *ref_coeff, tran_low_t *const dqcoeff,
+                      uint16_t *eob, const int16_t *quant, int plane,
+                      int tx_size, TX_TYPE tx_type, int *rate,
+                      PVQ_INFO *pvq_info) {
   const int tx_blk_size = 1 << (tx_size + 2);
   int skip;
   // TODO: Enable this later, if pvq_qm_q4 is available in AOM.
-  //int pvq_dc_quant = OD_MAXI(1,
-  //  quant * daala_enc->state.pvq_qm_q4[plane][od_qm_get_index(tx_size, 0)] >> 4);
+  // int pvq_dc_quant = OD_MAXI(1,
+  //  quant * daala_enc->state.pvq_qm_q4[plane][od_qm_get_index(tx_size, 0)] >>
+  //  4);
   int quant_shift = tx_size == TX_32X32 ? 1 : 0;
   int pvq_dc_quant = OD_MAXI(1, quant[0] >> quant_shift);
   int tell;
@@ -1400,43 +1396,42 @@ int pvq_encode_helper(daala_enc_ctx *daala_enc,
   tell = od_ec_enc_tell(&daala_enc->ec);
 
   // Change coefficient ordering for pvq encoding.
-  od_raster_to_coding_order(coeff_pvq, tx_blk_size, tx_type, coeff, tx_blk_size);
-  od_raster_to_coding_order(ref_coeff_pvq, tx_blk_size, tx_type, ref_coeff, tx_blk_size);
+  od_raster_to_coding_order(coeff_pvq, tx_blk_size, tx_type, coeff,
+                            tx_blk_size);
+  od_raster_to_coding_order(ref_coeff_pvq, tx_blk_size, tx_type, ref_coeff,
+                            tx_blk_size);
 
-  //copy int16 inputs to int32
+  // copy int16 inputs to int32
   for (i = 0; i < tx_blk_size * tx_blk_size; i++) {
     ref_int32[i] = ref_coeff_pvq[i];
     in_int32[i] = coeff_pvq[i];
   }
 
-  if (abs(in_int32[0] - ref_int32[0]) < pvq_dc_quant * 141/256) { /* 0.55 */
+  if (abs(in_int32[0] - ref_int32[0]) < pvq_dc_quant * 141 / 256) { /* 0.55 */
     out_int32[0] = 0;
-  }
-  else {
+  } else {
     out_int32[0] = OD_DIV_R0(in_int32[0] - ref_int32[0], pvq_dc_quant);
   }
 
-  skip = od_pvq_encode(daala_enc, ref_int32, in_int32, out_int32,
-          (int)quant[0] >> quant_shift,//scale/quantizer
-          (int)quant[1] >> quant_shift,//scale/quantizer
-          plane, tx_size,
-          OD_PVQ_BETA[0/*use_activity_masking*/][plane][tx_size],
-          1,//OD_ROBUST_STREAM
-          0, //is_keyframe,
-          0, 0, 0, //q_scaling, bx, by,
-          daala_enc->state.qm + off, daala_enc->state.qm_inv + off, pvq_info);
+  skip = od_pvq_encode(
+      daala_enc, ref_int32, in_int32, out_int32,
+      (int)quant[0] >> quant_shift,  // scale/quantizer
+      (int)quant[1] >> quant_shift,  // scale/quantizer
+      plane, tx_size, OD_PVQ_BETA[0 /*use_activity_masking*/][plane][tx_size],
+      1,        // OD_ROBUST_STREAM
+      0,        // is_keyframe,
+      0, 0, 0,  // q_scaling, bx, by,
+      daala_enc->state.qm + off, daala_enc->state.qm_inv + off, pvq_info);
 
-  if (skip && pvq_info)
-    assert(pvq_info->ac_dc_coded == 0);
+  if (skip && pvq_info) assert(pvq_info->ac_dc_coded == 0);
 
-  if (!skip && pvq_info)
-    assert(pvq_info->ac_dc_coded > 0);
+  if (!skip && pvq_info) assert(pvq_info->ac_dc_coded > 0);
 
   // Encode residue of DC coeff, if required.
   if (!has_dc_skip || out_int32[0]) {
     generic_encode(&daala_enc->ec, &daala_enc->state.adapt.model_dc[plane],
-     abs(out_int32[0]) - has_dc_skip, -1,
-     &daala_enc->state.adapt.ex_dc[plane][tx_size][0], 2);
+                   abs(out_int32[0]) - has_dc_skip, -1,
+                   &daala_enc->state.adapt.ex_dc[plane][tx_size][0], 2);
   }
   if (out_int32[0]) {
     od_ec_enc_bits(&daala_enc->ec, out_int32[0] < 0, 1);
@@ -1445,22 +1440,21 @@ int pvq_encode_helper(daala_enc_ctx *daala_enc,
 
   // need to save quantized residue of DC coeff
   // so that final pvq bitstream writing can know whether DC is coded.
-  if (pvq_info)
-    pvq_info->dq_dc_residue = out_int32[0];
+  if (pvq_info) pvq_info->dq_dc_residue = out_int32[0];
 
   out_int32[0] = out_int32[0] * pvq_dc_quant;
   out_int32[0] += ref_int32[0];
 
-  //copy int32 result back to int16
-  for (i = 0; i < tx_blk_size * tx_blk_size; i++)
-    dqcoeff_pvq[i] = out_int32[i];
+  // copy int32 result back to int16
+  for (i = 0; i < tx_blk_size * tx_blk_size; i++) dqcoeff_pvq[i] = out_int32[i];
 
   // Safely initialize dqcoeff since some coeffs (band size > 128 coeffs)
   // are skipped by PVQ.
-  //od_init_skipped_coeffs(dqcoeff, ref_coeff, 0, 0, tx_blk_size, tx_blk_size);
+  // od_init_skipped_coeffs(dqcoeff, ref_coeff, 0, 0, tx_blk_size, tx_blk_size);
 
   // Back to original coefficient order
-  od_coding_order_to_raster(dqcoeff, tx_blk_size, tx_type, dqcoeff_pvq, tx_blk_size);
+  od_coding_order_to_raster(dqcoeff, tx_blk_size, tx_type, dqcoeff_pvq,
+                            tx_blk_size);
 
   *eob = tx_blk_size * tx_blk_size;
 
@@ -1470,17 +1464,9 @@ int pvq_encode_helper(daala_enc_ctx *daala_enc,
   return skip;
 }
 
-void store_pvq_enc_info(PVQ_INFO *pvq_info,
-                        int *qg,
-                        int *theta,
-                        int *max_theta,
-                        int *k,
-                        od_coeff *y,
-                        int nb_bands,
-                        const int *off,
-                        int *size,
-                        int skip_rest,
-                        int skip_dir,
+void store_pvq_enc_info(PVQ_INFO *pvq_info, int *qg, int *theta, int *max_theta,
+                        int *k, od_coeff *y, int nb_bands, const int *off,
+                        int *size, int skip_rest, int skip_dir,
                         int bs) {  // block size in log_2 -2
   int i;
   const int tx_blk_size = 1 << (bs + 2);

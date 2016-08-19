@@ -28,16 +28,16 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 # include "config.h"
 #endif
 
-#include <stdlib.h>
-#include <stdio.h>
-#include "pvq_decoder.h"
+#include "./aom_config.h"
+#include "aom_dsp/entcode.h"
+#include "aom_dsp/entdec.h"
+#include "av1/common/odintrin.h"
+#include "av1/common/partition.h"
 #include "av1/common/state.h"
 #include "av1/decoder/decint.h"
-#include "aom_dsp/entdec.h"
-#include "aom_dsp/entcode.h"
-#include "av1/common/partition.h"
-#include "av1/common/odintrin.h"
-#include "./aom_config.h"
+#include "pvq_decoder.h"
+#include <stdio.h>
+#include <stdlib.h>
 
 static void od_decode_pvq_codeword(od_ec_dec *ec, od_pvq_codeword_ctx *ctx,
  od_coeff *y, int n, int k) {

@@ -2755,10 +2755,10 @@ void av1_encode_tile(AV1_COMP *cpi, ThreadData *td, int tile_row,
 #if CONFIG_PVQ
   td->mb.pvq_q = &this_tile->pvq_q;
 
-  td->mb.daala_enc.state.qm =
-      (int16_t *)aom_calloc(OD_QM_BUFFER_SIZE, sizeof(td->mb.daala_enc.state.qm[0]));
-  td->mb.daala_enc.state.qm_inv =
-      (int16_t *)aom_calloc(OD_QM_BUFFER_SIZE, sizeof(td->mb.daala_enc.state.qm_inv[0]));
+  td->mb.daala_enc.state.qm = (int16_t *)aom_calloc(
+      OD_QM_BUFFER_SIZE, sizeof(td->mb.daala_enc.state.qm[0]));
+  td->mb.daala_enc.state.qm_inv = (int16_t *)aom_calloc(
+      OD_QM_BUFFER_SIZE, sizeof(td->mb.daala_enc.state.qm_inv[0]));
   td->mb.daala_enc.qm = OD_FLAT_QM;  // Hard coded. Enc/dec required to sync.
   {
     // FIXME: Multiple segments support
@@ -2768,13 +2768,15 @@ void av1_encode_tile(AV1_COMP *cpi, ThreadData *td, int tile_row,
     int64_t q_ac = av1_ac_quant(qindex, 0, cpi->common.bit_depth);
     int64_t q_dc = av1_dc_quant(qindex, 0, cpi->common.bit_depth);
     /* td->mb.daala_enc.pvq_norm_lambda = OD_PVQ_LAMBDA; */
-    td->mb.daala_enc.pvq_norm_lambda = (double)rdmult * (64 / 16) / (q_ac*q_ac*(1 << RDDIV_BITS));
-    td->mb.daala_enc.pvq_norm_lambda_dc = (double)rdmult * (64 / 16) / (q_dc*q_dc*(1 << RDDIV_BITS));
-    //printf("%f\n", td->mb.daala_enc.pvq_norm_lambda);
+    td->mb.daala_enc.pvq_norm_lambda =
+        (double)rdmult * (64 / 16) / (q_ac * q_ac * (1 << RDDIV_BITS));
+    td->mb.daala_enc.pvq_norm_lambda_dc =
+        (double)rdmult * (64 / 16) / (q_dc * q_dc * (1 << RDDIV_BITS));
+    // printf("%f\n", td->mb.daala_enc.pvq_norm_lambda);
   }
 
   od_init_qm(td->mb.daala_enc.state.qm, td->mb.daala_enc.state.qm_inv,
-      td->mb.daala_enc.qm == OD_HVS_QM ? OD_QM8_Q4_HVS : OD_QM8_Q4_FLAT);
+             td->mb.daala_enc.qm == OD_HVS_QM ? OD_QM8_Q4_HVS : OD_QM8_Q4_FLAT);
   od_ec_enc_init(&td->mb.daala_enc.ec, 65025);
 
   adapt = &td->mb.daala_enc.state.adapt;

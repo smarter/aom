@@ -498,7 +498,6 @@ int av1_has_high_freq_in_plane(MACROBLOCK *x, BLOCK_SIZE bsize, int plane) {
 
 #if CONFIG_PVQ
 void add_pvq_block(MACROBLOCK *const x, PVQ_INFO *pvq) {
-
   PVQ_QUEUE *q = x->pvq_q;
   if (q->curr_pos >= q->buf_len) {
     q->buf_len *= 2;
@@ -513,17 +512,17 @@ void add_pvq_block(MACROBLOCK *const x, PVQ_INFO *pvq) {
 //        which, later at packing stage,
 //        is written to bitstream via write_modes_b().
 static void tokenize_pvq(int plane, int block, int blk_row, int blk_col,
-                       BLOCK_SIZE plane_bsize, TX_SIZE tx_size, void *arg) {
+                         BLOCK_SIZE plane_bsize, TX_SIZE tx_size, void *arg) {
   struct tokenize_b_args *const args = arg;
   ThreadData *const td = args->td;
   MACROBLOCK *const x = &td->mb;
   PVQ_INFO *pvq_info;
 
-  (void) block;
-  (void) blk_row;
-  (void) blk_col;
-  (void) plane_bsize;
-  (void) tx_size;
+  (void)block;
+  (void)blk_row;
+  (void)blk_col;
+  (void)plane_bsize;
+  (void)tx_size;
 
   pvq_info = &x->pvq[block][plane];
   add_pvq_block(x, pvq_info);
@@ -568,7 +567,7 @@ void av1_tokenize_sb(const AV1_COMP *cpi, ThreadData *td, TOKENEXTRA **t,
 
     for (plane = 0; plane < MAX_MB_PLANE; ++plane)
       av1_foreach_transformed_block_in_plane(xd, bsize, plane, tokenize_pvq,
-                                              &arg);
+                                             &arg);
   }
 #endif
 }

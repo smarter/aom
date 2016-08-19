@@ -33,8 +33,9 @@ static void alloc_mode_context(AV1_COMMON *cm, int num_4x4_blk,
       CHECK_MEM_ERROR(cm, ctx->dqcoeff[i][k],
                       aom_memalign(32, num_pix * sizeof(*ctx->dqcoeff[i][k])));
 #if CONFIG_PVQ
-      CHECK_MEM_ERROR(cm, ctx->pvq_ref_coeff[i][k],
-                      aom_memalign(32, num_pix * sizeof(*ctx->pvq_ref_coeff[i][k])));
+      CHECK_MEM_ERROR(
+          cm, ctx->pvq_ref_coeff[i][k],
+          aom_memalign(32, num_pix * sizeof(*ctx->pvq_ref_coeff[i][k])));
 #endif
       CHECK_MEM_ERROR(cm, ctx->eobs[i][k],
                       aom_memalign(32, num_blk * sizeof(*ctx->eobs[i][k])));

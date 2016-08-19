@@ -1,5 +1,5 @@
-#include "av1/common/odintrin.h"
 #include "av1/common/state.h"
+#include "av1/common/odintrin.h"
 
 void od_adapt_ctx_reset(od_adapt_ctx *adapt, int is_keyframe) {
   int i;
@@ -21,21 +21,21 @@ void od_adapt_ctx_reset(od_adapt_ctx *adapt, int is_keyframe) {
   }
 }
 
-void od_init_skipped_coeffs(int16_t *d, int16_t *pred, int is_keyframe,
- int bo, int n, int w) {
+void od_init_skipped_coeffs(int16_t *d, int16_t *pred, int is_keyframe, int bo,
+                            int n, int w) {
   int i;
   int j;
   if (is_keyframe) {
     for (i = 0; i < n; i++) {
       for (j = 0; j < n; j++) {
         /* skip DC */
-        if (i || j) d[bo + i*w + j] = 0;
+        if (i || j) d[bo + i * w + j] = 0;
       }
     }
   } else {
     for (i = 0; i < n; i++) {
       for (j = 0; j < n; j++) {
-        d[bo + i*w + j] = pred[i*n + j];
+        d[bo + i * w + j] = pred[i * n + j];
       }
     }
   }

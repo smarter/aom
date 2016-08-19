@@ -30,10 +30,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 typedef struct od_state          od_state;
 typedef struct od_adapt_ctx      od_adapt_ctx;
 
-# include <stdio.h>
+# include "generic_code.h"
 # include "odintrin.h"
 # include "pvq.h"
-# include "generic_code.h"
+# include <stdio.h>
 
 /*Adaptation speed of scalar Laplace encoding.*/
 # define OD_SCALAR_ADAPT_SPEED (4)

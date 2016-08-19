@@ -28,17 +28,17 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 # include "config.h"
 #endif
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <math.h>
-#include "av1/common/odintrin.h"
-#include "av1/common/state.h"
-#include "aom_dsp/entenc.h"
 #include "aom_dsp/entcode.h"
-#include "pvq_encoder.h"
-#include "av1/common/partition.h"
+#include "aom_dsp/entenc.h"
 #include "av1/common/blockd.h"
+#include "av1/common/odintrin.h"
+#include "av1/common/partition.h"
+#include "av1/common/state.h"
 #include "av1/encoder/encodemb.h"
+#include "pvq_encoder.h"
+#include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 #define OD_PVQ_RATE_APPROX (0)
 /*Shift to ensure that the upper bound (i.e. for the max blocksize) of the

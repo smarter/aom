@@ -295,7 +295,7 @@ void av1_initialize_rd_consts(AV1_COMP *cpi) {
                           ? 0
                           : 1;
   // for DEBUG
-  //x->select_tx_size = 0;
+  // x->select_tx_size = 0;
   set_block_thresholds(cm, rd);
 
   fill_token_costs(x->token_costs, cm->fc->coef_probs);

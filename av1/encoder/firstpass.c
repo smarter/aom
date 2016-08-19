@@ -525,28 +525,28 @@ void av1_first_pass(AV1_COMP *cpi, const struct lookahead_entry *source) {
 #if CONFIG_PVQ
   // For pass 1 of 2-pass encoding, init here for PVQ for now.
   {
-  od_adapt_ctx *adapt;
+    od_adapt_ctx *adapt;
 
-  pvq_q.buf_len = 5000;
-  pvq_q.buf = aom_calloc(pvq_q.buf_len, sizeof(PVQ_INFO));
-  pvq_q.curr_pos = 0;
+    pvq_q.buf_len = 5000;
+    pvq_q.buf = aom_calloc(pvq_q.buf_len, sizeof(PVQ_INFO));
+    pvq_q.curr_pos = 0;
 
-  x->pvq_q = &pvq_q;
+    x->pvq_q = &pvq_q;
 
-  x->daala_enc.state.qm =
-      (int16_t *)aom_calloc(OD_QM_BUFFER_SIZE, sizeof(x->daala_enc.state.qm[0]));
-  x->daala_enc.state.qm_inv =
-      (int16_t *)aom_calloc(OD_QM_BUFFER_SIZE, sizeof(x->daala_enc.state.qm_inv[0]));
-  x->daala_enc.qm = OD_FLAT_QM;  // Hard coded. Enc/dec required to sync.
-  x->daala_enc.pvq_norm_lambda = OD_PVQ_LAMBDA;
+    x->daala_enc.state.qm = (int16_t *)aom_calloc(
+        OD_QM_BUFFER_SIZE, sizeof(x->daala_enc.state.qm[0]));
+    x->daala_enc.state.qm_inv = (int16_t *)aom_calloc(
+        OD_QM_BUFFER_SIZE, sizeof(x->daala_enc.state.qm_inv[0]));
+    x->daala_enc.qm = OD_FLAT_QM;  // Hard coded. Enc/dec required to sync.
+    x->daala_enc.pvq_norm_lambda = OD_PVQ_LAMBDA;
 
-  od_init_qm(x->daala_enc.state.qm, x->daala_enc.state.qm_inv,
-      x->daala_enc.qm == OD_HVS_QM ? OD_QM8_Q4_HVS : OD_QM8_Q4_FLAT);
-  od_ec_enc_init(&x->daala_enc.ec, 65025);
+    od_init_qm(x->daala_enc.state.qm, x->daala_enc.state.qm_inv,
+               x->daala_enc.qm == OD_HVS_QM ? OD_QM8_Q4_HVS : OD_QM8_Q4_FLAT);
+    od_ec_enc_init(&x->daala_enc.ec, 65025);
 
-  adapt = &x->daala_enc.state.adapt;
-  od_ec_enc_reset(&x->daala_enc.ec);
-  od_adapt_ctx_reset(adapt, 0);
+    adapt = &x->daala_enc.state.adapt;
+    od_ec_enc_reset(&x->daala_enc.ec);
+    od_adapt_ctx_reset(adapt, 0);
   }
 #endif
 

@@ -31,9 +31,9 @@ typedef struct daala_enc_ctx od_enc_ctx;
 typedef struct od_params_ctx od_params_ctx;
 typedef struct od_rollback_buffer od_rollback_buffer;
 
+# include "aom_dsp/entenc.h"
 # include "av1/common/odintrin.h"
 # include "av1/common/state.h"
-# include "aom_dsp/entenc.h"
 
 struct daala_enc_ctx{
   od_state state;

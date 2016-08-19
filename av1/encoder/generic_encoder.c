@@ -30,9 +30,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 
 #include <stdio.h>
 
-#include "av1/common/generic_code.h"
-#include "aom_dsp/entenc.h"
 #include "aom_dsp/entdec.h"
+#include "aom_dsp/entenc.h"
+#include "av1/common/generic_code.h"
 #include "av1/common/odintrin.h"
 #include "pvq_encoder.h"
 

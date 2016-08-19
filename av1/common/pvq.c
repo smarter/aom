@@ -29,11 +29,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 #endif
 
 #include "odintrin.h"
-#include "pvq.h"
 #include "partition.h"
-#include <stdlib.h>
-#include <stdio.h>
+#include "pvq.h"
 #include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 /*These tables were generated using compute_basis.c. If OD_FILT_SIZE is
