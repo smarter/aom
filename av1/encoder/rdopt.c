@@ -2651,6 +2651,7 @@ static int64_t rd_pick_best_sub8x8_mode(
 #if CONFIG_PVQ
       od_rollback_buffer idx_buf, post_buf;
       od_encode_checkpoint(&x->daala_enc, &idx_buf);
+      od_encode_checkpoint(&x->daala_enc, &post_buf);
 #endif
 
       for (ref = 0; ref < 1 + has_second_rf; ++ref) {
