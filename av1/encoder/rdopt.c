@@ -1010,7 +1010,9 @@ static int64_t rd_pick_intra4x4block(const AV1_COMP *const cpi, MACROBLOCK *x,
 #endif
 
 #if CONFIG_PVQ
-  od_rollback_buffer buf;
+  od_rollback_buffer pre_buf, post_buf;
+  od_encode_checkpoint(&x->daala_enc, &pre_buf);
+  od_encode_checkpoint(&x->daala_enc, &post_buf);
 #endif
 
   memcpy(ta, a, num_4x4_blocks_wide * sizeof(a[0]));
@@ -1117,7 +1119,7 @@ static int64_t rd_pick_intra4x4block(const AV1_COMP *const cpi, MACROBLOCK *x,
 #endif  // CONFIG_AOM_HIGHBITDEPTH
 
 #if CONFIG_PVQ
-  od_encode_checkpoint(&x->daala_enc, &buf);
+  od_encode_checkpoint(&x->daala_enc, &pre_buf);
 #endif
 
   for (mode = DC_PRED; mode <= TM_PRED; ++mode) {
@@ -1257,80 +1259,23 @@ static int64_t rd_pick_intra4x4block(const AV1_COMP *const cpi, MACROBLOCK *x,
       *best_mode = mode;
       memcpy(a, tempa, num_4x4_blocks_wide * sizeof(tempa[0]));
       memcpy(l, templ, num_4x4_blocks_high * sizeof(templ[0]));
+#if CONFIG_PVQ
+      od_encode_checkpoint(&x->daala_enc, &post_buf);
+#endif
       for (idy = 0; idy < num_4x4_blocks_high * 4; ++idy)
         memcpy(best_dst + idy * 8, dst_init + idy * dst_stride,
                num_4x4_blocks_wide * 4);
     }
   next : {}
 #if CONFIG_PVQ
-    od_encode_rollback(&x->daala_enc, &buf);
+    od_encode_rollback(&x->daala_enc, &pre_buf);
 #endif
   }  // for (mode =
 
   if (best_rd >= rd_thresh) return best_rd;
 
 #if CONFIG_PVQ
-  // Run the 4x4 intra for the chosen direction to update pvq properly
-  for (idy = 0; idy < num_4x4_blocks_high; ++idy) {
-    for (idx = 0; idx < num_4x4_blocks_wide; ++idx) {
-      const int block = (row + idy) * 2 + (col + idx);
-      const uint8_t *const src = &src_init[idx * 4 + idy * 4 * src_stride];
-      uint8_t *const dst = &dst_init[idx * 4 + idy * 4 * dst_stride];
-      tran_low_t *const coeff = BLOCK_OFFSET(x->plane[0].coeff, block);
-      const int diff_stride = 8;
-      tran_low_t *const dqcoeff = BLOCK_OFFSET(pd->dqcoeff, block);
-      tran_low_t *ref_coeff = BLOCK_OFFSET(pd->pvq_ref_coeff, block);
-      int16_t *pred = &pd->pred[4 * (row * diff_stride + col)];
-      int16_t *src_int16 = &p->src_int16[4 * (row * diff_stride + col)];
-      int i, j, tx_blk_size;
-      TX_TYPE tx_type = get_tx_type(PLANE_TYPE_Y, xd, block);
-      int rate_pvq;
-      int skip;
-      int lossless = xd->lossless[xd->mi[0]->mbmi.segment_id];
-
-      av1_predict_intra_block(xd, 1, 1, TX_4X4, *best_mode, dst, dst_stride,
-                              dst, dst_stride, col + idx, row + idy, 0);
-
-      if (xd->lossless[xd->mi[0]->mbmi.segment_id]) tx_type = DCT_DCT;
-      // transform block size in pixels
-      tx_blk_size = 4;
-
-      // copy uint8 orig and predicted block to int16 buffer
-      // in order to use existing VP10 transform functions
-      for (j = 0; j < tx_blk_size; j++)
-        for (i = 0; i < tx_blk_size; i++) {
-          src_int16[diff_stride * j + i] = src[src_stride * j + i];
-          pred[diff_stride * j + i] = dst[dst_stride * j + i];
-        }
-
-      av1_fwd_txfm_4x4(src_int16, coeff, diff_stride, tx_type, lossless);
-      av1_fwd_txfm_4x4(pred, ref_coeff, diff_stride, tx_type, lossless);
-
-      skip = pvq_encode_helper(&x->daala_enc, coeff, ref_coeff, dqcoeff,
-                               &p->eobs[block], pd->dequant, 0, TX_4X4, tx_type,
-                               &rate_pvq, NULL);
-
-      if (lossless) {
-        if (!skip) {
-          for (j = 0; j < tx_blk_size; j++)
-            for (i = 0; i < tx_blk_size; i++)
-              dst[j * dst_stride + i] -= dst[j * dst_stride + i];
-
-          av1_inv_txfm_add_4x4(BLOCK_OFFSET(pd->dqcoeff, block), dst,
-                               dst_stride, p->eobs[block], DCT_DCT, 1);
-        }
-      } else {
-        if (!skip) {
-          for (j = 0; j < tx_blk_size; j++)
-            for (i = 0; i < tx_blk_size; i++)
-              dst[j * dst_stride + i] -= dst[j * dst_stride + i];
-
-          av1_inv_txfm_add_4x4(BLOCK_OFFSET(pd->dqcoeff, block), dst,
-                               dst_stride, p->eobs[block], tx_type, 0);
-        }
-      }
-    }
-  }  // for (idy =
+  od_encode_rollback(&x->daala_enc, &post_buf);
 #endif
 
   for (idy = 0; idy < num_4x4_blocks_high * 4; ++idy)
