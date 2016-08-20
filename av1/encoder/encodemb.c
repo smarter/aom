@@ -18,7 +18,6 @@
 #include "aom_ports/mem.h"
 
 #include "av1/common/idct.h"
-#include "av1/common/partition.h"
 #include "av1/common/reconinter.h"
 #include "av1/common/reconintra.h"
 #include "av1/common/scan.h"
@@ -30,6 +29,7 @@
 
 #if CONFIG_PVQ
 #include "av1/encoder/encint.h"
+#include "av1/common/partition.h"
 #include "av1/encoder/pvq_encoder.h"
 #endif
 

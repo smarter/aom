@@ -24,7 +24,9 @@
 #include "av1/common/loopfilter.h"
 #include "av1/common/tile_common.h"
 #include "odintrin.h"
+#if CONFIG_PVQ
 #include "pvq.h"
+#endif
 
 #ifdef __cplusplus
 extern "C" {
