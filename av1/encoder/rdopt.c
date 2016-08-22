@@ -834,7 +834,10 @@ static void choose_tx_size_from_rd(const AV1_COMP *const cpi, MACROBLOCK *x,
   const aom_prob *tx_probs = get_tx_probs2(max_tx_size, xd, &cm->fc->tx_probs);
 
 #if CONFIG_PVQ
-  od_rollback_buffer buf;
+  od_rollback_buffer pre_buf, post_buf;
+
+  od_encode_checkpoint(&x->daala_enc, &pre_buf);
+  od_encode_checkpoint(&x->daala_enc, &post_buf);
 #endif
   assert(skip_prob > 0);
   s0 = av1_cost_bit(skip_prob, 0);
@@ -855,16 +858,15 @@ static void choose_tx_size_from_rd(const AV1_COMP *const cpi, MACROBLOCK *x,
   *skip = 0;
   *psse = INT64_MAX;
 
-#if CONFIG_PVQ
-  if (end_tx < TX_32X32) od_encode_checkpoint(&x->daala_enc, &buf);
-#endif
-
   for (tx_type = DCT_DCT; tx_type < TX_TYPES; ++tx_type) {
 #if CONFIG_REF_MV
     if (mbmi->ref_mv_idx > 0 && tx_type != DCT_DCT) continue;
 #endif
     last_rd = INT64_MAX;
     for (n = start_tx; n >= end_tx; --n) {
+#if CONFIG_PVQ
+      od_encode_rollback(&x->daala_enc, &pre_buf);
+#endif
       int r_tx_size = 0;
       for (m = 0; m <= n - (n == (int)max_tx_size); ++m) {
         if (m == n)
@@ -880,9 +882,6 @@ static void choose_tx_size_from_rd(const AV1_COMP *const cpi, MACROBLOCK *x,
 
       txfm_rd_in_plane(x, &r, &d, &s, &sse, ref_best_rd, 0, bs, n,
                        cpi->sf.use_fast_coef_costing);
-#if CONFIG_PVQ
-      od_encode_rollback(&x->daala_enc, &buf);
-#endif
       if (n < TX_32X32 && !xd->lossless[xd->mi[0]->mbmi.segment_id] &&
           r != INT_MAX) {
         if (is_inter)
@@ -927,6 +926,9 @@ static void choose_tx_size_from_rd(const AV1_COMP *const cpi, MACROBLOCK *x,
         *psse = sse;
         best_tx_type = mbmi->tx_type;
         memcpy(zcoeff_blk, x->zcoeff_blk[n], num_4x4_blks);
+#if CONFIG_PVQ
+        od_encode_checkpoint(&x->daala_enc, &post_buf);
+#endif
       }
     }
   }
@@ -935,13 +937,11 @@ static void choose_tx_size_from_rd(const AV1_COMP *const cpi, MACROBLOCK *x,
   mbmi->tx_type = best_tx_type;
 
   if (mbmi->tx_size >= TX_32X32) assert(mbmi->tx_type == DCT_DCT);
-#if CONFIG_PVQ
-  if (best_tx < TX_SIZES)
-    txfm_rd_in_plane(x, &r, &d, &s, &sse, ref_best_rd, 0, bs, best_tx,
-                     cpi->sf.use_fast_coef_costing);
-#endif
   if (best_tx < TX_SIZES)
     memcpy(x->zcoeff_blk[best_tx], zcoeff_blk, num_4x4_blks);
+#if CONFIG_PVQ
+  od_encode_rollback(&x->daala_enc, &post_buf);
+#endif
 }
 
 static void super_block_yrd(const AV1_COMP *const cpi, MACROBLOCK *x, int *rate,
