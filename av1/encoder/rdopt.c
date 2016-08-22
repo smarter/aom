@@ -1194,7 +1194,7 @@ static int64_t rd_pick_intra4x4block(const AV1_COMP *const cpi, MACROBLOCK *x,
 #else
           skip = pvq_encode_helper(&x->daala_enc, coeff, ref_coeff, dqcoeff,
                                    &p->eobs[block], pd->dequant, 0, TX_4X4,
-                                   tx_type, &rate_pvq, NULL);
+                                   tx_type, &rate_pvq, 1, NULL);
           ratey += rate_pvq;
 #endif
           if (RDCOST(x->rdmult, x->rddiv, ratey, distortion) >= best_rd)
@@ -1224,7 +1224,7 @@ static int64_t rd_pick_intra4x4block(const AV1_COMP *const cpi, MACROBLOCK *x,
 #else
           skip = pvq_encode_helper(&x->daala_enc, coeff, ref_coeff, dqcoeff,
                                    &p->eobs[block], pd->dequant, 0, TX_4X4,
-                                   tx_type, &rate_pvq, NULL);
+                                   tx_type, &rate_pvq, 1, NULL);
           ratey += rate_pvq;
 #endif
           // No need for av1_block_error2_c because the ssz is unused
@@ -2185,7 +2185,7 @@ static int64_t encode_inter_mb_segment(const AV1_COMP *const cpi, MACROBLOCK *x,
       fwd_txm4x4(pred, ref_coeff, diff_stride);
 
       pvq_encode_helper(&x->daala_enc, coeff, ref_coeff, dqcoeff, &p->eobs[k],
-                        pd->dequant, 0, TX_4X4, tx_type, &rate_pvq, NULL);
+                        pd->dequant, 0, TX_4X4, tx_type, &rate_pvq, 1, NULL);
 #endif
 
 #if CONFIG_AOM_HIGHBITDEPTH

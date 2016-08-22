@@ -142,6 +142,8 @@ struct macroblock {
   int optimize;
 
   // indicate if it is in the rd search loop or encoding process
+  int is_coded;
+
   int use_lp32x32fdct;
 
   // use fast quantization process

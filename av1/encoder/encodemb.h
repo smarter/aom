@@ -44,7 +44,7 @@ void av1_encode_intra_block_plane(MACROBLOCK *x, BLOCK_SIZE bsize, int plane);
 int pvq_encode_helper(daala_enc_ctx *daala_enc, tran_low_t *const coeff,
                       tran_low_t *ref_coeff, tran_low_t *const dqcoeff,
                       uint16_t *eob, const int16_t *quant, int plane,
-                      int tx_size, TX_TYPE tx_type, int *rate,
+                      int tx_size, TX_TYPE tx_type, int *rate, int speed,
                       PVQ_INFO *pvq_info);
 
 void store_pvq_enc_info(PVQ_INFO *pvq_info, int *qg, int *theta, int *max_theta,

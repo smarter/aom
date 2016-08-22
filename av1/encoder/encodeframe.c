@@ -1094,6 +1094,8 @@ static void rd_pick_sb_modes(const AV1_COMP *const cpi, TileDataEnc *tile_data,
 
   aom_clear_system_state();
 
+  x->is_coded = 0;
+
   // Use the lower precision, but faster, 32x32 fdct for mode selection.
   x->use_lp32x32fdct = 1;
 
@@ -3108,6 +3110,8 @@ static void encode_superblock(const AV1_COMP *const cpi, ThreadData *td,
   const int mi_height = num_8x8_blocks_high_lookup[bsize];
 
   memset(x->skip_txfm, 0, sizeof(x->skip_txfm));
+
+  x->is_coded = 1;
 
   x->use_lp32x32fdct = cpi->sf.use_lp32x32fdct;
 
