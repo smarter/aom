@@ -120,15 +120,25 @@ static double pvq_search_rdo_double(const od_val16 *xcoeff, int n, int k,
     for (j = 0; j < n; j++) l1_norm += x[j];
     l1_inv = 1./OD_MAXF(l1_norm, 1e-100);
     for (j = 0; j < n; j++) {
-      ypulse[j] = OD_MAXI(0, (int)floor(k*x[j]*l1_inv));
+      if (i >= k) {
+        OD_ASSERT(i == k);
+        ypulse[j] = 0;
+      }
+      ypulse[j] = OD_MAXI(0, (int)ceil(k*x[j]*l1_inv));
+      i += ypulse[j];
+      if (i > k) {
+        ypulse[j] -= (i - k);
+        OD_ASSERT(ypulse[j] >= 0);
+        i = k;
+      }
       xy += x[j]*ypulse[j];
       yy += ypulse[j]*ypulse[j];
-      i += ypulse[j];
     }
   }
   else {
     for (j = 0; j < n; j++) ypulse[j] = 0;
   }
+  OD_ASSERT(i <= k);
   /* Only use RDO on the last few pulses. This not only saves CPU, but using
      RDO on all pulses actually makes the results worse for reasons I don't
      fully understand. */
