@@ -1411,7 +1411,9 @@ int pvq_encode_helper(daala_enc_ctx *daala_enc, tran_low_t *const coeff,
       1,        // OD_ROBUST_STREAM
       0,        // is_keyframe,
       0, 0, 0,  // q_scaling, bx, by,
-      daala_enc->state.qm + off, daala_enc->state.qm_inv + off, pvq_info);
+      daala_enc->state.qm + off, daala_enc->state.qm_inv + off,
+      0, // speed
+      pvq_info);
 
   if (skip && pvq_info) assert(pvq_info->ac_dc_coded == 0);
 
