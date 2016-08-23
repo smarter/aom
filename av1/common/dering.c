@@ -101,15 +101,11 @@ void av1_dering_frame(YV12_BUFFER_CONFIG *frame, AV1_COMMON *cm,
       for (pli = 0; pli < 3; pli++) {
         int16_t dst[MAX_MIB_SIZE * MAX_MIB_SIZE * 8 * 8];
         int threshold;
-#if DERING_REFINEMENT
         level = compute_level_from_index(
             global_level,
             cm->mi_grid_visible[MAX_MIB_SIZE * sbr * cm->mi_stride +
                                 MAX_MIB_SIZE * sbc]
                 ->mbmi.dering_gain);
-#else
-          level = global_level;
-#endif
         /* FIXME: This is a temporary hack that uses more conservative
            deringing for chroma. */
         if (pli) level = (level * 5 + 4) >> 3;
@@ -120,8 +116,7 @@ void av1_dering_frame(YV12_BUFFER_CONFIG *frame, AV1_COMMON *cm,
                             sbc * bsize[pli] * MAX_MIB_SIZE],
                   stride, nhb, nvb, sbc, sbr, nhsb, nvsb, dec[pli], dir, pli,
                   &bskip[MAX_MIB_SIZE * sbr * cm->mi_cols + MAX_MIB_SIZE * sbc],
-                  cm->mi_cols, threshold, OD_DERING_NO_CHECK_OVERLAP,
-                  coeff_shift);
+                  cm->mi_cols, threshold, coeff_shift);
         for (r = 0; r < bsize[pli] * nvb; ++r) {
           for (c = 0; c < bsize[pli] * nhb; ++c) {
 #if CONFIG_AOM_HIGHBITDEPTH

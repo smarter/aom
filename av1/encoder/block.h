@@ -71,7 +71,6 @@ struct macroblock {
   MACROBLOCKD e_mbd;
   MB_MODE_INFO_EXT *mbmi_ext;
   int skip_block;
-  int select_tx_size;
   int q_index;
 
   // The equivalent error at the current rdmult of one whole bit (not one
@@ -129,10 +128,6 @@ struct macroblock {
   int mv_col_max;
   int mv_row_min;
   int mv_row_max;
-
-  // Notes transform blocks where no coefficents are coded.
-  // Set during mode selection. Read during block encoding.
-  uint8_t zcoeff_blk[TX_SIZES][256];
 
   int skip;
 

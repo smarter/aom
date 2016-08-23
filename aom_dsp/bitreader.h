@@ -80,7 +80,11 @@ static INLINE int aom_reader_has_error(aom_reader *r) {
 }
 
 static INLINE ptrdiff_t aom_reader_tell(const aom_reader *r) {
-#if CONFIG_DAALA_EC
+#if CONFIG_ANS
+  (void)r;
+  assert(0 && "aom_reader_tell() is unimplemented for ANS");
+  return 0;
+#elif CONFIG_DAALA_EC
   return aom_daala_reader_tell(r);
 #else
   return aom_dk_reader_tell(r);
@@ -131,13 +135,13 @@ static INLINE int aom_read_tree(aom_reader *r, const aom_tree_index *tree,
 #endif
 }
 
-static INLINE int aom_read_symbol(aom_reader *r, const uint16_t *cdf,
+static INLINE int aom_read_symbol(aom_reader *r, const aom_cdf_prob *cdf,
                                   int nsymbs) {
 #if CONFIG_RANS
   (void)nsymbs;
   return rans_read(r, cdf);
 #elif CONFIG_DAALA_EC
-  return daala_read_tree_cdf(r, cdf, nsymbs);
+  return daala_read_symbol(r, cdf, nsymbs);
 #else
   (void)r;
   (void)cdf;

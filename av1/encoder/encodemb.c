@@ -897,18 +897,6 @@ static void encode_block(int plane, int block, int blk_row, int blk_col,
   a = &ctx->ta[plane][blk_col];
   l = &ctx->tl[plane][blk_row];
 
-  // TODO(jingning): per transformed block zero forcing only enabled for
-  // luma component. will integrate chroma components as well.
-  if (x->zcoeff_blk[tx_size][block] && plane == 0) {
-#if !CONFIG_PVQ
-    p->eobs[block] = 0;
-#else
-    pvq_info->ac_dc_coded = 0;
-#endif
-    *a = *l = 0;
-    return;
-  }
-
   if (x->quant_fp) {
     // Encoding process for rtc mode
     if (x->skip_txfm[0] == SKIP_TXFM_AC_DC && plane == 0) {

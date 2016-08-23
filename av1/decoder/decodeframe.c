@@ -547,8 +547,8 @@ static void predict_and_reconstruct_intra_block(MACROBLOCKD *const xd,
     inverse_transform_block_intra(xd, plane, tx_type, tx_size, dst,
                                   pd->dst.stride, eob);
 #if CONFIG_PVQ
-  }
-}
+      }
+    }
 #endif
   }
 }
@@ -628,8 +628,8 @@ static int reconstruct_inter_block(MACROBLOCKD *const xd, aom_reader *r,
       xd, plane, tx_size, &pd->dst.buf[4 * row * pd->dst.stride + 4 * col],
       pd->dst.stride, eob, block_idx);
 #if CONFIG_PVQ
-}
-}
+        }
+      }
 #endif
 return eob;
 }
@@ -891,7 +891,7 @@ static void decode_partition(AV1Decoder *const pbi, MACROBLOCKD *const xd,
       (bsize == BLOCK_8X8 || partition != PARTITION_SPLIT))
     dec_update_partition_context(xd, mi_row, mi_col, subsize, num_8x8_wh);
 
-#if DERING_REFINEMENT
+#if CONFIG_DERING
   if (bsize == BLOCK_64X64) {
     if (cm->dering_level != 0 && !sb_all_skip(cm, mi_row, mi_col)) {
       cm->mi_grid_visible[mi_row * cm->mi_stride + mi_col]->mbmi.dering_gain =
@@ -1531,8 +1531,6 @@ static const uint8_t *decode_tiles(AV1Decoder *pbi, const uint8_t *data,
                            tile_data->pvq_ref_coeff);
       daala_dec_init(&tile_data->xd.daala_dec, &tile_data->bit_reader.ec);
 #endif
-      tile_data->xd.plane[0].color_index_map = tile_data->color_index_map[0];
-      tile_data->xd.plane[1].color_index_map = tile_data->color_index_map[1];
     }
   }
 
@@ -1773,8 +1771,6 @@ static const uint8_t *decode_tiles_mt(AV1Decoder *pbi, const uint8_t *data,
                            tile_data->pvq_ref_coeff);
       daala_dec_init(&tile_data->xd.daala_dec, &tile_data->bit_reader.ec);
 #endif
-      tile_data->xd.plane[0].color_index_map = tile_data->color_index_map[0];
-      tile_data->xd.plane[1].color_index_map = tile_data->color_index_map[1];
 
       worker->had_error = 0;
       if (i == num_workers - 1 || n == tile_cols - 1) {
@@ -2260,7 +2256,7 @@ static int read_compressed_header(AV1Decoder *pbi, const uint8_t *data,
     av1_diff_update_prob(&r, &fc->skip_probs[k]);
 
 #if CONFIG_MISC_FIXES
-  if (cm->seg.enabled) {
+  if (cm->seg.enabled && cm->seg.update_map) {
     if (cm->seg.temporal_update) {
       for (k = 0; k < PREDICTION_PROBS; k++)
         av1_diff_update_prob(&r, &cm->fc->seg.pred_probs[k]);

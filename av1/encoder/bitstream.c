@@ -1034,7 +1034,7 @@ static void write_modes_sb(AV1_COMP *cpi, const TileInfo *const tile,
       (bsize == BLOCK_8X8 || partition != PARTITION_SPLIT))
     update_partition_context(xd, mi_row, mi_col, subsize, bsize);
 
-#if DERING_REFINEMENT
+#if CONFIG_DERING
   if (bsize == BLOCK_64X64 && cm->dering_level != 0 &&
       !sb_all_skip(cm, mi_row, mi_col)) {
     aom_write_literal(
@@ -1427,9 +1427,9 @@ static void encode_segmentation(AV1_COMMON *cm, MACROBLOCKD *xd,
 static void update_seg_probs(AV1_COMP *cpi, aom_writer *w) {
   AV1_COMMON *cm = &cpi->common;
 
-  if (!cpi->common.seg.enabled) return;
+  if (!cm->seg.enabled || !cm->seg.update_map) return;
 
-  if (cpi->common.seg.temporal_update) {
+  if (cm->seg.temporal_update) {
     int i;
 
     for (i = 0; i < PREDICTION_PROBS; i++)
