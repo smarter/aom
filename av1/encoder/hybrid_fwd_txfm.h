@@ -13,6 +13,7 @@
 #define AV1_ENCODER_HYBRID_FWD_TXFM_H_
 
 #include "./aom_config.h"
+#include "./aom_dsp_rtcd.h"
 
 typedef enum FWD_TXFM_OPT { FWD_TXFM_OPT_NORMAL, FWD_TXFM_OPT_DC } FWD_TXFM_OPT;
 

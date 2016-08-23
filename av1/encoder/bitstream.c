@@ -810,6 +810,144 @@ PVQ_INFO *get_pvq_block(PVQ_QUEUE *pvq_q) {
 }
 #endif
 
+#if CONFIG_DAALA_EC && !CONFIG_AOM_HIGHBITDEPTH && !CONFIG_PVQ
+#define CONFIG_COLLECT_RD_STATS (1)
+#else
+#undef CONFIG_COLLECT_RD_STATS
+#endif
+
+#if CONFIG_COLLECT_RD_STATS
+#include "hybrid_fwd_txfm.h"
+#include "av1/common/reconintra.h"
+
+typedef struct av1_rd_stats {
+  uint8_t inter;
+  uint8_t plane;
+  uint8_t n_log2;
+  uint8_t qindex;
+  uint8_t var;
+  uint8_t rate;
+  int64_t dist;
+} av1_rd_stats;
+
+static void recompute_intra_diff_b(int plane, int block,
+    int blk_row, int blk_col, BLOCK_SIZE plane_bsize, TX_SIZE tx_size,
+    void *arg) {
+  AV1_COMP *cpi;
+  MACROBLOCK *x;
+  MACROBLOCKD *xd;
+  struct macroblock_plane *p;
+  struct macroblockd_plane *pd;
+  PREDICTION_MODE mode;
+  int tx1d_size;
+  int bwl;
+  int bhl;
+  uint8_t dst[1 << 2*(TX_SIZES + 1)];
+  int dst_stride;
+  uint8_t *src;
+  int src_stride;
+  uint8_t *rec;
+  int rec_stride;
+  int16_t *diff;
+  int diff_stride;
+  cpi = (AV1_COMP *)arg;
+  x = &cpi->td.mb;
+  xd = &x->e_mbd;
+  p = &x->plane[plane];
+  pd = &xd->plane[plane];
+  tx1d_size = get_tx1d_size(tx_size);
+  dst_stride = tx1d_size;
+  src_stride = p->src.stride;
+  src = pd->dst.buf + 4*(blk_row*src_stride + blk_col);
+  rec_stride = pd->dst.stride;
+  rec = pd->dst.buf + 4*(blk_row*rec_stride + blk_col);
+  bwl = b_width_log2_lookup[plane_bsize];
+  bhl = b_height_log2_lookup[plane_bsize];
+  mode = plane == 0 ? get_y_mode(xd->mi[0], block) : xd->mi[0]->mbmi.uv_mode;
+  av1_predict_intra_block(xd, bwl, bhl, tx_size, mode,
+      rec, rec_stride, dst, dst_stride, blk_col, blk_row, plane);
+  diff_stride = 4 << bwl;
+  diff = p->src_diff + 4*(blk_row*diff_stride + blk_col);
+  aom_subtract_block(tx1d_size, tx1d_size, diff, diff_stride,
+    src, src_stride, dst, dst_stride);
+}
+
+typedef struct collect_rd_stats_args {
+  AV1_COMP *cpi;
+  av1_rd_stats *rd_stats;
+  int mi_row;
+  int mi_col;
+} collect_rd_stats_args;
+
+static void collect_rd_stats_b(int plane, int block, int blk_row, int blk_col,
+                               BLOCK_SIZE plane_bsize, TX_SIZE tx_size,
+                               void *arg) {
+  collect_rd_stats_args *args;
+  AV1_COMP *cpi;
+  const AV1_COMMON *cm;
+  const MACROBLOCK *x;
+  const struct macroblock_plane *p;
+  av1_rd_stats *rd_stats;
+  const int16_t *diff;
+  int diff_stride;
+  YV12_BUFFER_CONFIG *src_yv12;
+  const uint8_t *src;
+  int src_stride;
+  YV12_BUFFER_CONFIG *rec_yv12;
+  const uint8_t *rec;
+  int rec_stride;
+  int tx1d_size;
+  int px_row;
+  int px_col;
+  uint32_t sse;
+  int i;
+  int j;
+  args = (collect_rd_stats_args *)arg;
+  cpi = args->cpi;
+  x = &cpi->td.mb;
+  p = &x->plane[plane];
+  diff_stride = 4*num_4x4_blocks_wide_lookup[plane_bsize];
+  diff = p->src_diff + 4*(blk_row*diff_stride + blk_col);
+  tx1d_size = get_tx1d_size(tx_size);
+  sse = 0;
+  for (i = 0; i < tx1d_size; i++) {
+    for (j = 0; j < tx1d_size; j++) {
+      int d;
+      d = diff[i*diff_stride + j];
+      sse += d*d;
+    }
+  }
+  rd_stats = args->rd_stats;
+  rd_stats->var += sse;
+  px_row = args->mi_row*8 + blk_row*tx1d_size;
+  px_col = args->mi_col*8 + blk_col*tx1d_size;
+  src_yv12 = cpi->Source;
+  src = plane == 0 ? src_yv12->y_buffer :
+      plane == 1 ? src_yv12->u_buffer : src_yv12->v_buffer;
+  src_stride = plane ? src_yv12->uv_stride : src_yv12->y_stride;
+  src += px_row*src_stride + px_col;
+  cm = &cpi->common;
+  rec_yv12 = get_frame_new_buffer(cm);
+  rec = plane == 0 ? rec_yv12->y_buffer :
+      plane == 1 ? rec_yv12->u_buffer : rec_yv12->v_buffer;
+  rec_stride = plane ? rec_yv12->uv_stride : rec_yv12->y_stride;
+  rec += px_row*rec_stride + px_col;
+  sse = 0;
+  for (i = 0; i < tx1d_size; i++) {
+    for (j = 0; j < tx1d_size; j++) {
+      int d;
+      d = src[i*src_stride + j] - rec[i*rec_stride + j];
+      sse += d*d;
+    }
+  }
+  rd_stats->dist += sse;
+  printf("rd_stats[%i][%i(%i,%i)] = %u %u %u %u %u %u %llu\n",
+   plane, block, blk_row, blk_col,
+   rd_stats->inter, rd_stats->plane, rd_stats->n_log2, rd_stats->qindex,
+   rd_stats->var, rd_stats->rate, (unsigned long long)rd_stats->dist);
+}
+#endif
+
 static void write_modes_b(AV1_COMP *cpi, const TileInfo *const tile,
                           aom_writer *w, TOKENEXTRA **tok,
                           const TOKENEXTRA *const tok_end, int mi_row,
@@ -848,11 +986,101 @@ static void write_modes_b(AV1_COMP *cpi, const TileInfo *const tile,
 #if !CONFIG_PVQ
   // NOTE: if pvq encoder is used, this should not be called.
   if (!m->mbmi.skip) {
+#if CONFIG_COLLECT_RD_STATS
+    BLOCK_SIZE bsize;
+    bsize = xd->mi[0]->mbmi.sb_type;
+    /*We didn't keep a copy of what was used for the prediction, so we have to
+      reconstruct it here.*/
+    if (!is_inter_block(&m->mbmi)) {
+      for (plane = 0; plane < MAX_MB_PLANE; plane++) {
+        av1_foreach_transformed_block_in_plane(xd, bsize, plane,
+            recompute_intra_diff_b, cpi);
+      }
+    }
+    else {
+      struct buf_2d dst_backup[MAX_MB_PLANE];
+      uint8_t pred_buf[MAX_MB_PLANE][MAX_SB_SQUARE];
+      int is_compound;
+      int ref;
+      is_compound = has_second_ref(&m->mbmi);
+      set_ref_ptrs(cm, xd, m->mbmi.ref_frame[0], m->mbmi.ref_frame[1]);
+      for (ref = 0; ref < 1 + is_compound; ref++) {
+        YV12_BUFFER_CONFIG *ref_yv12;
+        ref_yv12 = get_ref_frame_buffer(cpi, m->mbmi.ref_frame[ref]);
+        av1_setup_pre_planes(xd, ref, ref_yv12, mi_row, mi_col,
+            &xd->block_refs[ref]->sf);
+      }
+      /*Temporarily retarget the destination buffer to a local copy so we don't
+        overwrite the reconstructed frame.*/
+      for (plane = 0; plane < MAX_MB_PLANE; plane++) {
+        struct macroblockd_plane *pd;
+        pd = xd->plane + plane;
+        dst_backup[plane].buf = pd->dst.buf;
+        dst_backup[plane].stride = pd->dst.stride;
+        pd->dst.buf = pred_buf[plane];
+        pd->dst.stride = MAX_SB_SIZE;
+      }
+      av1_build_inter_predictors_sby(xd, mi_row, mi_col,
+          AOMMAX(bsize, BLOCK_8X8));
+      av1_build_inter_predictors_sbuv(xd, mi_row, mi_col,
+          AOMMAX(bsize, BLOCK_8X8));
+#if CONFIG_MOTION_VAR
+      if (m->mbmi.motion_mode == OBMC_CAUSAL) {
+        av1_build_obmc_inter_predictors_sb(cm, xd, mi_row, mi_col);
+      }
+#endif
+      for (plane = 0; plane < MAX_MB_PLANE; plane++) {
+        struct macroblockd_plane *pd;
+        pd = xd->plane + plane;
+        av1_subtract_plane(&cpi->td.mb,
+            get_plane_block_size(bsize, pd), plane);
+        /*Restore dst to point to the reconstruction buffer again.*/
+        pd->dst.buf = dst_backup[plane].buf;
+        pd->dst.stride = dst_backup[plane].stride;
+      }
+    }
+#endif
     assert(*tok < tok_end);
     for (plane = 0; plane < MAX_MB_PLANE; ++plane) {
       TX_SIZE tx =
           plane ? get_uv_tx_size(&m->mbmi, &xd->plane[plane]) : m->mbmi.tx_size;
+#if CONFIG_COLLECT_RD_STATS
+      const struct macroblockd_plane *pd;
+      av1_rd_stats rd_stats;
+      collect_rd_stats_args args;
+      int tell_frac;
+      tell_frac = od_ec_enc_tell_frac(&w->ec);
+#endif
       pack_mb_tokens(w, tok, tok_end, cm->bit_depth, tx);
+#if CONFIG_COLLECT_RD_STATS
+      tell_frac = od_ec_enc_tell_frac(&w->ec) - tell_frac;
+      rd_stats.inter = is_inter_block(&m->mbmi);
+      rd_stats.plane = plane;
+      pd = &xd->plane[plane];
+      rd_stats.n_log2 =
+          num_pels_log2_lookup[get_plane_block_size(bsize, pd)];
+      rd_stats.qindex =
+          av1_get_qindex(&cm->seg, m->mbmi.segment_id, cm->base_qindex);
+      rd_stats.var = 0;
+      rd_stats.rate = tell_frac << (AV1_PROB_COST_SHIFT - OD_BITRES);
+      rd_stats.dist = 0;
+      args.cpi = cpi;
+      args.rd_stats = &rd_stats;
+      args.mi_row = mi_row;
+      args.mi_col = mi_col;
+      av1_foreach_transformed_block_in_plane(xd, bsize, plane,
+          collect_rd_stats_b, &args);
+      {
+        FILE *fp;
+        fp = fopen("rdstats.txt", "ab");
+        if (fp != NULL) {
+          fprintf(fp, "%u %u %u %u %u %u %llu\n",
+              rd_stats.inter, rd_stats.plane, rd_stats.n_log2, rd_stats.qindex,
+              rd_stats.var, rd_stats.rate, (unsigned long long)rd_stats.dist);
+          fclose(fp);
+        }
+      }
+#endif
       assert(*tok < tok_end && (*tok)->token == EOSB_TOKEN);
       (*tok)++;
     }
