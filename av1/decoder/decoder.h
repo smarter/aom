@@ -44,7 +44,6 @@ typedef struct TileData {
   /* forward transformed predicted image, a reference for PVQ */
   DECLARE_ALIGNED(16, tran_low_t, pvq_ref_coeff[32 * 32]);
 #endif
-  DECLARE_ALIGNED(16, uint8_t, color_index_map[2][64 * 64]);
 } TileData;
 
 typedef struct TileWorkerData {
@@ -58,7 +57,6 @@ typedef struct TileWorkerData {
   /* forward transformed predicted image, a reference for PVQ */
   DECLARE_ALIGNED(16, tran_low_t, pvq_ref_coeff[32 * 32]);
 #endif
-  DECLARE_ALIGNED(16, uint8_t, color_index_map[2][64 * 64]);
   struct aom_internal_error_info error_info;
 } TileWorkerData;
 
