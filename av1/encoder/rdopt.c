@@ -689,7 +689,7 @@ static void choose_largest_tx_size(const AV1_COMP *const cpi, MACROBLOCK *x,
 #endif
 
   if (mbmi->tx_size < TX_32X32 && !xd->lossless[mbmi->segment_id]) {
-    for (tx_type = DCT_DCT; tx_type < TX_TYPES; ++tx_type) {
+    for (tx_type = DCT_DCT; tx_type < DCT_DCT + 1; ++tx_type) {
       mbmi->tx_type = tx_type;
       txfm_rd_in_plane(x, &r, &d, &s, &psse, ref_best_rd, 0, bs, mbmi->tx_size,
                        cpi->sf.use_fast_coef_costing);
@@ -787,7 +787,7 @@ static void choose_tx_size_from_rd(const AV1_COMP *const cpi, MACROBLOCK *x,
   if (end_tx < TX_32X32) od_encode_checkpoint(&x->daala_enc, &buf);
 #endif
 
-  for (tx_type = DCT_DCT; tx_type < TX_TYPES; ++tx_type) {
+  for (tx_type = DCT_DCT; tx_type < DCT_DCT + 1; ++tx_type) {
 #if CONFIG_REF_MV
     if (mbmi->ref_mv_idx > 0 && tx_type != DCT_DCT) continue;
 #endif
