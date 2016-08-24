@@ -625,7 +625,6 @@ static void pack_inter_mode_mvs(AV1_COMP *cpi, const MODE_INFO *mi,
       int idx, idy;
       const int num_4x4_w = num_4x4_blocks_wide_lookup[bsize];
       const int num_4x4_h = num_4x4_blocks_high_lookup[bsize];
-
       for (idy = 0; idy < 2; idy += num_4x4_h) {
         for (idx = 0; idx < 2; idx += num_4x4_w) {
           const PREDICTION_MODE b_mode = mi->bmi[idy * 2 + idx].as_mode;
@@ -828,6 +827,7 @@ static void write_modes_b(AV1_COMP *cpi, const TileInfo *const tile,
 #endif
   xd->mi = cm->mi_grid_visible + (mi_row * cm->mi_stride + mi_col);
   m = xd->mi[0];
+
   cpi->td.mb.mbmi_ext = cpi->mbmi_ext_base + (mi_row * cm->mi_cols + mi_col);
 
   set_mi_row_col(xd, tile, mi_row, num_8x8_blocks_high_lookup[m->mbmi.sb_type],
@@ -846,7 +846,6 @@ static void write_modes_b(AV1_COMP *cpi, const TileInfo *const tile,
   }
 
 #if !CONFIG_PVQ
-  // NOTE: if pvq encoder is used, this should not be called.
   if (!m->mbmi.skip) {
     assert(*tok < tok_end);
     for (plane = 0; plane < MAX_MB_PLANE; ++plane) {
@@ -1063,7 +1062,7 @@ static void write_modes(AV1_COMP *cpi, const TileInfo *const tile,
       write_modes_sb(cpi, tile, w, tok, tok_end, mi_row, mi_col, BLOCK_64X64);
   }
 #if CONFIG_PVQ
-  // check # of pvq blocks that are encoded and written to bitstream
+  // Check that the number of PVQ blocks encoded and written to the bitstream
   // are the same
   assert(cpi->td.mb.pvq_q->curr_pos == cpi->td.mb.pvq_q->last_pos);
   // Reset curr_pos in case we repack the bitstream

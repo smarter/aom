@@ -27,8 +27,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 #if !defined(_state_H)
 # define _state_H (1)
 
-typedef struct od_state          od_state;
-typedef struct od_adapt_ctx      od_adapt_ctx;
+typedef struct od_state     od_state;
+typedef struct od_adapt_ctx od_adapt_ctx;
 
 # include "generic_code.h"
 # include "odintrin.h"
@@ -52,8 +52,8 @@ struct od_adapt_ctx {
   int skip_increment;
 };
 
-struct od_state{
-  od_adapt_ctx        adapt;
+struct od_state {
+  od_adapt_ctx adapt;
   //unsigned char pvq_qm_q4[OD_NPLANES_MAX][OD_QM_SIZE];
   int16_t *qm;
   int16_t *qm_inv;

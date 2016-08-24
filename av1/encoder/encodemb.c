@@ -341,6 +341,8 @@ static int optimize_b(MACROBLOCK *mb, int plane, int block, TX_SIZE tx_size,
 }
 #endif
 
+// TODO(sarahparker) refactor fwd quant functions to use fwd_txfm fns in
+// hybrid_fwd_txfm.c
 void av1_xform_quant_fp(MACROBLOCK *x, int plane, int block, int blk_row,
                         int blk_col, BLOCK_SIZE plane_bsize, TX_SIZE tx_size) {
   MACROBLOCKD *const xd = &x->e_mbd;

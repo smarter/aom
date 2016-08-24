@@ -76,6 +76,7 @@
                                        // mv. Choose a very high value for
                                        // now so that HIGH_PRECISION is always
                                        // chosen.
+// #define OUTPUT_YUV_REC
 
 #ifdef OUTPUT_YUV_DENOISED
 FILE *yuv_denoised_file = NULL;
@@ -3884,10 +3885,6 @@ static void encode_frame_to_data_rate(AV1_COMP *cpi, size_t *size,
   if (cm->is_reference_frame)
 #endif  // CONFIG_EXT_REFS
     cm->prev_frame = cm->cur_frame;
-
-#ifdef OUTPUT_YUV_REC
-  av1_write_yuv_rec_frame(cm);
-#endif
 }
 
 static void Pass0Encode(AV1_COMP *cpi, size_t *size, uint8_t *dest,

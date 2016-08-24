@@ -488,6 +488,7 @@ static int cost_coeffs(MACROBLOCK *x, int plane, int block, ENTROPY_CONTEXT *A,
 
   // is eob first coefficient;
   *A = *L = (c > 0);
+
   return cost;
 }
 #endif
@@ -512,8 +513,7 @@ static void dist_block(MACROBLOCK *x, int plane, int block, TX_SIZE tx_size,
               shift;
 #elif CONFIG_PVQ
   *out_dist = av1_block_error2_c(coeff, dqcoeff, ref_coeff, 16 << ss_txfrm_size,
-                                 &this_sse) >>
-              shift;
+                                 &this_sse) >> shift;
 #else
   *out_dist =
       av1_block_error(coeff, dqcoeff, 16 << ss_txfrm_size, &this_sse) >> shift;

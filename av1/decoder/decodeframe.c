@@ -265,7 +265,6 @@ static void inverse_transform_block_inter(MACROBLOCKD *xd, int plane,
   struct macroblockd_plane *const pd = &xd->plane[plane];
   TX_TYPE tx_type = get_tx_type(pd->plane_type, xd, block);
   const int seg_id = xd->mi[0]->mbmi.segment_id;
-
   if (eob > 0) {
     tran_low_t *const dqcoeff = pd->dqcoeff;
 #if CONFIG_AOM_HIGHBITDEPTH
@@ -330,7 +329,6 @@ static void inverse_transform_block_intra(MACROBLOCKD *xd, int plane,
                                           int stride, int eob) {
   struct macroblockd_plane *const pd = &xd->plane[plane];
   const int seg_id = xd->mi[0]->mbmi.segment_id;
-
   if (eob > 0) {
     tran_low_t *const dqcoeff = pd->dqcoeff;
 #if CONFIG_AOM_HIGHBITDEPTH
@@ -631,7 +629,7 @@ static int reconstruct_inter_block(MACROBLOCKD *const xd, aom_reader *r,
         }
       }
 #endif
-return eob;
+  return eob;
 }
 
 static INLINE TX_SIZE dec_get_uv_tx_size(const MB_MODE_INFO *mbmi, int n4_wl,

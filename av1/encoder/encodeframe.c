@@ -1761,7 +1761,6 @@ static void rd_use_partition(AV1_COMP *cpi, ThreadData *td,
       last_part_rdc.rate = 0;
       last_part_rdc.dist = 0;
       last_part_rdc.rdcost = 0;
-
       for (i = 0; i < 4; i++) {
         int x_idx = (i & 1) * (mi_step >> 1);
         int y_idx = (i >> 1) * (mi_step >> 1);
@@ -1885,7 +1884,6 @@ static void rd_use_partition(AV1_COMP *cpi, ThreadData *td,
 
   if (do_recon) {
     int output_enabled = (bsize == BLOCK_64X64);
-
     encode_sb(cpi, td, tile_info, tp, mi_row, mi_col, output_enabled, bsize,
               pc_tree);
   }
