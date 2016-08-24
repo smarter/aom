@@ -563,71 +563,71 @@ static int reconstruct_inter_block(MACROBLOCKD *const xd, aom_reader *r,
   const int eob = av1_decode_block_tokens(xd, plane, scan_order, col, row,
                                           tx_size, r, mbmi->segment_id);
 #else
-      int ac_dc_coded;
-      int eob = 0;
+  int ac_dc_coded;
+  int eob = 0;
 
-      (void)r;
+  (void)r;
 
-      // pvq_decode() for inter block runs here.
+  // pvq_decode() for inter block runs here.
 
-      // decode ac/dc skip flag. bit0: 0 : DC skipped, bit1 : 0: AC skipped
-      // NOTE : we don't use 5 symbols for luma here in aom codebase,
-      // since block partition is taken care of by aom.
-      // So, only AC/DC skip info is coded
-      ac_dc_coded = od_decode_cdf_adapt(
-          xd->daala_dec.ec,
-          xd->daala_dec.state.adapt.skip_cdf[2 * tx_size + (plane != 0)], 4,
-          xd->daala_dec.state.adapt.skip_increment, "skip");
+  // decode ac/dc skip flag. bit0: 0 : DC skipped, bit1 : 0: AC skipped
+  // NOTE : we don't use 5 symbols for luma here in aom codebase,
+  // since block partition is taken care of by aom.
+  // So, only AC/DC skip info is coded
+  ac_dc_coded = od_decode_cdf_adapt(
+      xd->daala_dec.ec,
+      xd->daala_dec.state.adapt.skip_cdf[2 * tx_size + (plane != 0)], 4,
+      xd->daala_dec.state.adapt.skip_increment, "skip");
 
-      if (ac_dc_coded) {
-        // transform block size in pixels
-        int tx_blk_size = 1 << (tx_size + 2);
-        int i, j;
-        tran_low_t *pvq_ref_coeff = pd->pvq_ref_coeff;
-        const int diff_stride = tx_blk_size;
-        int16_t *pred = pd->pred;
-        uint8_t *dst;
-        tran_low_t *const dqcoeff = pd->dqcoeff;
-        int xdec = pd->subsampling_x;
-        int seg_id = mbmi->segment_id;
-        int16_t *quant;
-        FWD_TXFM_PARAM fwd_txfm_param;
+  if (ac_dc_coded) {
+    // transform block size in pixels
+    int tx_blk_size = 1 << (tx_size + 2);
+    int i, j;
+    tran_low_t *pvq_ref_coeff = pd->pvq_ref_coeff;
+    const int diff_stride = tx_blk_size;
+    int16_t *pred = pd->pred;
+    uint8_t *dst;
+    tran_low_t *const dqcoeff = pd->dqcoeff;
+    int xdec = pd->subsampling_x;
+    int seg_id = mbmi->segment_id;
+    int16_t *quant;
+    FWD_TXFM_PARAM fwd_txfm_param;
 
-        dst = &pd->dst.buf[4 * row * pd->dst.stride + 4 * col];
+    dst = &pd->dst.buf[4 * row * pd->dst.stride + 4 * col];
 
-        for (j = 0; j < tx_blk_size; j++)
-          for (i = 0; i < tx_blk_size; i++) {
-            pred[diff_stride * j + i] = dst[pd->dst.stride * j + i];
-          }
+    for (j = 0; j < tx_blk_size; j++)
+      for (i = 0; i < tx_blk_size; i++) {
+        pred[diff_stride * j + i] = dst[pd->dst.stride * j + i];
+      }
 
-        fwd_txfm_param.tx_type = tx_type;
-        fwd_txfm_param.tx_size = tx_size;
-        fwd_txfm_param.fwd_txfm_opt = FWD_TXFM_OPT_NORMAL;
-        fwd_txfm_param.rd_transform = 0;
-        fwd_txfm_param.lossless = xd->lossless[seg_id];
+    fwd_txfm_param.tx_type = tx_type;
+    fwd_txfm_param.tx_size = tx_size;
+    fwd_txfm_param.fwd_txfm_opt = FWD_TXFM_OPT_NORMAL;
+    fwd_txfm_param.rd_transform = 0;
+    fwd_txfm_param.lossless = xd->lossless[seg_id];
 
-        fwd_txfm(pred, pvq_ref_coeff, diff_stride, &fwd_txfm_param);
+    fwd_txfm(pred, pvq_ref_coeff, diff_stride, &fwd_txfm_param);
 
-        quant = &pd->seg_dequant[seg_id][0];  // aom's DC quantizer
+    quant = &pd->seg_dequant[seg_id][0];  // aom's DC quantizer
 
-        eob = pvq_decode_helper(&xd->daala_dec, pvq_ref_coeff, dqcoeff, quant,
-                                plane, tx_size, tx_type, xdec, ac_dc_coded);
+    eob = pvq_decode_helper(&xd->daala_dec, pvq_ref_coeff, dqcoeff, quant,
+                            plane, tx_size, tx_type, xdec, ac_dc_coded);
 
-        // Since av1 does not have separate inverse transform
-        // but also contains adding to predicted image,
-        // pass blank dummy image to av1_inv_txfm_add_*x*(), i.e. set dst as
-        // zeros
-        if (eob > 0) {
-          for (j = 0; j < tx_blk_size; j++)
-            for (i = 0; i < tx_blk_size; i++)
-              dst[j * pd->dst.stride + i] -= dst[j * pd->dst.stride + i];
+    // Since av1 does not have separate inverse transform
+    // but also contains adding to predicted image,
+    // pass blank dummy image to av1_inv_txfm_add_*x*(), i.e. set dst as
+    // zeros
+    if (eob > 0) {
+      for (j = 0; j < tx_blk_size; j++)
+        for (i = 0; i < tx_blk_size; i++)
+          dst[j * pd->dst.stride + i] -= dst[j * pd->dst.stride + i];
 #endif
   inverse_transform_block_inter(
       xd, plane, tx_size, &pd->dst.buf[4 * row * pd->dst.stride + 4 * col],
       pd->dst.stride, eob, block_idx);
 #if CONFIG_PVQ
-        }
-      }
+    }
+  }
 #endif
   return eob;
 }
