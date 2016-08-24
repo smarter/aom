@@ -252,9 +252,6 @@ static void model_rd_for_sb(const AV1_COMP *const cpi, BLOCK_SIZE bsize,
   unsigned int sum_sse = 0;
   int64_t total_sse = 0;
   int skip_flag = 1;
-#if !CONFIG_PVQ
-  const int shift = 6;
-#endif
   int rate;
   int64_t dist;
   const int dequant_shift =
@@ -271,14 +268,6 @@ static void model_rd_for_sb(const AV1_COMP *const cpi, BLOCK_SIZE bsize,
     const BLOCK_SIZE bs = get_plane_block_size(bsize, pd);
     const TX_SIZE max_tx_size = max_txsize_lookup[bs];
     const BLOCK_SIZE unit_size = txsize_to_bsize[max_tx_size];
-#if !CONFIG_PVQ
-    const int64_t dc_thr = p->quant_thred[0] >> shift;
-    const int64_t ac_thr = p->quant_thred[1] >> shift;
-    // The low thresholds are used to measure if the prediction errors are
-    // low enough so that we can skip the mode search.
-    const int64_t low_dc_thr = AOMMIN(50, dc_thr >> 2);
-    const int64_t low_ac_thr = AOMMIN(80, ac_thr >> 2);
-#endif
     int bw = 1 << (b_width_log2_lookup[bs] - b_width_log2_lookup[unit_size]);
     int bh = 1 << (b_height_log2_lookup[bs] - b_width_log2_lookup[unit_size]);
     int idx, idy;
