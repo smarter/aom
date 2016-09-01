@@ -232,28 +232,28 @@ const int get_accounting_property(GetAccountingProperty v, int i) {
 #if !CONFIG_ACCOUNTING
   return 0;
 #else
-  AOMAccounting *accounting = &pbi->accounting;
+  Accounting *accounting = &pbi->accounting;
   switch (v) {
     case GET_ACCOUNTING_SYMBOL_COUNT:
       return accounting->syms.num_syms;
     case GET_ACCOUNTING_SYMBOL_NAME: {
-      AOMAccountingSymbol *sym = &accounting->syms.syms[i];
+      AccountingSymbol *sym = &accounting->syms.syms[i];
       return accounting->syms.dictionary.strs[sym->id];
     }
     case GET_ACCOUNTING_SYMBOL_BITS: {
-      AOMAccountingSymbol *sym = &accounting->syms.syms[i];
+      AccountingSymbol *sym = &accounting->syms.syms[i];
       return sym->bits;
     }
     case GET_ACCOUNTING_SYMBOL_SAMPLES: {
-      AOMAccountingSymbol *sym = &accounting->syms.syms[i];
+      AccountingSymbol *sym = &accounting->syms.syms[i];
       return sym->samples;
     }
     case GET_ACCCOUNTING_SYMBOL_CONTEXT_X: {
-      AOMAccountingSymbol *sym = &accounting->syms.syms[i];
+      AccountingSymbol *sym = &accounting->syms.syms[i];
       return sym->context.x;
     }
     case GET_ACCCOUNTING_SYMBOL_CONTEXT_Y: {
-      AOMAccountingSymbol *sym = &accounting->syms.syms[i];
+      AccountingSymbol *sym = &accounting->syms.syms[i];
       return sym->context.y;
     }
   }
