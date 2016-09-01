@@ -8,7 +8,7 @@ fi
 cd asm
 emmake make
 cp examples/analyzer_decoder examples/analyzer_decoder.bc
-emcc -O3 examples/analyzer_decoder.bc -o examples/decoder.js -s TOTAL_MEMORY=134217728
+emcc -O3 examples/analyzer_decoder.bc -o examples/decoder.js -s TOTAL_MEMORY=134217728 -s MODULARIZE=1 -s EXPORT_NAME="'DecoderModule'" --post-js "../ins/post.js"
 cd ..
 mkdir -p ins/bin
 cp asm/examples/decoder.js ins/bin/decoder.js

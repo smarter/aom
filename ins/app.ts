@@ -1,5 +1,5 @@
 declare let angular: any;
-declare let FS: any;
+declare let DecoderModule: any;
 declare let Mousetrap: any;
 declare let tinycolor: any;
 declare let tinygradient: any;
@@ -264,15 +264,17 @@ interface AOMInternal {
   _get_predicted_plane_buffer(pli: number): number;
   _get_predicted_plane_stride(pli: number): number;
 
+  FS: any;
   HEAPU8: Uint8Array;
   UTF8ToString(p: number): string;
 }
 
 class AOM {
-  native: AOMInternal = (<any>window).Module;
-  HEAPU8: Uint8Array = this.native.HEAPU8;
-  constructor () {
-
+  native: AOMInternal;
+  HEAPU8: Uint8Array;
+  constructor (native: AOMInternal) {
+    this.native = native;
+    this.HEAPU8 = native.HEAPU8;
   }
   openFile() {
     return this.native._open_file();
@@ -1147,8 +1149,9 @@ class AppCtrl {
     let parameters = getUrlParameters();
     let frames = parseInt(parameters.frameNumber) || 1;
 
+
     this.loadDecoder("default", () => {
-      this.aom = new AOM();
+      this.aom = new AOM(DecoderModule(Module));
       this.createUIFrameProperties();
       this.createUIBlockProperties();
       let file = parameters.file || "media/default.ivf";
@@ -1373,7 +1376,7 @@ class AppCtrl {
   openFileBytes(buffer: Uint8Array) {
     this.fileBytes = buffer;
     this.fileSize = buffer.length;
-    FS.writeFile("/tmp/input.ivf", buffer, { encoding: "binary" });
+    this.aom.native.FS.writeFile("/tmp/input.ivf", buffer, { encoding: "binary" });
     this.aom.openFile();
     this.frameNumber = -1;
     this.frameSize = this.aom.getFrameSize();
