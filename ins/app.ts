@@ -25,6 +25,12 @@ function toPercent(v: number) {
 function withCommas(v: number) {
   return v.toLocaleString();
 }
+function toByteSize(v: number) {
+  return withCommas(v) + " Bytes";
+}
+function toFileName(s: string) {
+  return s.replace(/^.*[\\\/]/, '')
+}
 
 type AsyncMap<A, B> = (from: A, next: (to: B) => void) => void;
 
@@ -53,9 +59,6 @@ class Y4MFrame {
   constructor(public y: number, public cb: number, public cr: number) {
     // ...
   }
-}
-interface Window {
-  Module: any;
 }
 
 interface CanvasRenderingContext2D {
@@ -106,7 +109,7 @@ function tileOffset(i: number, rowsOrCols: number, tileRowsOrColsLog2: number) {
   return Math.min(offset, rowsOrCols);
 }
 
-enum AOMAnalyzerPredictionMode {
+enum AnalyzerPredictionMode {
   DC_PRED 		= 0,   // Average of above and left pixels
   V_PRED 			= 1,   // Vertical
   H_PRED 			= 2,   // Horizontal
@@ -123,7 +126,7 @@ enum AOMAnalyzerPredictionMode {
   NEWMV 			= 13
 }
 
-enum AOMAnalyzerBlockSize {
+enum AnalyzerBlockSize {
   BLOCK_4X4   = 0,
   BLOCK_4X8   = 1,
   BLOCK_8X4   = 2,
@@ -170,7 +173,7 @@ enum AccountingProperty {
   GET_ACCCOUNTING_SYMBOL_CONTEXT_Y
 }
 
-enum AOMAnalyzerTransformMode {
+enum AnalyzerTransformMode {
   ONLY_4X4       = 0,
   ALLOW_8X8      = 1,
   ALLOW_16X16    = 2,
@@ -178,14 +181,14 @@ enum AOMAnalyzerTransformMode {
   TX_MODE_SELECT = 4
 }
 
-enum AOMAnalyzerTransformType {
+enum AnalyzerTransformType {
   DCT_DCT        = 0,
   ADST_DCT       = 1,
   DCT_ADST       = 2,
   ADST_ADST      = 3
 }
 
-enum AOMAnalyzerTransformSize {
+enum AnalyzerTransformSize {
   TX_4X4         = 0,
   TX_8X8         = 1,
   TX_16X16       = 2,
@@ -193,7 +196,7 @@ enum AOMAnalyzerTransformSize {
 }
 
 /**
- * Maps AOMAnalyzerTransformSize enum to [w, h] log2 pairs.
+ * Maps AnalyzerTransformSize enum to [w, h] log2 pairs.
  */
 const TRANSFORM_SIZES = [
   [2, 2],
@@ -203,7 +206,7 @@ const TRANSFORM_SIZES = [
 ];
 
 /**
- * Maps AOMAnalyzerBlockSize enum to [w, h] log2 pairs.
+ * Maps AnalyzerBlockSize enum to [w, h] log2 pairs.
  */
 const BLOCK_SIZES = [
   [2, 2],
@@ -266,7 +269,7 @@ class Accounting {
   }
 }
 
-interface AOMInternal {
+interface Internal {
   _read_frame (): number;
   _get_plane (pli: number): number;
   _get_plane_stride (pli: number): number;
@@ -292,21 +295,28 @@ interface AOMInternal {
 }
 
 class AOM {
-  native: AOMInternal;
+  title: string;
+  native: Internal;
   HEAPU8: Uint8Array;
-  constructor (native: AOMInternal) {
+  buffer: Uint8Array;
+  frameNumber: number = -1;
+  lastDecodeFrameTime: number = 0;
+  constructor (native: Internal) {
     this.native = native;
     this.HEAPU8 = native.HEAPU8;
-  }
-  openFile() {
-    return this.native._open_file();
+    this.buffer = new Uint8Array(0);
   }
   openFileBytes(buffer: Uint8Array) {
+    this.buffer = buffer;
     this.native.FS.writeFile("/tmp/input.ivf", buffer, { encoding: "binary" });
-    this.openFile();
+    this.native._open_file();
   }
   readFrame() {
-    return this.native._read_frame();
+    let s = performance.now();
+    this.native._read_frame();
+    this.frameNumber ++;
+    this.lastDecodeFrameTime = performance.now() - s;
+    return true;
   }
   getPlane(pli: number): number {
     return this.native._get_plane(pli);
@@ -560,7 +570,7 @@ function drawLine(ctx: CanvasRenderingContext2D, x, y, dx, dy) {
 }
 
 interface BlockVisitor {
-  (size: AOMAnalyzerBlockSize | AOMAnalyzerTransformSize, coordinates: MICoordinates, subCoordinates: MICoordinates, bounds: Rectangle): void;
+  (size: AnalyzerBlockSize | AnalyzerTransformSize, coordinates: MICoordinates, subCoordinates: MICoordinates, bounds: Rectangle): void;
 }
 
 enum BlockVisitorMode {
@@ -579,14 +589,35 @@ interface Decoder {
 
 const BLOCK_SIZE = 8;
 
+const MissingAOM = {
+  buffer: { length: 0 },
+  lastDecodeFrameTime: 0,
+  getProperty(p: Property) {
+    switch (p) {
+      case Property.GET_CLPF_STRENGTH:
+        return 0;
+      default:
+        return undefined;
+    }
+  },
+  getMIProperty(p: MIProperty) {
+    switch (p) {
+      case MIProperty.GET_MI_BLOCK_SIZE:
+        return 0;
+      default:
+        return undefined;
+    }
+  },
+  getTileGridSizeLog2() {
+    return new Size(0, 0);
+  }
+};
+
 class AppCtrl {
-  aom: AOM = null;
+  aom: AOM = <any>MissingAOM;
   aoms: AOM [] = [];
   selectedDecoder: string;
   frameSize: Size = new Size(128, 128);
-  tileGridSize: GridSize = new GridSize(0, 0);
-  fileSize: number = 0;
-  fileBytes: Uint8Array;
   ratio: number = 1;
   scale: number = 1;
 
@@ -704,7 +735,7 @@ class AppCtrl {
       value: undefined
     },
     showInspector: {
-      key: "2",
+      key: "\\",
       description: "Inspector",
       detail: "Display block and frame details.",
       default: window.innerWidth > 1024,
@@ -720,7 +751,6 @@ class AppCtrl {
     }
   };
 
-  frameNumber: number = -1;
   y4mFile: Y4MFile;
 
   progressValue = 0;
@@ -755,8 +785,6 @@ class AppCtrl {
 
   compositionCanvas: HTMLCanvasElement;
   compositionContext: CanvasRenderingContext2D = null;
-
-  lastDecodeFrameTime: number = 0;
 
   colorOptions = {
     modeColor: {
@@ -887,7 +915,7 @@ class AppCtrl {
       frameNumber: {
         description: "Frame Number",
         get value() {
-          return self.frameNumber;
+          return self.aom.frameNumber;
         }
       },
       scale: {
@@ -906,20 +934,20 @@ class AppCtrl {
       tiles: {
         description: "Tiles",
         get value() {
-          let s = self.tileGridSize;
+          let s = self.aom.getTileGridSizeLog2();
           return s.cols + " x " + s.rows;
         }
       },
       fileSize: {
         description: "File Size",
         get value() {
-          return self.fileSize;
+          return toByteSize(self.aom.buffer.length);
         }
       },
       decodeTime: {
         description: "Decode Time",
         get value() {
-          return self.lastDecodeFrameTime.toFixed(2) + "ms";
+          return self.aom.lastDecodeFrameTime.toFixed(2) + "ms";
         }
       },
       frameError: {
@@ -957,7 +985,7 @@ class AppCtrl {
         description: "Block Size",
         get value() {
           return withMIUnderMouse(mi => {
-            return AOMAnalyzerBlockSize[self.aom.getMIProperty(MIProperty.GET_MI_BLOCK_SIZE, mi.x, mi.y)];
+            return AnalyzerBlockSize[self.aom.getMIProperty(MIProperty.GET_MI_BLOCK_SIZE, mi.x, mi.y)];
           });
         }
       },
@@ -973,7 +1001,7 @@ class AppCtrl {
         description: "Prediction Mode",
         get value() {
           return withMIUnderMouse(mi => {
-            return AOMAnalyzerPredictionMode[self.aom.getMIProperty(MIProperty.GET_MI_MODE, mi.x, mi.y)];
+            return AnalyzerPredictionMode[self.aom.getMIProperty(MIProperty.GET_MI_MODE, mi.x, mi.y)];
           });
         }
       },
@@ -1022,7 +1050,7 @@ class AppCtrl {
         description: "Transform Type",
         get value() {
           return withMIUnderMouse(mi => {
-            return AOMAnalyzerTransformType[self.aom.getMIProperty(MIProperty.GET_MI_TRANSFORM_TYPE, mi.x, mi.y)];
+            return AnalyzerTransformType[self.aom.getMIProperty(MIProperty.GET_MI_TRANSFORM_TYPE, mi.x, mi.y)];
           });
         }
       },
@@ -1030,7 +1058,7 @@ class AppCtrl {
         description: "Transform Size",
         get value() {
           return withMIUnderMouse(mi => {
-            return AOMAnalyzerTransformSize[self.aom.getMIProperty(MIProperty.GET_MI_TRANSFORM_SIZE, mi.x, mi.y)];
+            return AnalyzerTransformSize[self.aom.getMIProperty(MIProperty.GET_MI_TRANSFORM_SIZE, mi.x, mi.y)];
           });
         }
       },
@@ -1094,11 +1122,13 @@ class AppCtrl {
       let input = <any>event.target;
       let reader = new FileReader();
       reader.onload = function() {
-        let buffer = reader.result;
-        self.openFileBytes(new Uint8Array(buffer));
-        self.playFrameAsync(1, () => {
+        let bytes = new Uint8Array(reader.result);
+        self.openFileBytes(self.aom, bytes, () => {
+          self.aom.readFrame();
           self.drawFrame();
-        });
+          self.updateFrame();
+        }, true);
+        self.aom.title = toFileName(input.value);
       };
       reader.readAsArrayBuffer(input.files[0]);
     };
@@ -1163,24 +1193,27 @@ class AppCtrl {
     this.loadOptions();
 
     let parameters = getUrlParameters();
-    let frames = parseInt(parameters.frameNumber) || 1;
-
-
-    var list = [
-      { decoder: "default", file: "media/default.ivf" },
-      { decoder: "default", file: "media/default.ivf" }
-    ];
-
-
-    mapJoin(["bin/decoder.js", "bin/decoder.js", "bin/decoder.js"], this.loadDecoder, (aoms: AOM []) => {
+    let decoderFilePairs = getDecoderFilePairs();
+    if (decoderFilePairs.length == 0) {
+      decoderFilePairs = [
+        {decoder: "bin/decoder.js", file: "media/default.ivf"}
+      ];
+    }
+    let decoderPaths = decoderFilePairs.map((pair) => pair.decoder);
+    let decoderFiles = decoderFilePairs.map((pair) => pair.file);
+    mapJoin(decoderPaths, this.loadDecoder, (aoms: AOM []) => {
       this.aoms = aoms;
-      this.aom = aoms[0];
-
-      let file = parameters.file || "media/default.ivf";
-      this.openFile(file, () => {
-        this.playFrameAsync(frames, () => {
-          this.drawFrame();
-        })
+      let filesLeft = decoderFiles.length;
+      aoms.forEach((aom, i) => {
+        let path = decoderFiles[i];
+        this.openFile(aom, path, () => {
+          console.info("Loaded File: " + path);
+          aom.readFrame();
+          if (--filesLeft === 0) {
+            this.drawFrame();
+            this.updateFrame();
+          }
+        });
       });
     });
 
@@ -1189,15 +1222,10 @@ class AppCtrl {
   }
 
   installKeyboardShortcuts() {
-    Mousetrap.bind(['.'], () => {
-      this.playFrame();
+    Mousetrap.bind(['.', 'space'], () => {
+      this.advanceFrame();
       this.drawFrame();
       this.uiApply();
-    });
-
-    Mousetrap.bind(['space'], (e) => {
-      this.uiPlayPause();
-      e.preventDefault();
     });
 
     Mousetrap.bind([']'], () => {
@@ -1227,9 +1255,21 @@ class AppCtrl {
 
     let self = this;
     function toggle(name, event) {
-      let option = this.options[name];
-      option.value = !option.value;
-      if (option.updatesImage) {
+      if (isNaN(name)) {
+        let option = this.options[name];
+        option.value = !option.value;
+        if (option.updatesImage) {
+          self.drawImages();
+        }
+      } else {
+        // Toggle AOMs
+        let index = Number(name) - 1;
+        if (index < self.aoms.length) {
+          self.aom = self.aoms[index];
+          self.updateFrame();
+          document.title = self.aom.title;
+          console.info("Changed AOM to " + index);
+        }
         self.drawImages();
       }
       self.drawMain();
@@ -1248,6 +1288,10 @@ class AppCtrl {
         installedKeys[option.key] = option;
         Mousetrap.bind([option.key], toggle.bind(this, name));
       }
+    }
+
+    for (let i = 1; i < 9; i++) {
+      Mousetrap.bind([String(i)], toggle.bind(this, i));
     }
   }
 
@@ -1289,7 +1333,7 @@ class AppCtrl {
     this.uiApply();
   }
 
-  getMIBlockSize(c: number, r: number, miMinBlockSize: AOMAnalyzerBlockSize = AOMAnalyzerBlockSize.BLOCK_4X4): Size {
+  getMIBlockSize(c: number, r: number, miMinBlockSize: AnalyzerBlockSize = AnalyzerBlockSize.BLOCK_4X4): Size {
     let miBlockSize = this.aom.getMIProperty(MIProperty.GET_MI_BLOCK_SIZE, c, r);
     if (miBlockSize >= BLOCK_SIZES.length) {
       // TODO: This should not happen, figure out what is going on.
@@ -1327,27 +1371,6 @@ class AppCtrl {
   getMIBits(c: number, r: number): number {
     let mi = this.getMI(c, r);
     return this.aom.getMIProperty(MIProperty.GET_MI_BITS, mi.x, mi.y);
-  }
-
-  loadDecoders(paths: string [], next: (aom: AOM []) => void) {
-    mapJoin(paths, (path: string, next: (aom: AOM) => void) => {
-      this.loadDecoder(path, next);
-    }, next);
-
-    // let self = this;
-    // let aoms = [];
-    // let left = paths.slice(0);
-    // function loadNextDecoder() {
-    //   if (left.length === 0) {
-    //     next(aoms);
-    //     return;
-    //   }
-    //   self.loadDecoder(left.shift(), (aom) => {
-    //     aoms.push(aom);
-    //     loadNextDecoder();
-    //   });
-    // }
-    // loadNextDecoder();
   }
 
   /**
@@ -1434,22 +1457,22 @@ class AppCtrl {
     return new Y4MFile(size, buffer, frames);
   }
 
-  openFileBytes(buffer: Uint8Array) {
-    this.fileBytes = buffer;
-    this.fileSize = buffer.length;
-    this.aom.openFileBytes(buffer);
-    this.frameNumber = -1;
-    this.frameSize = this.aom.getFrameSize();
-    this.resetCanvases();
+  openFile(aom: AOM, path: string, next: () => any = null, overwrite = false) {
+    aom.title = toFileName(path);
+    this.downloadFile(path, (bytes: Uint8Array) => {
+      this.openFileBytes(aom, bytes, next, overwrite);
+    });
   }
 
-  openFile(path: string, next: () => any = null) {
-    let fileName = path.replace(/^.*[\\\/]/, '')
-    document.title = fileName;
-    this.downloadFile(path, (buffer: Uint8Array) => {
-      this.openFileBytes(buffer);
-      next();
-    });
+  openFileBytes(aom: AOM, bytes: Uint8Array, next: () => any = null, overwrite = false) {
+    aom.openFileBytes(bytes);
+    if (this.aom == <any>MissingAOM || overwrite) {
+      this.aom = aom;
+      document.title = aom.title;
+      this.frameSize = this.aom.getFrameSize();
+      this.resetCanvases();
+    }
+    next && next();
   }
 
   resetCanvases() {
@@ -1506,7 +1529,7 @@ class AppCtrl {
   }
 
   uiAction(name) {
-    let file;
+    let path;
     switch (name) {
       case "open-file":
         this.showFileInputDialog();
@@ -1515,30 +1538,29 @@ class AppCtrl {
         this.showY4MFileInputDialog();
         return;
       case "open-crosswalk":
-        file = "media/crosswalk_30.ivf";
+        path = "media/crosswalk_30.ivf";
         break;
       case "open-soccer":
-        file = "media/soccer_30.ivf";
+        path = "media/soccer_30.ivf";
         break;
       case "open-tiger":
-        file = "media/tiger_30.ivf";
+        path = "media/tiger_30.ivf";
         break;
       case "open-tiger-60":
-        file = "media/tiger_60.ivf";
+        path = "media/tiger_60.ivf";
         break;
     }
-    this.openFile(file, () => {
-      this.playFrameAsync(1, () => {
-        this.drawFrame();
-      })
-    });
+    this.openFile(this.aom, path, () => {
+      console.info("Loaded File: " + path);
+      this.aom.readFrame();
+      this.drawFrame();
+      this.updateFrame();
+    }, true);
   }
 
   createSharingLink() {
     let url = location.protocol + '//' + location.host + location.pathname;
-    let args = {
-      frameNumber: this.frameNumber
-    };
+    let args = { };
     for (let name in this.options) {
       let option = this.options[name];
       if (option.doNotShare) {
@@ -1563,7 +1585,7 @@ class AppCtrl {
   }
 
   fileIssue(label: string = "") {
-    window.open("https://github.com/mbebenita/aomanalyzer/issues/new?labels=" + label + "&body=" + encodeURIComponent(this.createSharingLink()));
+    window.open("https://github.com/mbebenita/Analyzer/issues/new?labels=" + label + "&body=" + encodeURIComponent(this.createSharingLink()));
   }
 
   uiResetLayers() {
@@ -1593,46 +1615,15 @@ class AppCtrl {
     this.drawFrame();
   }
 
-  playPause() {
-    if (this.playInterval) {
-      this.$interval.cancel(this.playInterval);
-      this.playInterval = 0;
-      return;
-    }
-    this.playInterval = this.$interval(() => {
-      if (!this.playFrame()) {
-        this.$interval.cancel(this.playInterval);
-        this.playInterval = 0;
-        return;
-      }
-      this.drawFrame();
-    }, 1);
-  }
-
-  playFrameAsync(count: number, step: () => void = null, stop: () => void = null) {
-    this.$interval(() => {
-      this.playFrame();
-      step && step();
-      if (--count == 0) {
-        stop && stop();
-      }
-    }, 1, count);
-  }
-
-  playFrame(count: number = 1) {
+  advanceFrame(count: number = 1) {
     for (let i = 0; i < count; i++) {
-      let s = performance.now();
-      if (this.aom.readFrame()) {
+      if (!this.aoms.every(aom => {
+        return aom.readFrame();
+      })) {
         return false;
       }
-      this.processFrame();
-      this.lastDecodeFrameTime = performance.now() - s;
-      this.frameNumber ++;
-
-      let tileGridSize = this.aom.getTileGridSizeLog2();
-      this.tileGridSize.cols = 1 << tileGridSize.cols;
-      this.tileGridSize.rows = 1 << tileGridSize.rows;
     }
+    this.updateFrame();
     return true;
   }
 
@@ -1653,7 +1644,7 @@ class AppCtrl {
 
   lastAccounting: Accounting = null;
 
-  processFrame() {
+  updateFrame() {
     let {cols, rows} = this.aom.getMIGridSize();
     let miTotalBits = 0;
     for (let c = 0; c < cols; c++) {
@@ -1754,9 +1745,9 @@ class AppCtrl {
 
   uiReload() {
     // TODO: Don't reload entire file.
-    this.fileBytes && this.openFileBytes(this.fileBytes);
+    // this.fileBytes && this.openFileBytes(this.fileBytes);
     this.resetCanvases();
-    this.playFrame();
+    this.advanceFrame();
     this.drawFrame();
   }
 
@@ -1764,12 +1755,8 @@ class AppCtrl {
     this.uiApply();
   }
 
-  uiPlayPause() {
-    this.playPause();
-  }
-
   uiNextFrame() {
-    this.playFrame();
+    this.advanceFrame();
     this.drawFrame();
   }
 
@@ -1982,8 +1969,9 @@ class AppCtrl {
     if (!this.y4mFile) {
       return;
     }
+    alert("FIXME");
     let file = this.y4mFile;
-    let frame = file.frames[this.frameNumber];
+    let frame = file.frames[this.aom.frameNumber];
     let Yp = frame.y;
     let Ys = file.size.w;
     let Up = frame.cb;
@@ -2110,7 +2098,7 @@ class AppCtrl {
       mode(i, bounds);
     });
 
-    function mode(m: AOMAnalyzerPredictionMode, bounds: Rectangle) {
+    function mode(m: AnalyzerPredictionMode, bounds: Rectangle) {
       let x = bounds.x;
       let y = bounds.y;
       let w = bounds.w;
@@ -2118,28 +2106,28 @@ class AppCtrl {
       let hw = w / 2;
       let hh = h / 2;
       switch (m) {
-        case AOMAnalyzerPredictionMode.V_PRED:
+        case AnalyzerPredictionMode.V_PRED:
           drawLine(ctx, x + hw + lineOffset, y, 0, h);
           break;
-        case AOMAnalyzerPredictionMode.H_PRED:
+        case AnalyzerPredictionMode.H_PRED:
           drawLine(ctx, x, y + hh + lineOffset, w, 0);
           break;
-        case AOMAnalyzerPredictionMode.D45_PRED:
+        case AnalyzerPredictionMode.D45_PRED:
           drawLine(ctx, x, y + h, w, -h);
           break;
-        case AOMAnalyzerPredictionMode.D63_PRED:
+        case AnalyzerPredictionMode.D63_PRED:
           drawLine(ctx, x, y + h, hw, -h);
           break;
-        case AOMAnalyzerPredictionMode.D135_PRED:
+        case AnalyzerPredictionMode.D135_PRED:
           drawLine(ctx, x, y, w, h);
           break;
-        case AOMAnalyzerPredictionMode.D117_PRED:
+        case AnalyzerPredictionMode.D117_PRED:
           drawLine(ctx, x + hw, y, hw, h);
           break;
-        case AOMAnalyzerPredictionMode.D153_PRED:
+        case AnalyzerPredictionMode.D153_PRED:
           drawLine(ctx, x, y + hh, w, hh);
           break;
-        case AOMAnalyzerPredictionMode.D207_PRED:
+        case AnalyzerPredictionMode.D207_PRED:
           drawLine(ctx, x, y + hh, w, -hh);
           break;
         default:
@@ -2219,7 +2207,7 @@ class AppCtrl {
 
   getMIBlockBitsPerPixel(c: number, r: number): number {
     // Bits are stored at the 8x8 level, even if the block is split further.
-    let blockSize = this.getMIBlockSize(c, r, AOMAnalyzerBlockSize.BLOCK_8X8);
+    let blockSize = this.getMIBlockSize(c, r, AnalyzerBlockSize.BLOCK_8X8);
     let blockArea = blockSize.w * blockSize.h;
     let miBits = this.getMIBits(c, r);
     return miBits / blockArea;
@@ -2260,7 +2248,8 @@ class AppCtrl {
     if (!this.y4mFile) {
       return;
     }
-    let frame = file.frames[this.frameNumber];
+    alert("FIXME");
+    let frame = file.frames[this.aom.frameNumber];
 
     let AYp = frame.y;
     let AYs = file.size.w;
@@ -2292,7 +2281,8 @@ class AppCtrl {
     if (!this.y4mFile) {
       return;
     }
-    let frame = file.frames[this.frameNumber];
+    alert("FIXME");
+    let frame = file.frames[this.aom.frameNumber];
     let AYp = frame.y;
     let AYs = file.size.w;
     let AH = file.buffer;
@@ -2346,17 +2336,17 @@ class AppCtrl {
           let h = (1 << BLOCK_SIZES[size][1]);
           coordinates.set(c, r);
           switch (size) {
-            case AOMAnalyzerBlockSize.BLOCK_4X4:
+            case AnalyzerBlockSize.BLOCK_4X4:
               visitor(size, coordinates, subCoordinates.set(0, 0), bounds.set(c * s,     r * s,     w, h));
               visitor(size, coordinates, subCoordinates.set(0, 1), bounds.set(c * s,     r * s + h, w, h));
               visitor(size, coordinates, subCoordinates.set(1, 0), bounds.set(c * s + w, r * s,     w, h));
               visitor(size, coordinates, subCoordinates.set(1, 1), bounds.set(c * s + w, r * s + h, w, h));
               break;
-            case AOMAnalyzerBlockSize.BLOCK_8X4:
+            case AnalyzerBlockSize.BLOCK_8X4:
               visitor(size, coordinates, subCoordinates.set(0, 0), bounds.set(c * s,     r * s,     w, h));
               visitor(size, coordinates, subCoordinates.set(0, 1), bounds.set(c * s,     r * s + h, w, h));
               break;
-            case AOMAnalyzerBlockSize.BLOCK_4X8:
+            case AnalyzerBlockSize.BLOCK_4X8:
               visitor(size, coordinates, subCoordinates.set(0, 0), bounds.set(c * s,     r * s,     w, h));
               visitor(size, coordinates, subCoordinates.set(1, 0), bounds.set(c * s + w, r * s,     w, h));
               break;
@@ -2392,7 +2382,7 @@ class AppCtrl {
           let h = (1 << TRANSFORM_SIZES[size][1]);
           coordinates.set(c, r);
           switch (size) {
-            case AOMAnalyzerBlockSize.BLOCK_4X4:
+            case AnalyzerBlockSize.BLOCK_4X4:
               visitor(size, coordinates, subCoordinates.set(0, 0), bounds.set(c * s,     r * s,     w, h));
               visitor(size, coordinates, subCoordinates.set(0, 1), bounds.set(c * s,     r * s + h, w, h));
               visitor(size, coordinates, subCoordinates.set(1, 0), bounds.set(c * s + w, r * s,     w, h));
@@ -2490,16 +2480,39 @@ function YUV2RGB(yValue, uValue, vValue) {
   return (b << 16) | (g << 8) | (r << 0);
 }
 
-function getUrlParameters(): any {
+function forEachUrlParameter(callback: (key: string, value: string) => void) {
   let url = window.location.search.substring(1);
   url = url.replace(/\/$/, ""); // Replace / at the end that gets inserted by browsers.
   let params = {};
   url.split('&').forEach(function (s) {
     let t = s.split('=');
-    params[t[0]] = decodeURIComponent(t[1]);
+    callback(t[0], decodeURIComponent(t[1]));
+  });
+}
+
+function getUrlParameters(): any {
+  let params = {};
+  forEachUrlParameter((key, value) => {
+    params[key] = value;
   });
   return params;
 };
+
+/**
+ * Extracts decoder / file pairs from the url parameter string.
+ */
+function getDecoderFilePairs(): {decoder: string, file: string} [] {
+  let currenDecoder = "bin/decoder.js";
+  let pairs = [];
+  forEachUrlParameter((key, value) => {
+    if (key == "decoder") {
+      currenDecoder = value;
+    } else if (key == "file") {
+      pairs.push({decoder: currenDecoder, file: value});
+    }
+  });
+  return pairs;
+}
 
 angular
 .module('AomInspectorApp', ['ngMaterial', 'color.picker'])
