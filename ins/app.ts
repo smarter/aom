@@ -3,6 +3,9 @@ declare let DecoderModule: any;
 declare let Mousetrap: any;
 declare let tinycolor: any;
 declare let tinygradient: any;
+
+/* Utility Functions */
+
 function assert(condition: boolean, message = "") {
   if (!condition) {
     throw new Error(message);
@@ -22,6 +25,25 @@ function toPercent(v: number) {
 function withCommas(v: number) {
   return v.toLocaleString();
 }
+
+type AsyncMap<A, B> = (from: A, next: (to: B) => void) => void;
+
+function mapJoin<A, B>(from: A [], fn: AsyncMap<A, B>, next: (to: B []) => void) {
+  let out = [];
+  let src = from.slice(0);
+  function doNext() {
+    if (src.length == 0) {
+      next(out);
+    } else {
+      fn(src.shift(), (to) => {
+        out.push(to);
+        doNext();
+      });
+    }
+  }
+  doNext();
+}
+
 class Y4MFile {
   constructor(public size: Size, public buffer: Uint8Array, public frames: Y4MFrame []) {
     // ...
@@ -278,6 +300,10 @@ class AOM {
   }
   openFile() {
     return this.native._open_file();
+  }
+  openFileBytes(buffer: Uint8Array) {
+    this.native.FS.writeFile("/tmp/input.ivf", buffer, { encoding: "binary" });
+    this.openFile();
   }
   readFrame() {
     return this.native._read_frame();
@@ -555,17 +581,7 @@ const BLOCK_SIZE = 8;
 
 class AppCtrl {
   aom: AOM = null;
-
-  decoders = {
-    default: {
-      description: "Default",
-      path: "bin/decoder.js"
-    },
-    dering: {
-      description: "Deringing",
-      path: "bin/dering-decoder.js"
-    }
-  };
+  aoms: AOM [] = [];
   selectedDecoder: string;
   frameSize: Size = new Size(128, 128);
   tileGridSize: GridSize = new GridSize(0, 0);
@@ -1150,10 +1166,16 @@ class AppCtrl {
     let frames = parseInt(parameters.frameNumber) || 1;
 
 
-    this.loadDecoder("default", () => {
-      this.aom = new AOM(DecoderModule(Module));
-      this.createUIFrameProperties();
-      this.createUIBlockProperties();
+    var list = [
+      { decoder: "default", file: "media/default.ivf" },
+      { decoder: "default", file: "media/default.ivf" }
+    ];
+
+
+    mapJoin(["bin/decoder.js", "bin/decoder.js", "bin/decoder.js"], this.loadDecoder, (aoms: AOM []) => {
+      this.aoms = aoms;
+      this.aom = aoms[0];
+
       let file = parameters.file || "media/default.ivf";
       this.openFile(file, () => {
         this.playFrameAsync(frames, () => {
@@ -1161,6 +1183,9 @@ class AppCtrl {
         })
       });
     });
+
+    this.createUIFrameProperties();
+    this.createUIBlockProperties();
   }
 
   installKeyboardShortcuts() {
@@ -1304,11 +1329,47 @@ class AppCtrl {
     return this.aom.getMIProperty(MIProperty.GET_MI_BITS, mi.x, mi.y);
   }
 
-  loadDecoder(decoder: string, next: () => any) {
-    this.selectedDecoder = decoder;
+  loadDecoders(paths: string [], next: (aom: AOM []) => void) {
+    mapJoin(paths, (path: string, next: (aom: AOM) => void) => {
+      this.loadDecoder(path, next);
+    }, next);
+
+    // let self = this;
+    // let aoms = [];
+    // let left = paths.slice(0);
+    // function loadNextDecoder() {
+    //   if (left.length === 0) {
+    //     next(aoms);
+    //     return;
+    //   }
+    //   self.loadDecoder(left.shift(), (aom) => {
+    //     aoms.push(aom);
+    //     loadNextDecoder();
+    //   });
+    // }
+    // loadNextDecoder();
+  }
+
+  /**
+   * Loads and initializes an AOM decoder.
+   */
+  loadDecoder(path: string, next: (aom: AOM) => void) {
+    console.info("Loading Decoder: " + path);
     let s = document.createElement('script');
-    s.onload = next;
-    s.setAttribute('src', this.decoders[decoder].path);
+    let self = this;
+    s.onload = function () {
+      var Module = {
+        noExitRuntime: true,
+        preRun: [],
+        postRun: [function() {
+          // ...
+        }],
+        memoryInitializerPrefixURL: "bin/",
+        arguments: ['input.ivf', 'output.raw']
+      };
+      next(new AOM(DecoderModule(Module)));
+    }
+    s.setAttribute('src', path);
     document.body.appendChild(s);
   }
 
@@ -1376,8 +1437,7 @@ class AppCtrl {
   openFileBytes(buffer: Uint8Array) {
     this.fileBytes = buffer;
     this.fileSize = buffer.length;
-    this.aom.native.FS.writeFile("/tmp/input.ivf", buffer, { encoding: "binary" });
-    this.aom.openFile();
+    this.aom.openFileBytes(buffer);
     this.frameNumber = -1;
     this.frameSize = this.aom.getFrameSize();
     this.resetCanvases();
@@ -2480,13 +2540,3 @@ angular
   };
 }]);
 ;
-
-window.Module = {
-  noExitRuntime: true,
-  preRun: [],
-  postRun: [function() {
-    // startVideo();
-  }],
-  memoryInitializerPrefixURL: "bin/",
-  arguments: ['input.ivf', 'output.raw']
-};
