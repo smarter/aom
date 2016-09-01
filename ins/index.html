@@ -142,12 +142,6 @@
             Reload: R
           </md-tooltip>
         </md-button>
-        <md-button ng-click="vm.uiPlayPause()" class="md-icon-button">
-          <i class="material-icons">{{vm.isPlaying ? "pause" : "play_arrow"}}</i>
-          <md-tooltip md-direction="bottom">
-            Play / Pause: Space
-          </md-tooltip>
-        </md-button>
         <md-button ng-click="vm.uiNextFrame()" class="md-icon-button">
           <i class="material-icons md-18">skip_next</i>
           <md-tooltip md-direction="bottom">
@@ -396,8 +390,8 @@
   <script src="lib/dragscroll.js"></script>
 
   <div style="display: none;">
-    <input id="fileInput" type="file" onchange="angular.element(this).scope().fileInputNameChanged(this)">
-    <input id="y4mFileInput" type="file" onchange="angular.element(this).scope().y4mFileInputNameChanged(this)">
+    <input id="fileInput" type="file" accept=".ivf" onchange="angular.element(this).scope().fileInputNameChanged(this)">
+    <input id="y4mFileInput" type="file" accept=".y4m" onchange="angular.element(this).scope().y4mFileInputNameChanged(this)">
   </div>
 
 </html>
