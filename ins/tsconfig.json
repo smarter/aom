@@ -6,7 +6,6 @@
     },
     "files": [
         "ext.d.ts",
-        "app.ts",
-        "typings/modules/es6-promise/index.d.ts"
+        "app.ts"
     ]
 }

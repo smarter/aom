@@ -1,5 +1,3 @@
-import {Promise} from 'es6-promise';
-
 declare let angular: any;
 declare let DecoderModule: any;
 declare let Mousetrap: any;
@@ -50,25 +48,6 @@ function mapJoin<A, B>(from: A [], fn: AsyncMap<A, B>, next: (to: B []) => void)
     }
   }
   doNext();
-}
-
-function readFilesFromFileInput(input: any, next: (to: Uint8Array []) => void) {
-  let i = 0;
-  let reader = new FileReader();
-  let to = [];
-  reader.onload = function () {
-    to.push(new Uint8Array(reader.result));
-    i++;
-    readNext()
-  }
-  function readNext() {
-    if (i == input.files.length) {
-      next(to);
-      return;
-    }
-    reader.readAsArrayBuffer(input.files[i]);
-  }
-  readNext();
 }
 
 class Y4MFile {
@@ -306,8 +285,11 @@ interface Internal {
   UTF8ToString(p: number): string;
 }
 
+const DEFAULT_DECODER = "bin/decoder.js";
+
 class AOM {
-  title: string;
+  file: string;
+  decoder: string;
   native: Internal;
   HEAPU8: Uint8Array;
   buffer: Uint8Array;
@@ -1133,24 +1115,12 @@ class AppCtrl {
     // File input types don't have angular bindings, so we need set the
     // event handler on the scope object.
     $scope.ivfFileInputNameChanged = function(target) {
-      readFilesFromFileInput(target, (files) => {
-        let decoderPaths = [];
-        for (let i = 0; i < files.length; i++) {
-          decoderPaths.push("bin/decoder.js");
-        }
-        let filesLeft = files.length;
-        mapJoin(decoderPaths, self.loadDecoder, (aoms: AOM []) => {
-          self.aoms = aoms;
-          self.aom = <any>MissingAOM;
-          aoms.forEach((aom, i) => {
-            self.openFileBytes(aom, files[i], () => {
-              aom.readFrame();
-              if (--filesLeft === 0) {
-                self.drawFrame();
-                self.updateFrame();
-              }
-            }, false);
-          });
+      self.readInputFilesPromise(target).then(files => {
+        console.info(files);
+        let promises = files.map((file, i) =>
+          self.loadDecoderAndFilePromise(DEFAULT_DECODER, file, target.files[i].name));
+        Promise.all(promises).then((aoms) => {
+          self.initializeManyAOMs(aoms);
         });
       });
     };
@@ -1216,36 +1186,49 @@ class AppCtrl {
     this.createUIAccountingProperties();
     this.loadOptions();
 
-    let parameters = getUrlParameters();
-    let decoderFilePairs = getDecoderFilePairs();
-    if (decoderFilePairs.length == 0) {
-      decoderFilePairs = [
-        {decoder: "bin/decoder.js", file: "media/default.ivf"}
+
+    let urlFiles = getUrlFiles();
+    if (urlFiles.length == 0) {
+      urlFiles = [
+        { decoder: DEFAULT_DECODER, file: "media/default.ivf" }
       ];
     }
-    let decoderPaths = decoderFilePairs.map((pair) => pair.decoder);
-    let decoderFiles = decoderFilePairs.map((pair) => pair.file);
-    mapJoin(decoderPaths, this.loadDecoder, (aoms: AOM []) => {
-      this.aoms = aoms;
-      if (aoms.length > 1) {
-        this.showToast(`Loaded ${aoms.length} files, use number keys to toggle bitstreams.`, 5000);
-      }
-      let filesLeft = decoderFiles.length;
-      aoms.forEach((aom, i) => {
-        let path = decoderFiles[i];
-        this.openFile(aom, path, () => {
-          console.info("Loaded File: " + path);
-          aom.readFrame();
-          if (--filesLeft === 0) {
-            this.drawFrame();
-            this.updateFrame();
-          }
-        });
-      });
+
+    let promises = urlFiles.map(file => {
+      return this.loadDecoderAndFilePromise(file.decoder, file.file);
     });
 
+    Promise.all(promises).then((aoms) => {
+      this.initializeManyAOMs(aoms);
+    });
     this.createUIFrameProperties();
     this.createUIBlockProperties();
+    return;
+  }
+
+  initializeManyAOMs(aoms: AOM []) {
+    this.aoms = aoms;
+    aoms.forEach(aom => aom.readFrame());
+    this.activateAOM(0);
+    if (aoms.length > 1) {
+      this.showToast(`Loaded ${aoms.length} files, use number keys to toggle bitstreams.`, 5000);
+    }
+  }
+
+  activateAOM(index: number) {
+    if (index >= this.aoms.length) {
+      return;
+    }
+    if (this.aom === this.aoms[index]) {
+      return;
+    }
+    this.aom = this.aoms[index];
+    document.title = this.aom.file;
+    this.frameSize = this.aom.getFrameSize();
+    this.resetCanvases();
+    this.drawFrame();
+    this.updateFrame();
+    this.showToast(`Showing ${this.aom.file}`);
   }
 
   installKeyboardShortcuts() {
@@ -1290,15 +1273,7 @@ class AppCtrl {
           self.drawImages();
         }
       } else {
-        // Toggle AOMs
-        let index = Number(name) - 1;
-        if (index < self.aoms.length) {
-          self.aom = self.aoms[index];
-          self.updateFrame();
-          document.title = self.aom.title;
-          self.showToast(`Showing ${document.title}`);
-        }
-        self.drawImages();
+        self.activateAOM(Number(name) - 1);
       }
       self.drawMain();
       self.options.showInspector.value && self.drawInfo();
@@ -1402,6 +1377,7 @@ class AppCtrl {
   }
 
   showToast(message: string, duration = 1000) {
+    console.log(message);
     this.toast.innerHTML = message;
     let opacity = 1;
     this.toast.style.opacity = String(opacity);
@@ -1419,34 +1395,40 @@ class AppCtrl {
       }, 16);
     }, duration);
   }
-  /**
-   * Loads and initializes an AOM decoder.
-   */
-  loadDecoder(path: string, next: (aom: AOM) => void) {
-    console.info("Loading Decoder: " + path);
-    let s = document.createElement('script');
-    let self = this;
-    s.onload = function () {
-      var aom = null;
-      var Module = {
-        noExitRuntime: true,
-        preRun: [],
-        postRun: [function() {
-          next(aom);
-        }],
-        memoryInitializerPrefixURL: "bin/",
-        arguments: ['input.ivf', 'output.raw']
-      };
-      aom = new AOM(DecoderModule(Module));
-    }
-    s.setAttribute('src', path);
-    document.body.appendChild(s);
+
+  loadDecoderPromise(path: string): Promise<AOM> {
+    return new Promise((resolve, reject) => {
+      this.showToast(`Loading Decoder: ${path} ...`);
+      let s = document.createElement('script');
+      let self = this;
+      s.onload = function () {
+        var aom = null;
+        var Module = {
+          noExitRuntime: true,
+          preRun: [],
+          postRun: [function() {
+            self.showToast(`Loaded Decoder: ${path}.`);
+            resolve(aom);
+          }],
+          memoryInitializerPrefixURL: "bin/",
+          arguments: ['input.ivf', 'output.raw']
+        };
+        aom = new AOM(DecoderModule(Module));
+      }
+      s.setAttribute('src', path);
+      document.body.appendChild(s);
+    });
   }
 
-  // loadDecoderAsync(path: string): Promise<AOM> {
-
-  // }
-
+  loadDecoderAndFilePromise(decoder: string, file: string | Uint8Array, fileName?: string): Promise<AOM> {
+    return this.loadDecoderPromise(decoder).then((aom) => {
+      return this.openFilePromise(aom, file).then(() => {
+        aom.file = fileName || (typeof file === "string" ? file : "Untitled");
+        aom.decoder = decoder;
+        return aom;
+      });
+    });
+  }
 
   loadY4MBytes(buffer: Uint8Array): Y4MFile {
     return this.parseY4MBytes(buffer);
@@ -1502,22 +1484,14 @@ class AppCtrl {
     return new Y4MFile(size, buffer, frames);
   }
 
-  openFile(aom: AOM, path: string, next: () => any = null, overwrite = false) {
-    aom.title = toFileName(path);
-    this.downloadFile(path, (bytes: Uint8Array) => {
-      this.openFileBytes(aom, bytes, next, overwrite);
-    });
-  }
-
-  openFileBytes(aom: AOM, bytes: Uint8Array, next: () => any = null, overwrite = false) {
-    aom.openFileBytes(bytes);
-    if (this.aom == <any>MissingAOM || overwrite) {
-      this.aom = aom;
-      document.title = aom.title;
-      this.frameSize = this.aom.getFrameSize();
-      this.resetCanvases();
+  openFilePromise(aom: AOM, file: string | Uint8Array): Promise<void> {
+    if (typeof file === "string") {
+      return this.downloadFilePromise(file).then((bytes) => {
+        aom.openFileBytes(bytes);
+      });
+    } else {
+      return Promise.resolve(aom.openFileBytes(file));
     }
-    next && next();
   }
 
   resetCanvases() {
@@ -1545,23 +1519,49 @@ class AppCtrl {
 		this.zoomCanvas.height = this.zoomWidth * this.ratio;
   }
 
-  downloadFile(path: string, next: (buffer: Uint8Array) => void) {
-    let xhr = new XMLHttpRequest();
+  readInputFilesPromise(input: any): Promise<Uint8Array []> {
     let self = this;
-    self.progressMode = "determinate";
-    xhr.open("GET", path, true);
-    xhr.responseType = "arraybuffer";
-    xhr.send();
-    xhr.addEventListener("progress", (e) => {
-      let progress = (e.loaded / e.total) * 100;
-      this.progressValue = progress;
-      this.$scope.$apply();
-    });
-    xhr.addEventListener("load", function () {
-      if (xhr.status != 200) {
-        return;
+    return new Promise((resolve, reject) => {
+      let i = 0;
+      let reader = new FileReader();
+      let array = [];
+      reader.onload = function () {
+        array.push(new Uint8Array(reader.result));
+        i++;
+        readNext()
       }
-      next(new Uint8Array(this.response));
+      function readNext() {
+        if (i == input.files.length) {
+          resolve(array);
+          return;
+        }
+        self.showToast(`Reading File: ${input.files[i]}.`);
+        reader.readAsArrayBuffer(input.files[i]);
+      }
+      readNext();
+    });
+  }
+
+  downloadFilePromise(path: string): Promise<Uint8Array> {
+    return new Promise((resolve, reject) => {
+      this.showToast(`Downloading File: ${path}.`);
+      let xhr = new XMLHttpRequest();
+      let self = this;
+      self.progressMode = "determinate";
+      xhr.open("GET", path, true);
+      xhr.responseType = "arraybuffer";
+      xhr.send();
+      xhr.addEventListener("progress", (e) => {
+        let progress = (e.loaded / e.total) * 100;
+        this.progressValue = progress;
+        this.$scope.$apply();
+      });
+      xhr.addEventListener("load", function () {
+        if (xhr.status != 200) {
+          return;
+        }
+        resolve(new Uint8Array(this.response));
+      });
     });
   }
 
@@ -1595,12 +1595,11 @@ class AppCtrl {
         path = "media/tiger_60.ivf";
         break;
     }
-    this.openFile(this.aom, path, () => {
-      console.info("Loaded File: " + path);
-      this.aom.readFrame();
-      this.drawFrame();
-      this.updateFrame();
-    }, true);
+    this.loadDecoderAndFilePromise(DEFAULT_DECODER, path).then(aom => {
+      this.aoms = [aom];
+      aom.readFrame();
+      this.activateAOM(0);
+    });
   }
 
   createSharingLink() {
@@ -1790,11 +1789,7 @@ class AppCtrl {
   }
 
   uiReload() {
-    // TODO: Don't reload entire file.
-    // this.fileBytes && this.openFileBytes(this.fileBytes);
-    this.resetCanvases();
-    this.advanceFrame();
-    this.drawFrame();
+    // TODO
   }
 
   uiPreviousFrame() {
@@ -2544,8 +2539,8 @@ function getUrlParameters(): any {
 /**
  * Extracts decoder / file pairs from the url parameter string.
  */
-function getDecoderFilePairs(): {decoder: string, file: string} [] {
-  let currenDecoder = "bin/decoder.js";
+function getUrlFiles(): {decoder: string, file: string} [] {
+  let currenDecoder = DEFAULT_DECODER;
   let pairs = [];
   forEachUrlParameter((key, value) => {
     if (key == "decoder") {
