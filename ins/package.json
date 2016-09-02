@@ -1,0 +1,29 @@
+{
+  "name": "analyzer",
+  "version": "1.0.0",
+  "description": "AOM/VP9 Bitstream Analyzer",
+  "main": "app.js",
+  "bin": {
+    "analyzer": "decoder.js"
+  },
+  "dependencies": {
+    "typescript": "^2.0.2",
+    "typings": "^1.3.3"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "tsc": "./node_modules/typescript/bin/tsc",
+    "typings": "typings"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mbebenita/aomanalyzer.git"
+  },
+  "author": "Michael Bebenita",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/mbebenita/aomanalyzer/issues"
+  },
+  "homepage": "https://github.com/mbebenita/aomanalyzer#readme"
+}
