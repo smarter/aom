@@ -782,6 +782,8 @@ class AppCtrl {
   // If not zero, we are playing frames.
   playInterval: number = 0;
 
+  toast: HTMLDivElement;
+  toastTimeout = 0;
   container: HTMLDivElement;
   displayCanvas: HTMLCanvasElement;
   overlayCanvas: HTMLCanvasElement;
@@ -1183,6 +1185,7 @@ class AppCtrl {
     this.scale = this.ratio;
     this.scale = 1;
 
+    this.toast = <HTMLDivElement>document.getElementById("toast");
     this.container = <HTMLDivElement>document.getElementById("container");
 
     this.displayCanvas = <HTMLCanvasElement>document.getElementById("display");
@@ -1224,13 +1227,16 @@ class AppCtrl {
     let decoderFilePairs = getDecoderFilePairs();
     if (decoderFilePairs.length == 0) {
       decoderFilePairs = [
-        // {decoder: "bin/decoder.js", file: "media/default.ivf"}
+        {decoder: "bin/decoder.js", file: "media/default.ivf"}
       ];
     }
     let decoderPaths = decoderFilePairs.map((pair) => pair.decoder);
     let decoderFiles = decoderFilePairs.map((pair) => pair.file);
     mapJoin(decoderPaths, this.loadDecoder, (aoms: AOM []) => {
       this.aoms = aoms;
+      if (aoms.length > 1) {
+        this.showToast(`Loaded ${aoms.length} files, use number keys to toggle bitstreams.`, 5000);
+      }
       let filesLeft = decoderFiles.length;
       aoms.forEach((aom, i) => {
         let path = decoderFiles[i];
@@ -1286,6 +1292,7 @@ class AppCtrl {
       if (isNaN(name)) {
         let option = this.options[name];
         option.value = !option.value;
+        self.showToast(`${option.value ? "Enable" : "Disable"} : ${option.detail}`);
         if (option.updatesImage) {
           self.drawImages();
         }
@@ -1296,7 +1303,7 @@ class AppCtrl {
           self.aom = self.aoms[index];
           self.updateFrame();
           document.title = self.aom.title;
-          console.info("Changed AOM to " + index);
+          self.showToast(`Showing ${document.title}`);
         }
         self.drawImages();
       }
@@ -1401,6 +1408,24 @@ class AppCtrl {
     return this.aom.getMIProperty(MIProperty.GET_MI_BITS, mi.x, mi.y);
   }
 
+  showToast(message: string, duration = 1000) {
+    this.toast.innerHTML = message;
+    let opacity = 1;
+    this.toast.style.opacity = String(opacity);
+    if (this.toastTimeout) {
+      clearTimeout(this.toastTimeout);
+      this.toastTimeout = 0;
+    }
+    this.toastTimeout = setTimeout(() => {
+      let interval = setInterval(() => {
+        this.toast.style.opacity = String(opacity);
+        opacity -= 0.1;
+        if (opacity < 0) {
+          clearInterval(interval);
+        }
+      }, 16);
+    }, duration);
+  }
   /**
    * Loads and initializes an AOM decoder.
    */

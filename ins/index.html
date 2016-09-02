@@ -63,6 +63,24 @@
       font-size: 12px;
       font-family: 'Roboto Mono', monospace;
     }
+    #toast {
+      font-size: 12px;
+      font-family: 'Roboto Mono', monospace;
+      position: absolute;
+      left: 0;
+      top: 0;
+      right: 0;
+      z-index: 10;
+      opacity: 0;
+      height: 40px;
+      background-color: rgba(0, 0, 0, 0.5);
+      color: white;
+      overflow: hidden;
+
+      text-align: center;
+      vertical-align: middle;
+      line-height: 40px;       /* the same as your div height */
+    }
   </style>
 </head>
 <script>
@@ -137,12 +155,12 @@
             Zoom In: ]
           </md-tooltip>
         </md-button>
-        <md-button ng-click="vm.uiReload()" class="md-icon-button">
+        <!--<md-button ng-click="vm.uiReload()" class="md-icon-button">
           <i class="material-icons">refresh</i>
           <md-tooltip md-direction="bottom">
             Reload: R
           </md-tooltip>
-        </md-button>
+        </md-button>-->
         <md-button ng-click="vm.uiNextFrame()" class="md-icon-button">
           <i class="material-icons md-18">skip_next</i>
           <md-tooltip md-direction="bottom">
@@ -197,7 +215,10 @@
       </md-content>
     </md-sidenav>
     <md-content flex layout="row">
-      <md-content class="dragscroll" flex layout="row" style="overflow: scroll;">
+      <div id="toast">
+        Toast
+      </div>
+      <md-content class="dragscroll" flex layout="row" style="overflow: hidden;">
         <div id="container" style="position: relative; width: 128px; height: 128px;">
           <canvas id="display" oncontextmenu="event.preventDefault()" style="position: absolute; left: 0; top: 0; z-index: 0; image-rendering: pixelated; background-color: #F5F5F5;"
             width=0 height=0></canvas>
