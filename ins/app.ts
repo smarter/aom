@@ -32,6 +32,63 @@ function toFileName(s: string) {
   return s.replace(/^.*[\\\/]/, '')
 }
 
+let colorPool = {
+  name: "#FFFFFF", // White
+  // name: "#FF0000", // Red
+  // name: "#00FF00", // Green
+  "decode_coefs": "#0000FF", // Blue
+  "read_inter_mode": "#FF00FF", // Magenta
+  // name: "#00FFFF", // Cyan
+  // name: "#FFFF00", // Yellow
+  // name: "#000000", // Black
+  // name: "#70DB93", // Aquamarine
+  // name: "#B5A642", // Brass
+  // name: "#5F9F9F", // Cadet Blue
+  "read_mv_component": "#B87333", // Copper
+  // name: "#2F4F2F", // Dark Green
+  // name: "#9932CD", // Dark Orchid
+  // name: "#871F78", // Dark Purple
+  // name: "#855E42", // Dark Wood
+  // name: "#545454", // Dim Grey
+  // name: "#8E2323", // Firebrick
+  // name: "#F5CCB0", // Flesh
+  // name: "#238E23", // Forest Green
+  // name: "#CD7F32", // Gold
+  // name: "#DBDB70", // Goldenrod
+  // name: "#C0C0C0", // Grey
+  // name: "#527F76", // Green Copper
+  // name: "#9F9F5F", // Khaki
+  // name: "#8E236B", // Maroon
+  // name: "#2F2F4F", // Midnight Blue
+  // name: "#EBC79E", // New Tan
+  // name: "#CFB53B", // Old Gold
+  // name: "#FF7F00", // Orange
+  // name: "#DB70DB", // Orchid
+  // name: "#D9D9F3", // Quartz
+  // name: "#5959AB", // Rich Blue
+  // name: "#8C1717", // Scarlet
+  // name: "#238E68", // Sea Green
+  // name: "#6B4226", // Semi-Sweet Chocolate
+  // name: "#8E6B23", // Sienna
+  // name: "#007FFF", // Slate Blue
+  // name: "#00FF7F", // Spring Green
+  // name: "#236B8E", // Steel Blue
+  // name: "#38B0DE", // Summer Sky
+  // name: "#DB9370", // Tan
+  // name: "#ADEAEA", // Turquoise
+  // name: "#5C4033", // Very Dark Brown
+  // name: "#4F2F4F", // Violet
+  // name: "#CC3299", // Violet Red
+  // name: "#99CC32", // Yellow Green
+};
+function getColor(s) {
+  if (colorPool[s]) {
+    return colorPool[s];
+  }
+  colorPool[s] = tinycolor.random().toString();
+  return colorPool[s];
+}
+
 type AsyncMap<A, B> = (from: A, next: (to: B) => void) => void;
 
 function mapJoin<A, B>(from: A [], fn: AsyncMap<A, B>, next: (to: B []) => void) {
@@ -225,11 +282,15 @@ type AccountingSymbolMap = { [name: string]: AccountingSymbol };
 
 class Accounting {
   symbols: AccountingSymbol [] = null;
-  frameSymbols: AccountingSymbolMap = Object.create(null);
+  frameSymbols: AccountingSymbolMap = null;
   constructor(symbols: AccountingSymbol [] = []) {
     this.symbols = symbols;
   }
   createFrameSymbols() {
+    if (this.frameSymbols) {
+      return this.frameSymbols;
+    }
+    this.frameSymbols = Object.create(null);
     this.frameSymbols = Accounting.flatten(this.symbols);
   }
   createBlockSymbols(mi: Vector) {
@@ -257,6 +318,52 @@ class Accounting {
       ret[name] = map[name];
     });
     return ret;
+  }
+
+  static makeTraces(accountings: Accounting[]) {
+    let allFrameSymbols = {};
+    let x = [];
+    function makeEmptyArray(n) {
+      let a = [];
+      for (let i = 0; i < n; i++) a[i] = 0;
+      return a;
+    }
+    let count = Math.max(32, accountings.length);
+    for (let i = 0; i < count; i++) {
+      x.push(i);
+    }
+    for (let i = 0; i < accountings.length; i++) {
+      let frameSymbols = accountings[i].createFrameSymbols();
+      let totalBits = 0;
+      for (let symbolName in frameSymbols) {
+        totalBits += frameSymbols[symbolName].bits;
+      }
+      for (let symbolName in frameSymbols) {
+        if (!allFrameSymbols[symbolName]) {
+          allFrameSymbols[symbolName] = makeEmptyArray(count);
+        }
+        allFrameSymbols[symbolName][i] = frameSymbols[symbolName].bits / totalBits;
+      }
+    }
+
+    // Sort to make Plotly happy.
+    let names = [];
+    for (let symbolName in allFrameSymbols) names.push(symbolName);
+    names.sort();
+    let traces = [];
+    names.forEach(symbolName => {
+      let y = allFrameSymbols[symbolName];
+      traces.push({
+        x: x,
+        y: y,
+        name: symbolName,
+        type: "bar",
+        marker: {
+          color: getColor(symbolName)
+        }
+      });
+    });
+    return traces;
   }
 }
 
@@ -295,6 +402,7 @@ class AOM {
   buffer: Uint8Array;
   frameNumber: number = -1;
   lastDecodeFrameTime: number = 0;
+  accountings: Accounting [] = [];
   constructor (native: Internal) {
     this.native = native;
     this.HEAPU8 = native.HEAPU8;
@@ -310,6 +418,7 @@ class AOM {
     this.native._read_frame();
     this.frameNumber ++;
     this.lastDecodeFrameTime = performance.now() - s;
+    this.accountings.push(this.getAccounting());
     return true;
   }
   getPlane(pli: number): number {
@@ -359,6 +468,27 @@ class AOM {
     let cols = v >> 16;
     let rows = v & 0xFF;
     return new GridSize(cols, rows);
+  }
+  getFrameAccounting(): Accounting {
+    return this.accountings[this.frameNumber];
+  }
+  getAccounting(): Accounting {
+    var accounting = new Accounting();
+    let count = this.getAccountingProperty(AccountingProperty.GET_ACCCOUNTING_SYMBOL_COUNT);
+    let nameMap = [];
+    for (let i = 0; i < count; i++) {
+      let nameAddress = this.getAccountingProperty(AccountingProperty.GET_ACCCOUNTING_SYMBOL_NAME, i);
+      if (nameMap[nameAddress] === undefined) {
+        nameMap[nameAddress] = this.getString(nameAddress);
+      }
+      let name = nameMap[nameAddress];
+      let bits = this.getAccountingProperty(AccountingProperty.GET_ACCCOUNTING_SYMBOL_BITS, i);
+      let samples = this.getAccountingProperty(AccountingProperty.GET_ACCCOUNTING_SYMBOL_SAMPLES, i);
+      let x = this.getAccountingProperty(AccountingProperty.GET_ACCCOUNTING_SYMBOL_CONTEXT_X, i);
+      let y = this.getAccountingProperty(AccountingProperty.GET_ACCCOUNTING_SYMBOL_CONTEXT_Y, i);
+      accounting.symbols.push(new AccountingSymbol(name, bits, samples, x, y));
+    }
+    return accounting;
   }
 }
 
@@ -1203,6 +1333,7 @@ class AppCtrl {
     });
     this.createUIFrameProperties();
     this.createUIBlockProperties();
+
     return;
   }
 
@@ -1701,32 +1832,12 @@ class AppCtrl {
     // this.frameStatistics.errors.values.push(this.getFrameError());
 
     this.lastAccounting = this.accounting;
-    this.accounting = this.getAccounting();
+    this.accounting = this.aom.getFrameAccounting();
     this.updateBlockAccounting()
     this.updateFrameAccounting();
   }
 
   accounting: Accounting = null;
-
-  getAccounting(): Accounting {
-    var aom = this.aom;
-    var accounting = new Accounting();
-    let count = aom.getAccountingProperty(AccountingProperty.GET_ACCCOUNTING_SYMBOL_COUNT);
-    let nameMap = [];
-    for (let i = 0; i < count; i++) {
-      let nameAddress = aom.getAccountingProperty(AccountingProperty.GET_ACCCOUNTING_SYMBOL_NAME, i);
-      if (nameMap[nameAddress] === undefined) {
-        nameMap[nameAddress] = aom.getString(nameAddress);
-      }
-      let name = nameMap[nameAddress];
-      let bits = aom.getAccountingProperty(AccountingProperty.GET_ACCCOUNTING_SYMBOL_BITS, i);
-      let samples = aom.getAccountingProperty(AccountingProperty.GET_ACCCOUNTING_SYMBOL_SAMPLES, i);
-      let x = aom.getAccountingProperty(AccountingProperty.GET_ACCCOUNTING_SYMBOL_CONTEXT_X, i);
-      let y = aom.getAccountingProperty(AccountingProperty.GET_ACCCOUNTING_SYMBOL_CONTEXT_Y, i);
-      accounting.symbols.push(new AccountingSymbol(name, bits, samples, x, y));
-    }
-    return accounting;
-  }
 
   updateFrameAccounting() {
     let accounting = this.accounting;
@@ -1749,8 +1860,44 @@ class AppCtrl {
         ]
       }
     }
+    this.updateFrameAccountingPlot();
   }
 
+  updateFrameAccountingPlot() {
+    let accountings = this.aom.accountings;
+    accountings = accountings.slice(Math.max(0, accountings.length - 32));
+    let data = Accounting.makeTraces(accountings);
+    var layout = {
+      barmode: 'stack',
+      showlegend: false,
+      margin: {
+        l: 0,
+        r: 0,
+        b: 0,
+        t: 0,
+        pad: 2
+      },
+      yaxis: {
+        showgrid: false,
+        zeroline: false,
+        showline: false,
+        autotick: true,
+        ticks: '',
+        showticklabels: false
+      },
+      xaxis: {
+        showgrid: false,
+        zeroline: false,
+        showline: false,
+        autotick: true,
+        ticks: '',
+        showticklabels: false
+      },
+      hovermode:'closest',
+    };
+
+    Plotly.newPlot('plotlyAccounting', data, layout);
+  }
   updateBlockAccounting() {
     let accounting = this.accounting;
     if (!accounting) {

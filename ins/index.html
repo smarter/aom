@@ -343,8 +343,8 @@
         </md-tab>
       </md-tabs>
       <div style="background-color: white;">
-        <md-subheader class="md-sticky">Frame Statistics</md-subheader>
         <canvas id="chart" oncontextmenu="event.preventDefault()" width=0 height=0></canvas>
+        <div id="plotlyAccounting" style="height: 160px;"></div>
       </div>
       <md-tabs md-dynamic-height md-border-bottom>
         <md-tab label="Frame Info">
@@ -410,6 +410,7 @@
   <script src="app.js"></script>
   <script src="lib/mousetrap.min.js"></script>
   <script src="lib/dragscroll.js"></script>
+  <script src="lib/plotly-latest.min.js"></script>
 
   <div style="display: none;">
     <input id="ivfFileInput" multiple type="file" accept=".ivf" onchange="angular.element(this).scope().ivfFileInputNameChanged(this)">
