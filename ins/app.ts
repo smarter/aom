@@ -1667,15 +1667,15 @@ class AppCtrl {
   lastAccounting: Accounting = null;
 
   updateFrame() {
-    let {cols, rows} = this.aom.getMIGridSize();
-    let miTotalBits = 0;
-    for (let c = 0; c < cols; c++) {
-      for (let r = 0; r < rows; r++) {
-        miTotalBits += this.aom.getMIProperty(MIProperty.GET_MI_BITS, c, r);
-      }
-    }
-    this.frameStatistics.bits.values.push(miTotalBits);
-    this.frameStatistics.errors.values.push(this.getFrameError());
+    // let {cols, rows} = this.aom.getMIGridSize();
+    // let miTotalBits = 0;
+    // for (let c = 0; c < cols; c++) {
+    //   for (let r = 0; r < rows; r++) {
+    //     miTotalBits += this.aom.getMIProperty(MIProperty.GET_MI_BITS, c, r);
+    //   }
+    // }
+    // this.frameStatistics.bits.values.push(miTotalBits);
+    // this.frameStatistics.errors.values.push(this.getFrameError());
 
     this.lastAccounting = this.accounting;
     this.accounting = this.getAccounting();
