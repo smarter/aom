@@ -48,7 +48,7 @@
     .keyShortcut {
       color: blueviolet;
     }
-    #fileInput, #y4mFileInput {
+    #ivfFileInput, #y4mFileInput {
       display: none;
     }
     .md-button.md-fab.md-overlay-primary {
@@ -91,7 +91,7 @@
             <md-menu-content>
               <md-menu-item>
                 <md-button ng-click="vm.uiAction('open-file', $event)">
-                  Open IVF ...
+                  Open IVF(s) ...
                 </md-button>
               </md-menu-item>
               <md-menu-item>
@@ -99,6 +99,7 @@
                   Open Y4M ...
                 </md-button>
               </md-menu-item>
+              <md-menu-divider></md-menu-divider>
               <md-menu-item>
                 <md-button ng-click="vm.uiAction('open-soccer', $event)">
                   Open Soccer
@@ -390,7 +391,7 @@
   <script src="lib/dragscroll.js"></script>
 
   <div style="display: none;">
-    <input id="fileInput" type="file" accept=".ivf" onchange="angular.element(this).scope().fileInputNameChanged(this)">
+    <input id="ivfFileInput" multiple type="file" accept=".ivf" onchange="angular.element(this).scope().ivfFileInputNameChanged(this)">
     <input id="y4mFileInput" type="file" accept=".y4m" onchange="angular.element(this).scope().y4mFileInputNameChanged(this)">
   </div>
 

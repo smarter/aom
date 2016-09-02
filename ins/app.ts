@@ -50,6 +50,25 @@ function mapJoin<A, B>(from: A [], fn: AsyncMap<A, B>, next: (to: B []) => void)
   doNext();
 }
 
+function readFilesFromFileInput(input: any, next: (to: Uint8Array []) => void) {
+  let i = 0;
+  let reader = new FileReader();
+  let to = [];
+  reader.onload = function () {
+    to.push(new Uint8Array(reader.result));
+    i++;
+    readNext()
+  }
+  function readNext() {
+    if (i == input.files.length) {
+      next(to);
+      return;
+    }
+    reader.readAsArrayBuffer(input.files[i]);
+  }
+  readNext();
+}
+
 class Y4MFile {
   constructor(public size: Size, public buffer: Uint8Array, public frames: Y4MFrame []) {
     // ...
@@ -1118,20 +1137,29 @@ class AppCtrl {
     this.$mdSidenav = $mdSidenav;
     // File input types don't have angular bindings, so we need set the
     // event handler on the scope object.
-    $scope.fileInputNameChanged = function() {
-      let input = <any>event.target;
-      let reader = new FileReader();
-      reader.onload = function() {
-        let bytes = new Uint8Array(reader.result);
-        self.openFileBytes(self.aom, bytes, () => {
-          self.aom.readFrame();
-          self.drawFrame();
-          self.updateFrame();
-        }, true);
-        self.aom.title = toFileName(input.value);
-      };
-      reader.readAsArrayBuffer(input.files[0]);
+    $scope.ivfFileInputNameChanged = function(target) {
+      readFilesFromFileInput(target, (files) => {
+        let decoderPaths = [];
+        for (let i = 0; i < files.length; i++) {
+          decoderPaths.push("bin/decoder.js");
+        }
+        let filesLeft = files.length;
+        mapJoin(decoderPaths, self.loadDecoder, (aoms: AOM []) => {
+          self.aoms = aoms;
+          self.aom = <any>MissingAOM;
+          aoms.forEach((aom, i) => {
+            self.openFileBytes(aom, files[i], () => {
+              aom.readFrame();
+              if (--filesLeft === 0) {
+                self.drawFrame();
+                self.updateFrame();
+              }
+            }, false);
+          });
+        });
+      });
     };
+
     $scope.y4mFileInputNameChanged = function() {
       let input = <any>event.target;
       let reader = new FileReader();
@@ -1196,7 +1224,7 @@ class AppCtrl {
     let decoderFilePairs = getDecoderFilePairs();
     if (decoderFilePairs.length == 0) {
       decoderFilePairs = [
-        {decoder: "bin/decoder.js", file: "media/default.ivf"}
+        // {decoder: "bin/decoder.js", file: "media/default.ivf"}
       ];
     }
     let decoderPaths = decoderFilePairs.map((pair) => pair.decoder);
@@ -1381,26 +1409,20 @@ class AppCtrl {
     let s = document.createElement('script');
     let self = this;
     s.onload = function () {
+      var aom = null;
       var Module = {
         noExitRuntime: true,
         preRun: [],
         postRun: [function() {
-          // ...
+          next(aom);
         }],
         memoryInitializerPrefixURL: "bin/",
         arguments: ['input.ivf', 'output.raw']
       };
-      next(new AOM(DecoderModule(Module)));
+      aom = new AOM(DecoderModule(Module));
     }
     s.setAttribute('src', path);
     document.body.appendChild(s);
-  }
-
-  uiChangeDecoder() {
-    alert("NYI");
-    this.loadDecoder(this.selectedDecoder, () => {
-      // ...
-    });
   }
 
   loadY4MBytes(buffer: Uint8Array): Y4MFile {
@@ -1520,8 +1542,8 @@ class AppCtrl {
     });
   }
 
-  showFileInputDialog() {
-    angular.element(document.querySelector('#fileInput'))[0].click();
+  showIVFFileInputDialog() {
+    angular.element(document.querySelector('#ivfFileInput'))[0].click();
   }
 
   showY4MFileInputDialog() {
@@ -1532,7 +1554,7 @@ class AppCtrl {
     let path;
     switch (name) {
       case "open-file":
-        this.showFileInputDialog();
+        this.showIVFFileInputDialog();
         return;
       case "open-y4m-file":
         this.showY4MFileInputDialog();
@@ -1969,7 +1991,6 @@ class AppCtrl {
     if (!this.y4mFile) {
       return;
     }
-    alert("FIXME");
     let file = this.y4mFile;
     let frame = file.frames[this.aom.frameNumber];
     let Yp = frame.y;
@@ -2248,7 +2269,6 @@ class AppCtrl {
     if (!this.y4mFile) {
       return;
     }
-    alert("FIXME");
     let frame = file.frames[this.aom.frameNumber];
 
     let AYp = frame.y;
@@ -2281,7 +2301,6 @@ class AppCtrl {
     if (!this.y4mFile) {
       return;
     }
-    alert("FIXME");
     let frame = file.frames[this.aom.frameNumber];
     let AYp = frame.y;
     let AYs = file.size.w;
