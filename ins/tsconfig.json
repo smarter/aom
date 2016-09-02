@@ -1,0 +1,12 @@
+{
+    "compileOnSave": true,
+    "compilerOptions": {
+        "target": "es5",
+        "sourceMap": true
+    },
+    "files": [
+        "ext.d.ts",
+        "app.ts",
+        "typings/modules/es6-promise/index.d.ts"
+    ]
+}

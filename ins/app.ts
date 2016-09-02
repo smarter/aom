@@ -1,3 +1,5 @@
+import {Promise} from 'es6-promise';
+
 declare let angular: any;
 declare let DecoderModule: any;
 declare let Mousetrap: any;
@@ -78,15 +80,6 @@ class Y4MFrame {
   constructor(public y: number, public cb: number, public cr: number) {
     // ...
   }
-}
-
-interface CanvasRenderingContext2D {
-  mozImageSmoothingEnabled: boolean;
-  imageSmoothingEnabled;
-}
-
-interface Math {
-  imul: (a: number, b: number) => number;
 }
 
 let colors = [
@@ -589,7 +582,7 @@ function drawLine(ctx: CanvasRenderingContext2D, x, y, dx, dy) {
 }
 
 interface BlockVisitor {
-  (size: AnalyzerBlockSize | AnalyzerTransformSize, coordinates: MICoordinates, subCoordinates: MICoordinates, bounds: Rectangle): void;
+  (size: AnalyzerBlockSize | AnalyzerTransformSize | number, coordinates: MICoordinates, subCoordinates: MICoordinates, bounds: Rectangle): void;
 }
 
 enum BlockVisitorMode {
@@ -1450,6 +1443,11 @@ class AppCtrl {
     document.body.appendChild(s);
   }
 
+  // loadDecoderAsync(path: string): Promise<AOM> {
+
+  // }
+
+
   loadY4MBytes(buffer: Uint8Array): Y4MFile {
     return this.parseY4MBytes(buffer);
   }
@@ -1671,6 +1669,7 @@ class AppCtrl {
       }
     }
     this.updateFrame();
+    this.showToast(`Showing Frame ${this.aom.frameNumber}`);
     return true;
   }
 
