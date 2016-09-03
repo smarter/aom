@@ -1109,7 +1109,7 @@ class AppCtrl {
         description: "Block Skip",
         get value() {
           return withMIUnderMouse(mi => {
-            self.aom.getMIProperty(MIProperty.GET_MI_SKIP, mi.x, mi.y);
+            return self.aom.getMIProperty(MIProperty.GET_MI_SKIP, mi.x, mi.y);
           });
         }
       },
