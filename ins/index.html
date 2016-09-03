@@ -81,6 +81,18 @@
       vertical-align: middle;
       line-height: 40px;       /* the same as your div height */
     }
+
+    .chart-header {
+      height: 24px;
+      min-height: 24px;
+      line-height: 24px;
+      padding: 4px;
+      background-color: #eeeeee;
+      font-size: 14px;
+    }
+
+    /* Fix Google Charts */
+    svg > g > g:last-child { pointer-events: none }
   </style>
 </head>
 <script>
@@ -342,10 +354,8 @@
           </md-content>
         </md-tab>
       </md-tabs>
-      <div style="background-color: white;">
-        <canvas id="chart" oncontextmenu="event.preventDefault()" width=0 height=0></canvas>
-        <div id="plotlyAccounting" style="height: 160px;"></div>
-      </div>
+      <canvas id="chart" oncontextmenu="event.preventDefault()" width=0 height=0></canvas>
+
       <md-tabs md-dynamic-height md-border-bottom>
         <md-tab label="Frame Info">
           <md-content>
@@ -358,6 +368,7 @@
           </md-content>
         </md-tab>
         <md-tab label="Frame Accounting">
+          <div id="frameSymbolChart" style="height: 160px;"></div>
           <md-content>
             <md-list>
               <md-list-item class="md-list-item-narrow md-list-header">
@@ -375,18 +386,12 @@
             </md-list>
           </md-content>
         </md-tab>
-        <md-tab label="Frame Statistcs">
-          <md-content>
-          <md-list>
-            <md-list-item ng-cloak ng-repeat="(name, statistic) in vm.frameStatistics">
-              <div class="key">{{statistic.description}}</div>
-            <md-checkbox class="md-secondary" ng-model="statistic.show" ng-change="vm.drawFrameStatistics()" aria-label="name"}></md-checkbox>
-            <md-tooltip md-direction="top">
-              {{statistic.detail}}
-            </md-tooltip>
-            </md-list-item>
-          </md-list>
-          </md-content>
+        <md-tab label="Frame Bits">
+          <div id="frameMetricChart" style="height: 160px;"></div>
+        </md-tab>
+        <md-tab label="Frame Error">
+          <md-content class="md-padding" ng-hide="vm.y4mFile">Load a .y4m file to view error metrics.</md-content>
+          <div ng-show="vm.y4mFile" id="frameErrorChart" style="height: 160px;"></div>
         </md-tab>
       </md-tabs>
     </md-content>
@@ -408,9 +413,44 @@
 
   <script src="lib/jsGradient.js"></script>
   <script src="app.js"></script>
+  <script src="metrics.js"></script>
   <script src="lib/mousetrap.min.js"></script>
   <script src="lib/dragscroll.js"></script>
-  <script src="lib/plotly-latest.min.js"></script>
+
+  <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+  <script type="text/javascript">
+    // Load the Visualization API and the corechart package.
+      google.charts.load('current', {'packages':['corechart']});
+
+      // Set a callback to run when the Google Visualization API is loaded.
+      // google.charts.setOnLoadCallback(drawChart);
+
+      // Callback that creates and populates a data table,
+      // instantiates the pie chart, passes in the data and
+      // draws it.
+      function drawChart() {
+
+        var data = google.visualization.arrayToDataTable([
+          ['Genre', 'Fantasy & Sci Fi', 'Romance', 'Mystery/Crime', 'General',
+           'Western', 'Literature', { role: 'annotation' }
+          ],
+          ['2010', 10, 24, 20, 32, 18, 5, ''],
+          ['2020', 16, 22, 23, 30, 16, 9, ''],
+          ['2030', 28, 19, 29, 30, 12, 13, '']
+        ]);
+
+        var options = {
+          isStacked: "percent",
+          height: 200,
+          'chartArea': {'width': '100%', 'height': '100%'},
+          vAxis: {minValue: 0}
+        };
+
+        // Instantiate and draw our chart, passing in some options.
+        var chart = new google.visualization.SteppedAreaChart(document.getElementById('accountingChart'));
+        chart.draw(data, options);
+      }
+  </script>
 
   <div style="display: none;">
     <input id="ivfFileInput" multiple type="file" accept=".ivf" onchange="angular.element(this).scope().ivfFileInputNameChanged(this)">
