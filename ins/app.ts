@@ -3,6 +3,7 @@ declare let DecoderModule: any;
 declare let Mousetrap: any;
 declare let tinycolor: any;
 declare let tinygradient: any;
+declare let google: any;
 
 /* Utility Functions */
 
@@ -272,101 +273,6 @@ const BLOCK_SIZES = [
   [6, 6]
 ];
 
-class AccountingSymbol {
-  constructor(public name: string, public bits: number, public samples: number, public x: number, public y: number) {
-    // ...
-  }
-}
-
-type AccountingSymbolMap = { [name: string]: AccountingSymbol };
-
-class Accounting {
-  symbols: AccountingSymbol [] = null;
-  frameSymbols: AccountingSymbolMap = null;
-  constructor(symbols: AccountingSymbol [] = []) {
-    this.symbols = symbols;
-  }
-  createFrameSymbols() {
-    if (this.frameSymbols) {
-      return this.frameSymbols;
-    }
-    this.frameSymbols = Object.create(null);
-    this.frameSymbols = Accounting.flatten(this.symbols);
-  }
-  createBlockSymbols(mi: Vector) {
-    return Accounting.flatten(this.symbols.filter(symbol => {
-      return symbol.x === mi.x && symbol.y === mi.y;
-    }));
-  }
-
-  static flatten(sybmols: AccountingSymbol []): AccountingSymbolMap {
-    let map = Object.create(null);
-    sybmols.forEach(symbol => {
-      let s = map[symbol.name];
-      if (!s) {
-        s = map[symbol.name] = new AccountingSymbol(symbol.name, 0, 0, symbol.x, symbol.y);
-      }
-      s.bits += symbol.bits;
-      s.samples += symbol.samples;
-    });
-    let ret = Object.create(null);
-    let names = [];
-    for (let name in map) names.push(name);
-    // Sort by bits.
-    names.sort((a, b) => map[b].bits - map[a].bits);
-    names.forEach(name => {
-      ret[name] = map[name];
-    });
-    return ret;
-  }
-
-  static makeTraces(accountings: Accounting[]) {
-    let allFrameSymbols = {};
-    let x = [];
-    function makeEmptyArray(n) {
-      let a = [];
-      for (let i = 0; i < n; i++) a[i] = 0;
-      return a;
-    }
-    let count = Math.max(32, accountings.length);
-    for (let i = 0; i < count; i++) {
-      x.push(i);
-    }
-    for (let i = 0; i < accountings.length; i++) {
-      let frameSymbols = accountings[i].createFrameSymbols();
-      let totalBits = 0;
-      for (let symbolName in frameSymbols) {
-        totalBits += frameSymbols[symbolName].bits;
-      }
-      for (let symbolName in frameSymbols) {
-        if (!allFrameSymbols[symbolName]) {
-          allFrameSymbols[symbolName] = makeEmptyArray(count);
-        }
-        allFrameSymbols[symbolName][i] = frameSymbols[symbolName].bits / totalBits;
-      }
-    }
-
-    // Sort to make Plotly happy.
-    let names = [];
-    for (let symbolName in allFrameSymbols) names.push(symbolName);
-    names.sort();
-    let traces = [];
-    names.forEach(symbolName => {
-      let y = allFrameSymbols[symbolName];
-      traces.push({
-        x: x,
-        y: y,
-        name: symbolName,
-        type: "bar",
-        marker: {
-          color: getColor(symbolName)
-        }
-      });
-    });
-    return traces;
-  }
-}
-
 interface Internal {
   _read_frame (): number;
   _get_plane (pli: number): number;
@@ -403,6 +309,8 @@ class AOM {
   frameNumber: number = -1;
   lastDecodeFrameTime: number = 0;
   accountings: Accounting [] = [];
+  frameErrors: ErrorMetrics [] = [];
+  y4mFile: Y4MFile;
   constructor (native: Internal) {
     this.native = native;
     this.HEAPU8 = native.HEAPU8;
@@ -419,7 +327,80 @@ class AOM {
     this.frameNumber ++;
     this.lastDecodeFrameTime = performance.now() - s;
     this.accountings.push(this.getAccounting());
+    this.frameErrors.push(this.getFrameError());
     return true;
+  }
+  getFrameError(): ErrorMetrics {
+    let file = this.y4mFile;
+    if (!this.y4mFile) {
+      return new ErrorMetrics(0, 0);
+    }
+    let frame = file.frames[this.frameNumber];
+
+    let AYp = frame.y;
+    let AYs = file.size.w;
+    let AH = file.buffer;
+
+    let BYp = this.getPlane(0);
+    let BYs = this.getPlaneStride(0);
+    let BH = this.HEAPU8;
+
+    let frameSize = this.getFrameSize();
+    let h = frameSize.h;
+    let w = frameSize.w;
+
+    let Ap = AYp;
+    let Bp = BYp;
+    let error = 0;
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        let d = AH[Ap + x] - BH[Bp + x];
+        error += d * d;
+      }
+      Ap += AYs;
+      Bp += BYs;
+    }
+    return new ErrorMetrics(error, error / frameSize.area());
+  }
+  getMIError(mi: Vector): ErrorMetrics {
+    let file = this.y4mFile;
+    if (!this.y4mFile) {
+      return;
+    }
+    let frame = file.frames[this.frameNumber];
+    let AYp = frame.y;
+    let AYs = file.size.w;
+    let AH = file.buffer;
+
+    let BYp = this.getPlane(0);
+    let BYs = this.getPlaneStride(0);
+    let BH = this.HEAPU8;
+    let size = this.getMIBlockSize(mi.x, mi.y);
+    let Ap = AYp + mi.y * BLOCK_SIZE * AYs + mi.x * BLOCK_SIZE;
+    let Bp = BYp + mi.y * BLOCK_SIZE * BYs + mi.x * BLOCK_SIZE;
+    let error = 0;
+    for (let y = 0; y < size.h; y++) {
+      for (let x = 0; x < size.w; x++) {
+        let d = AH[Ap + x] - BH[Bp + x];
+        error += d * d;
+      }
+      Ap += AYs;
+      Bp += BYs;
+    }
+    return new ErrorMetrics(error, error / size.area());
+  }
+  getMIBlockSize(c: number, r: number, miMinBlockSize: AnalyzerBlockSize = AnalyzerBlockSize.BLOCK_4X4): Size {
+    let miBlockSize = this.getMIProperty(MIProperty.GET_MI_BLOCK_SIZE, c, r);
+    if (miBlockSize >= BLOCK_SIZES.length) {
+      // TODO: This should not happen, figure out what is going on.
+      return new Size(0, 0);
+    }
+    if (miBlockSize < miMinBlockSize) {
+      miBlockSize = miMinBlockSize;
+    }
+    let w = 1 << BLOCK_SIZES[miBlockSize][0];
+    let h = 1 << BLOCK_SIZES[miBlockSize][1];
+    return new Size(w, h);
   }
   getPlane(pli: number): number {
     return this.native._get_plane(pli);
@@ -734,6 +715,15 @@ const MissingAOM = {
   },
   getTileGridSizeLog2() {
     return new Size(0, 0);
+  },
+  getMIBlockSize() {
+    return new Size(0, 0);
+  },
+  getMIError() {
+    return undefined;
+  },
+  getFrameError() {
+    return undefined;
   }
 };
 
@@ -1079,7 +1069,7 @@ class AppCtrl {
       frameError: {
         description: "Frame Error",
         get value() {
-          let error = self.getFrameError();
+          let error = self.aom.getFrameError();
           return error ? error.mseToString() : "N/A";
         }
       },
@@ -1203,7 +1193,7 @@ class AppCtrl {
         description: "Block Error",
         get value() {
           return withMIUnderMouse(mi => {
-            let error = self.getMIError(mi);
+            let error = self.aom.getMIError(mi);
             return error ? error.toString() : "N/A";
           });
         }
@@ -1266,6 +1256,7 @@ class AppCtrl {
           return;
         }
         self.y4mFile = y4mFile;
+        self.aoms.forEach(aom => aom.y4mFile = y4mFile);
         self.drawImages();
         // We can now show the image.
         self.options.showOriginalImage.disabled = false;
@@ -1467,20 +1458,6 @@ class AppCtrl {
     this.uiApply();
   }
 
-  getMIBlockSize(c: number, r: number, miMinBlockSize: AnalyzerBlockSize = AnalyzerBlockSize.BLOCK_4X4): Size {
-    let miBlockSize = this.aom.getMIProperty(MIProperty.GET_MI_BLOCK_SIZE, c, r);
-    if (miBlockSize >= BLOCK_SIZES.length) {
-      // TODO: This should not happen, figure out what is going on.
-      return new Size(0, 0);
-    }
-    if (miBlockSize < miMinBlockSize) {
-      miBlockSize = miMinBlockSize;
-    }
-    let w = 1 << BLOCK_SIZES[miBlockSize][0];
-    let h = 1 << BLOCK_SIZES[miBlockSize][1];
-    return new Size(w, h);
-  }
-
   /**
    * Gets the coordinates of the MI block under the mousedown.
    */
@@ -1496,7 +1473,7 @@ class AppCtrl {
    * not an 8x8 block.
    */
   getMI(c: number, r: number): Vector {
-    let blockSize = this.getMIBlockSize(c, r);
+    let blockSize = this.aom.getMIBlockSize(c, r);
     c = c & ~((blockSize.w - 1) >> 3);
     r = r & ~((blockSize.h - 1) >> 3);
     return new Vector(c, r);
@@ -1865,38 +1842,50 @@ class AppCtrl {
 
   updateFrameAccountingPlot() {
     let accountings = this.aom.accountings;
-    accountings = accountings.slice(Math.max(0, accountings.length - 32));
-    let data = Accounting.makeTraces(accountings);
-    var layout = {
-      barmode: 'stack',
-      showlegend: false,
-      margin: {
-        l: 0,
-        r: 0,
-        b: 0,
-        t: 0,
-        pad: 2
-      },
-      yaxis: {
-        showgrid: false,
-        zeroline: false,
-        showline: false,
-        autotick: true,
-        ticks: '',
-        showticklabels: false
-      },
-      xaxis: {
-        showgrid: false,
-        zeroline: false,
-        showline: false,
-        autotick: true,
-        ticks: '',
-        showticklabels: false
-      },
-      hovermode:'closest',
-    };
 
-    Plotly.newPlot('plotlyAccounting', data, layout);
+    var chart = new google.visualization.ColumnChart(document.getElementById('frameSymbolChart'));
+    chart.draw(Accounting.makeSteppedAreaChartDataTable(accountings), {
+      isStacked: "percent",
+      height: 160,
+      'chartArea': {'width': '100%', 'height': '98%'},
+      vAxis: {
+        minValue: 0,
+        gridlines: {
+          color: 'transparent'
+        }
+      }
+    });
+
+    var chart = new google.visualization.ColumnChart(document.getElementById('frameMetricChart'));
+    chart.draw(Accounting.makeTotalBitsDataTable(accountings), {
+      height: 160,
+      'chartArea': {'width': '100%', 'height': '98%'},
+      vAxis: {
+        minValue: 0,
+        gridlines: {
+          color: 'transparent'
+        }
+      },
+      title: 'Total',
+      colors: ['black']
+    });
+
+    let frameErrors = this.aom.frameErrors;
+    var chart = new google.visualization.ColumnChart(document.getElementById('frameErrorChart'));
+    chart.draw(Accounting.makeFrameErrorDataTable(frameErrors), {
+      height: 160,
+      'chartArea': {'width': '100%', 'height': '98%'},
+      vAxis: {
+        minValue: 0,
+        gridlines: {
+          color: 'transparent'
+        }
+      },
+      title: 'Total',
+      colors: ['red']
+    });
+
+
   }
   updateBlockAccounting() {
     let accounting = this.accounting;
@@ -2428,66 +2417,6 @@ class AppCtrl {
     let y = (mv >> 16);
     let x = (((mv & 0xFFFF) << 16) >> 16);
     return new Vector(x, y);
-  }
-
-  getFrameError(): ErrorMetrics {
-    let file = this.y4mFile;
-    if (!this.y4mFile) {
-      return;
-    }
-    let frame = file.frames[this.aom.frameNumber];
-
-    let AYp = frame.y;
-    let AYs = file.size.w;
-    let AH = file.buffer;
-
-    let BYp = this.aom.getPlane(0);
-    let BYs = this.aom.getPlaneStride(0);
-    let BH = this.aom.HEAPU8;
-
-    let h = this.frameSize.h;
-    let w = this.frameSize.w;
-
-    let Ap = AYp;
-    let Bp = BYp;
-    let error = 0;
-    for (let y = 0; y < h; y++) {
-      for (let x = 0; x < w; x++) {
-        let d = AH[Ap + x] - BH[Bp + x];
-        error += d * d;
-      }
-      Ap += AYs;
-      Bp += BYs;
-    }
-    return new ErrorMetrics(error, error / this.frameSize.area());
-  }
-
-  getMIError(mi: Vector): ErrorMetrics {
-    let file = this.y4mFile;
-    if (!this.y4mFile) {
-      return;
-    }
-    let frame = file.frames[this.aom.frameNumber];
-    let AYp = frame.y;
-    let AYs = file.size.w;
-    let AH = file.buffer;
-
-    let BYp = this.aom.getPlane(0);
-    let BYs = this.aom.getPlaneStride(0);
-    let BH = this.aom.HEAPU8;
-    let size = this.getMIBlockSize(mi.x, mi.y);
-    let Ap = AYp + mi.y * BLOCK_SIZE * AYs + mi.x * BLOCK_SIZE;
-    let Bp = BYp + mi.y * BLOCK_SIZE * BYs + mi.x * BLOCK_SIZE;
-    let error = 0;
-    for (let y = 0; y < size.h; y++) {
-      for (let x = 0; x < size.w; x++) {
-        let d = AH[Ap + x] - BH[Bp + x];
-        error += d * d;
-      }
-      Ap += AYs;
-      Bp += BYs;
-    }
-    return new ErrorMetrics(error, error / size.area());
   }
 
   visitBlocks(mode: BlockVisitorMode, visitor: BlockVisitor) {

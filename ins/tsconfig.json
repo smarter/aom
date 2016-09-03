@@ -6,6 +6,7 @@
     },
     "files": [
         "ext.d.ts",
+        "metrics.ts",
         "app.ts"
     ]
 }
