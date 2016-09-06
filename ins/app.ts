@@ -1737,7 +1737,7 @@ class AppCtrl {
   }
 
   fileIssue(label: string = "") {
-    window.open("https://github.com/mbebenita/Analyzer/issues/new?labels=" + label + "&body=" + encodeURIComponent(this.createSharingLink()));
+    window.open("https://github.com/mbebenita/aomanalyzer/issues/new?labels=" + label + "&body=" + encodeURIComponent(this.createSharingLink()));
   }
 
   uiResetLayers() {
@@ -2383,7 +2383,7 @@ class AppCtrl {
 
   getMIBlockBitsPerPixel(c: number, r: number): number {
     // Bits are stored at the 8x8 level, even if the block is split further.
-    let blockSize = this.getMIBlockSize(c, r, AnalyzerBlockSize.BLOCK_8X8);
+    let blockSize = this.aom.getMIBlockSize(c, r, AnalyzerBlockSize.BLOCK_8X8);
     let blockArea = blockSize.w * blockSize.h;
     let miBits = this.getMIBits(c, r);
     return miBits / blockArea;
