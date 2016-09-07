@@ -148,6 +148,8 @@ function getLineOffset(lineWidth: number) {
 
 const mi_block_size_log2 = 3;
 
+const MAX_CHART_BARS = 16;
+
 function alignPowerOfTwo(value: number, n: number) {
   return ((value) + ((1 << n) - 1)) & ~((1 << n) - 1);
 }
@@ -310,6 +312,8 @@ class AOM {
   lastDecodeFrameTime: number = 0;
   accountings: Accounting [] = [];
   frameErrors: ErrorMetrics [] = [];
+  frameModes: FrameModeMetrics [] = [];
+  frameBlockSizes: FrameBlockSizeMetrics [] = [];
   y4mFile: Y4MFile;
   constructor (native: Internal) {
     this.native = native;
@@ -328,7 +332,29 @@ class AOM {
     this.lastDecodeFrameTime = performance.now() - s;
     this.accountings.push(this.getAccounting());
     this.frameErrors.push(this.getFrameError());
+    this.frameModes.push(this.getFrameModeMetrics());
+    this.frameBlockSizes.push(this.getFrameBlockSizeMetrics());
     return true;
+  }
+  getFrameModeMetrics(): FrameModeMetrics {
+    let metrics = new FrameModeMetrics();
+    let {cols, rows} = this.getMIGridSize();
+    for (let c = 0; c < cols; c++) {
+      for (let r = 0; r < rows; r++) {
+        metrics.counts[this.getMIProperty(MIProperty.GET_MI_MODE, c, r)] ++;
+      }
+    }
+    return metrics;
+  }
+  getFrameBlockSizeMetrics(): FrameBlockSizeMetrics {
+    let metrics = new FrameBlockSizeMetrics();
+    let {cols, rows} = this.getMIGridSize();
+    for (let c = 0; c < cols; c++) {
+      for (let r = 0; r < rows; r++) {
+        metrics.counts[this.getMIProperty(MIProperty.GET_MI_BLOCK_SIZE, c, r)] ++;
+      }
+    }
+    return metrics;
   }
   getFrameError(): ErrorMetrics {
     let file = this.y4mFile;
@@ -1809,8 +1835,40 @@ class AppCtrl {
 
     this.lastAccounting = this.accounting;
     this.accounting = this.aom.getFrameAccounting();
-    this.updateBlockAccounting()
+    this.updateBlockAccounting();
     this.updateFrameAccounting();
+    this.updateFrameModeChart();
+    this.updateFrameBlockSizeChart();
+  }
+
+  updateFrameModeChart() {
+    var chart = new google.visualization.ColumnChart(document.getElementById('frameModeChart'));
+    chart.draw(FrameModeMetrics.makeFrameModeDataTable(this.aom.frameModes, MAX_CHART_BARS) , {
+      isStacked: "percent",
+      height: 160,
+      'chartArea': {'width': '100%', 'height': '98%'},
+      vAxis: {
+        minValue: 0,
+        gridlines: {
+          color: 'transparent'
+        }
+      }
+    });
+  }
+
+  updateFrameBlockSizeChart() {
+    var chart = new google.visualization.ColumnChart(document.getElementById('frameBlockSizeChart'));
+    chart.draw(FrameBlockSizeMetrics.makeFrameModeDataTable(this.aom.frameBlockSizes, MAX_CHART_BARS) , {
+      isStacked: "percent",
+      height: 160,
+      'chartArea': {'width': '100%', 'height': '98%'},
+      vAxis: {
+        minValue: 0,
+        gridlines: {
+          color: 'transparent'
+        }
+      }
+    });
   }
 
   accounting: Accounting = null;
@@ -1843,7 +1901,7 @@ class AppCtrl {
     let accountings = this.aom.accountings;
 
     var chart = new google.visualization.ColumnChart(document.getElementById('frameSymbolChart'));
-    chart.draw(Accounting.makeSteppedAreaChartDataTable(accountings), {
+    chart.draw(Accounting.makeSymbolsDataTable(accountings, MAX_CHART_BARS), {
       isStacked: "percent",
       height: 160,
       'chartArea': {'width': '100%', 'height': '98%'},
@@ -1856,8 +1914,8 @@ class AppCtrl {
     });
 
     var chart = new google.visualization.ColumnChart(document.getElementById('frameMetricChart'));
-    chart.draw(Accounting.makeTotalBitsDataTable(accountings), {
-      height: 160,
+    chart.draw(Accounting.makeTotalBitsDataTable(accountings, MAX_CHART_BARS), {
+      height: 100,
       'chartArea': {'width': '100%', 'height': '98%'},
       vAxis: {
         minValue: 0,
@@ -1871,7 +1929,7 @@ class AppCtrl {
 
     let frameErrors = this.aom.frameErrors;
     var chart = new google.visualization.ColumnChart(document.getElementById('frameErrorChart'));
-    chart.draw(Accounting.makeFrameErrorDataTable(frameErrors), {
+    chart.draw(Accounting.makeFrameErrorDataTable(frameErrors, MAX_CHART_BARS), {
       height: 160,
       'chartArea': {'width': '100%', 'height': '98%'},
       vAxis: {

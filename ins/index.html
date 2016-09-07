@@ -83,14 +83,14 @@
     }
 
     .chart-header {
-      height: 24px;
-      min-height: 24px;
-      line-height: 24px;
+      font-size: 12px;
+      font-family: 'Roboto Mono', monospace;
+      height: 20px;
+      min-height: 20px;
+      line-height: 20px;
       padding: 4px;
       background-color: #eeeeee;
-      font-size: 14px;
     }
-
     /* Fix Google Charts */
     svg > g > g:last-child { pointer-events: none }
   </style>
@@ -258,8 +258,43 @@
     <md-content id="right-panel" ng-hide="!vm.options.showInspector.value">
       <canvas id="zoom" oncontextmenu="event.preventDefault()" style="left: 0; bottom: 0; z-index: 1000; image-rendering: pixelated;"
             width=0 height=0></canvas>
+      <canvas id="chart" oncontextmenu="event.preventDefault()" width=0 height=0></canvas>
       <md-tabs md-dynamic-height md-border-bottom>
-        <md-tab label="Block Info">
+        <md-tab label="Timeline">
+          <div class="chart-header">Modes</div>
+          <div id="frameModeChart" style="height: 160px;"></div>
+          <div class="chart-header">Block Sizes</div>
+          <div id="frameBlockSizeChart" style="height: 160px;"></div>
+          <div class="chart-header">Symbols</div>
+          <div id="frameSymbolChart" style="height: 160px;"></div>
+          <div class="chart-header">Frame Bits</div>
+          <div id="frameMetricChart" style="height: 100px;"></div>
+        </md-tab>
+        <md-tab label="Frame Details">
+          <md-content>
+            <md-list>
+              <md-list-item class="md-list-item-narrow" ng-cloak ng-repeat="(name, p) in vm.uiFrameProperties" style="color: {{p.color}};">
+                <div flex="50" class="key">{{p.description}}</div>
+                <div flex="50" class="value" style="text-align: right;">{{p.value}}</div>
+              </md-list-item>
+            </md-list>
+            <md-list>
+              <md-list-item class="md-list-item-narrow md-list-header">
+                <div flex="40" class="key">Symbol</div>
+                <div flex="20" class="value" style="text-align: right;">Bits</div>
+                <div flex="20" class="value" style="text-align: right;">Percent</div>
+                <div flex="20" class="value" style="text-align: right;">Samples</div>
+              </md-list-item>
+              <md-list-item class="md-list-item-narrow" ng-cloak ng-repeat="(name, p) in vm.uiAccountingFrameProperties" style="color: {{p.color}};">
+                <div flex="40" class="key">{{p.description}}</div>
+                <div flex="20" class="value" style="text-align: right;">{{p.value[0]}}</div>
+                <div flex="20" class="value" style="text-align: right;">{{p.value[1]}}</div>
+                <div flex="20" class="value" style="text-align: right;">{{p.value[2]}}</div>
+              </md-list-item>
+            </md-list>
+          </md-content>
+        </md-tab>
+        <md-tab label="Block Details">
           <md-content>
             <md-list>
               <md-list-item class="md-list-item-narrow" ng-cloak ng-repeat="(name, p) in vm.uiBlockProperties" style="color: {{p.color}};">
@@ -267,10 +302,6 @@
                 <div flex="50" class="value" style="text-align: right;">{{p.value}}</div>
               </md-list-item>
             </md-list>
-          </md-content>
-        </md-tab>
-        <md-tab label="Block Accounting">
-          <md-content>
             <md-list>
               <md-list-item class="md-list-item-narrow md-list-header">
                 <div flex="40" class="key">Symbol</div>
@@ -286,6 +317,10 @@
               </md-list-item>
             </md-list>
           </md-content>
+        </md-tab>
+        <md-tab label="Frame Error">
+          <md-content class="md-padding" ng-hide="vm.y4mFile">Load a .y4m file to view error metrics.</md-content>
+          <div ng-show="vm.y4mFile" id="frameErrorChart" style="height: 160px;"></div>
         </md-tab>
         <md-tab label="Help">
           <md-content class="md-padding">
@@ -352,46 +387,6 @@
               You can share your current analyzer state with someone by sending them the sharing link.
             </p>
           </md-content>
-        </md-tab>
-      </md-tabs>
-      <canvas id="chart" oncontextmenu="event.preventDefault()" width=0 height=0></canvas>
-
-      <md-tabs md-dynamic-height md-border-bottom>
-        <md-tab label="Frame Info">
-          <md-content>
-            <md-list>
-              <md-list-item class="md-list-item-narrow" ng-cloak ng-repeat="(name, p) in vm.uiFrameProperties" style="color: {{p.color}};">
-                <div flex="50" class="key">{{p.description}}</div>
-                <div flex="50" class="value" style="text-align: right;">{{p.value}}</div>
-              </md-list-item>
-            </md-list>
-          </md-content>
-        </md-tab>
-        <md-tab label="Frame Accounting">
-          <div id="frameSymbolChart" style="height: 160px;"></div>
-          <md-content>
-            <md-list>
-              <md-list-item class="md-list-item-narrow md-list-header">
-                <div flex="40" class="key">Symbol</div>
-                <div flex="20" class="value" style="text-align: right;">Bits</div>
-                <div flex="20" class="value" style="text-align: right;">Percent</div>
-                <div flex="20" class="value" style="text-align: right;">Samples</div>
-              </md-list-item>
-              <md-list-item class="md-list-item-narrow" ng-cloak ng-repeat="(name, p) in vm.uiAccountingFrameProperties" style="color: {{p.color}};">
-                <div flex="40" class="key">{{p.description}}</div>
-                <div flex="20" class="value" style="text-align: right;">{{p.value[0]}}</div>
-                <div flex="20" class="value" style="text-align: right;">{{p.value[1]}}</div>
-                <div flex="20" class="value" style="text-align: right;">{{p.value[2]}}</div>
-              </md-list-item>
-            </md-list>
-          </md-content>
-        </md-tab>
-        <md-tab label="Frame Bits">
-          <div id="frameMetricChart" style="height: 160px;"></div>
-        </md-tab>
-        <md-tab label="Frame Error">
-          <md-content class="md-padding" ng-hide="vm.y4mFile">Load a .y4m file to view error metrics.</md-content>
-          <div ng-show="vm.y4mFile" id="frameErrorChart" style="height: 160px;"></div>
         </md-tab>
       </md-tabs>
     </md-content>
