@@ -1516,12 +1516,11 @@ class AppCtrl {
           preRun: [],
           postRun: [function() {
             self.showToast(`Loaded Decoder: ${path}.`);
-            resolve(aom);
           }],
           memoryInitializerPrefixURL: "bin/",
           arguments: ['input.ivf', 'output.raw']
         };
-        aom = new AOM(DecoderModule(Module));
+        resolve(new AOM(DecoderModule(Module)));
       }
       s.setAttribute('src', path);
       document.body.appendChild(s);
