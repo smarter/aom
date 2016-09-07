@@ -2056,9 +2056,7 @@ class AppCtrl {
     y = dst.y + dst.h / 2 + textHeight + textPadding;
     text = String(center.x) + " (" + (center.x / BLOCK_SIZE | 0) + ")";
     ctx.fillText(text, x, y);
-
     ctx.restore();
-
   }
 
   drawSuperBlockGrid(ctx: CanvasRenderingContext2D, src: Rectangle, dst: Rectangle) {
