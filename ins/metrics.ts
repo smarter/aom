@@ -1,5 +1,3 @@
-// declare let google: any;
-
 class AccountingSymbol {
   constructor(public name: string, public bits: number, public samples: number, public x: number, public y: number) {
     // ...
@@ -80,7 +78,7 @@ class Accounting {
           return frameSymbols[symbolName].bits / 8;
         }
         return 0;
-      });
+      }) as any [];
       row.unshift("Frame " + (i + offset));
       data.addRows([row]);
     }
