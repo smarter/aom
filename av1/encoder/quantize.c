@@ -1531,7 +1531,7 @@ static int get_qzbin_factor(int q, aom_bit_depth_t bit_depth) {
   }
 #else
   (void)bit_depth;
-  return (q == 0 ? 64 : (quant < 148 ? 84 : 80))/2;
+  return 0;
 #endif
 }
 
