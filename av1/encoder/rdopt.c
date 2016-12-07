@@ -1452,9 +1452,6 @@ static int64_t txfm_yrd(const AV1_COMP *const cpi, MACROBLOCK *x,
 static int64_t choose_tx_size_fix_type(const AV1_COMP *const cpi, BLOCK_SIZE bs,
                                        MACROBLOCK *x, RD_STATS *rd_stats,
                                        int64_t ref_best_rd, TX_TYPE tx_type,
-#if CONFIG_PVQ
-                                       od_rollback_buffer buf,
-#endif
                                        int prune) {
   const AV1_COMMON *const cm = &cpi->common;
   MACROBLOCKD *const xd = &x->e_mbd;
@@ -1467,6 +1464,13 @@ static int64_t choose_tx_size_fix_type(const AV1_COMP *const cpi, BLOCK_SIZE bs,
   TX_SIZE best_tx_size = max_tx_size;
   const int tx_select = cm->tx_mode == TX_MODE_SELECT;
   const int is_inter = is_inter_block(mbmi);
+#if CONFIG_PVQ
+  od_rollback_buffer pre_buf;
+  od_rollback_buffer post_buf;
+
+  od_encode_checkpoint(&x->daala_enc, &pre_buf);
+  od_encode_checkpoint(&x->daala_enc, &post_buf);
+#endif
 #if CONFIG_EXT_TX
 #if CONFIG_RECT_TX
   int evaluate_rect_tx = 0;
@@ -1513,6 +1517,9 @@ static int64_t choose_tx_size_fix_type(const AV1_COMP *const cpi, BLOCK_SIZE bs,
   last_rd = INT64_MAX;
   for (n = start_tx; n >= end_tx; --n) {
     RD_STATS this_rd_stats;
+#if CONFIG_PVQ
+    od_encode_rollback(&x->daala_enc, &pre_buf);
+#endif
 #if CONFIG_EXT_TX && CONFIG_RECT_TX
     if (is_rect_tx(n)) break;
 #endif  // CONFIG_EXT_TX && CONFIG_RECT_TX
@@ -1545,9 +1552,6 @@ static int64_t choose_tx_size_fix_type(const AV1_COMP *const cpi, BLOCK_SIZE bs,
 #endif  // CONFIG_EXT_TX
 
     rd = txfm_yrd(cpi, x, &this_rd_stats, ref_best_rd, bs, tx_type, n);
-#if CONFIG_PVQ
-    od_encode_rollback(&x->daala_enc, &buf);
-#endif
     // Early termination in transform size search.
     if (cpi->sf.tx_size_search_breakout &&
         (rd == INT64_MAX ||
@@ -1560,9 +1564,16 @@ static int64_t choose_tx_size_fix_type(const AV1_COMP *const cpi, BLOCK_SIZE bs,
       best_tx_size = n;
       best_rd = rd;
       *rd_stats = this_rd_stats;
+#if CONFIG_PVQ
+      od_encode_checkpoint(&x->daala_enc, &post_buf);
+#endif
     }
   }
   mbmi->tx_size = best_tx_size;
+
+#if CONFIG_PVQ
+      od_encode_rollback(&x->daala_enc, &post_buf);
+#endif
 
   return best_rd;
 }
@@ -1772,7 +1783,11 @@ static void choose_tx_size_type_from_rd(const AV1_COMP *const cpi,
   int prune = 0;
 
 #if CONFIG_PVQ
-  od_rollback_buffer buf;
+  od_rollback_buffer pre_buf;
+  od_rollback_buffer post_buf;
+
+  od_encode_checkpoint(&x->daala_enc, &pre_buf);
+  od_encode_checkpoint(&x->daala_enc, &post_buf);
 #endif
   if (is_inter && cpi->sf.tx_type_search.prune_mode > NO_PRUNE)
     // passing -1 in for tx_type indicates that all 1D
@@ -1781,26 +1796,24 @@ static void choose_tx_size_type_from_rd(const AV1_COMP *const cpi,
 
   av1_invalid_rd_stats(rd_stats);
 
-#if CONFIG_PVQ
-  od_encode_checkpoint(&x->daala_enc, &buf);
-#endif
-
   for (tx_type = DCT_DCT; tx_type < TX_TYPES; ++tx_type) {
     RD_STATS this_rd_stats;
 #if CONFIG_REF_MV
     if (mbmi->ref_mv_idx > 0 && tx_type != DCT_DCT) continue;
 #endif
-    rd = choose_tx_size_fix_type(cpi, bs, x, &this_rd_stats, ref_best_rd,
-                                 tx_type,
 #if CONFIG_PVQ
-                                 buf,
+    od_encode_rollback(&x->daala_enc, &pre_buf);
 #endif
-                                 prune);
+   rd = choose_tx_size_fix_type(cpi, bs, x, &this_rd_stats, ref_best_rd,
+                                 tx_type, prune);
     if (rd < best_rd) {
       best_rd = rd;
       *rd_stats = this_rd_stats;
       best_tx_type = tx_type;
       best_tx = mbmi->tx_size;
+#if CONFIG_PVQ
+      od_encode_checkpoint(&x->daala_enc, &post_buf);
+#endif
     }
   }
 
@@ -1815,9 +1828,10 @@ static void choose_tx_size_type_from_rd(const AV1_COMP *const cpi,
   if (mbmi->tx_size >= TX_32X32) assert(mbmi->tx_type == DCT_DCT);
 #endif
 #if CONFIG_PVQ
-  if (best_rd != INT64_MAX) {
-    txfm_yrd(cpi, x, rd_stats, ref_best_rd, bs, best_tx_type, best_tx);
-  }
+  /* if (best_rd != INT64_MAX) { */
+    //txfm_yrd(cpi, x, rd_stats, ref_best_rd, bs, best_tx_type, best_tx);
+    od_encode_rollback(&x->daala_enc, &post_buf);
+  /* } */
 #endif
 }
 
