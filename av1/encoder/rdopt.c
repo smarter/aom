@@ -1452,8 +1452,8 @@ static int64_t txfm_yrd(const AV1_COMP *const cpi, MACROBLOCK *x,
 static int64_t choose_tx_size_fix_type(const AV1_COMP *const cpi, BLOCK_SIZE bs,
                                        MACROBLOCK *x, RD_STATS *rd_stats,
                                        int64_t ref_best_rd, TX_TYPE tx_type,
-#if CONFIG_PVQ
-                                       od_rollback_buffer pre_buf, od_rollback_buffer post_buf,
+#if 0 && CONFIG_PVQ
+                                       od_rollback_buffer pre_buf, od_rollback_buffer post_iteration_buf,
 #endif
                                        int prune) {
   const AV1_COMMON *const cm = &cpi->common;
@@ -1467,6 +1467,15 @@ static int64_t choose_tx_size_fix_type(const AV1_COMP *const cpi, BLOCK_SIZE bs,
   TX_SIZE best_tx_size = max_tx_size;
   const int tx_select = cm->tx_mode == TX_MODE_SELECT;
   const int is_inter = is_inter_block(mbmi);
+
+#if CONFIG_PVQ
+  od_rollback_buffer pre_buf;
+  od_rollback_buffer post_buf;
+  
+  od_encode_checkpoint(&x->daala_enc, &pre_buf);
+  od_encode_checkpoint(&x->daala_enc, &post_buf);
+#endif
+
 #if CONFIG_EXT_TX
 #if CONFIG_RECT_TX
   int evaluate_rect_tx = 0;
@@ -1776,10 +1785,12 @@ static void choose_tx_size_type_from_rd(const AV1_COMP *const cpi,
 
 #if CONFIG_PVQ
   od_rollback_buffer pre_buf;
-  od_rollback_buffer post_buf;
+  /* od_rollback_buffer post_iteration_buf; */
+  od_rollback_buffer post_loop_buf;
 
   od_encode_checkpoint(&x->daala_enc, &pre_buf);
-  od_encode_checkpoint(&x->daala_enc, &post_buf);
+  /* od_encode_checkpoint(&x->daala_enc, &post_iteration_buf); */
+  od_encode_checkpoint(&x->daala_enc, &post_loop_buf);
 #endif
   if (is_inter && cpi->sf.tx_type_search.prune_mode > NO_PRUNE)
     // passing -1 in for tx_type indicates that all 1D
@@ -1793,10 +1804,13 @@ static void choose_tx_size_type_from_rd(const AV1_COMP *const cpi,
 #if CONFIG_REF_MV
     if (mbmi->ref_mv_idx > 0 && tx_type != DCT_DCT) continue;
 #endif
+#if CONFIG_PVQ
+    od_encode_rollback(&x->daala_enc, &pre_buf);
+#endif
     rd = choose_tx_size_fix_type(cpi, bs, x, &this_rd_stats, ref_best_rd,
                                  tx_type,
-#if CONFIG_PVQ
-                                 pre_buf, post_buf,
+#if 0 && CONFIG_PVQ
+                                 pre_buf, post_iteration_buf,
 #endif
                                  prune);
     if (rd < best_rd) {
@@ -1804,6 +1818,9 @@ static void choose_tx_size_type_from_rd(const AV1_COMP *const cpi,
       *rd_stats = this_rd_stats;
       best_tx_type = tx_type;
       best_tx = mbmi->tx_size;
+#if CONFIG_PVQ
+      od_encode_checkpoint(&x->daala_enc, &post_loop_buf);
+#endif
     }
   }
 
@@ -1818,7 +1835,16 @@ static void choose_tx_size_type_from_rd(const AV1_COMP *const cpi,
   if (mbmi->tx_size >= TX_32X32) assert(mbmi->tx_type == DCT_DCT);
 #endif
 #if CONFIG_PVQ
-  od_encode_rollback(&x->daala_enc, &post_buf);
+  od_encode_rollback(&x->daala_enc, &post_loop_buf);
+
+  od_encode_rollback(&x->daala_enc, &pre_buf);
+  if (best_rd != INT64_MAX) {
+#if 0
+    txfm_rd_in_plane(x, cpi, rd_stats, ref_best_rd, 0, bs, best_tx,
+                     cpi->sf.use_fast_coef_costing);
+#endif
+    txfm_yrd(cpi, x, rd_stats, ref_best_rd, bs, best_tx_type, best_tx);
+  }
 #endif
 }
 
