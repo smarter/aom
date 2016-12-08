@@ -2192,9 +2192,9 @@ static int64_t rd_pick_intra4x4block(
         const int block = (row + idy) * 2 + (col + idx);
         const uint8_t *const src = &src_init[idx * 4 + idy * 4 * src_stride];
         uint8_t *const dst = &dst_init[idx * 4 + idy * 4 * dst_stride];
-#if !CONFIG_PVQ
         int16_t *const src_diff =
             av1_raster_block_offset_int16(BLOCK_8X8, block, p->src_diff);
+#if !CONFIG_PVQ
 #else
         int lossless = xd->lossless[xd->mi[0]->mbmi.segment_id];
         const int diff_stride = 8;
@@ -2212,8 +2212,8 @@ static int64_t rd_pick_intra4x4block(
         av1_predict_intra_block(xd, pd->width, pd->height, TX_4X4, mode, dst,
                                 dst_stride, dst, dst_stride, col + idx,
                                 row + idy, 0);
-#if !CONFIG_PVQ
         aom_subtract_block(4, 4, src_diff, 8, src, src_stride, dst, dst_stride);
+#if !CONFIG_PVQ
 #else
         if (lossless) tx_type = DCT_DCT;
         // transform block size in pixels
