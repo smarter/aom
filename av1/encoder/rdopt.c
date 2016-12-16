@@ -2197,10 +2197,8 @@ static int64_t rd_pick_intra4x4block(
         int block = (row + idy) * 2 + (col + idx);
         const uint8_t *const src = &src_init[idx * 4 + idy * 4 * src_stride];
         uint8_t *const dst = &dst_init[idx * 4 + idy * 4 * dst_stride];
-#if !CONFIG_PVQ
         int16_t *const src_diff =
             av1_raster_block_offset_int16(BLOCK_8X8, block, p->src_diff);
-#else
         int lossless = xd->lossless[xd->mi[0]->mbmi.segment_id];
         const int diff_stride = 8;
         tran_low_t *const coeff = BLOCK_OFFSET(x->plane[0].coeff, block);
@@ -2212,7 +2210,6 @@ static int64_t rd_pick_intra4x4block(
         TX_TYPE tx_type = get_tx_type(PLANE_TYPE_Y, xd, block, TX_4X4);
         int rate_pvq;
         int skip;
-#endif
         xd->mi[0]->bmi[block].as_mode = mode;
         av1_predict_intra_block(xd, pd->width, pd->height, TX_4X4, mode, dst,
                                 dst_stride, dst, dst_stride,
@@ -2222,9 +2219,7 @@ static int64_t rd_pick_intra4x4block(
                                 col + idx, row + idy,
 #endif
                                 0);
-#if !CONFIG_PVQ
         aom_subtract_block(4, 4, src_diff, 8, src, src_stride, dst, dst_stride);
-#else
         if (lossless) tx_type = DCT_DCT;
         // transform block size in pixels
         tx_blk_size = 4;
@@ -2246,7 +2241,6 @@ static int64_t rd_pick_intra4x4block(
           fwd_txfm(src_int16, coeff, diff_stride, &fwd_txfm_param);
           fwd_txfm(pred, ref_coeff, diff_stride, &fwd_txfm_param);
         }
-#endif
 
         if (xd->lossless[xd->mi[0]->mbmi.segment_id]) {
 #if !CONFIG_PVQ
