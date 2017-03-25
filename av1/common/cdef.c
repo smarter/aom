@@ -264,6 +264,7 @@ void av1_cdef_frame(YV12_BUFFER_CONFIG *frame, AV1_COMMON *cm,
           rend = (nvb << bsize[pli]) + OD_FILT_VBORDER;
         coffset = sbc * MAX_MIB_SIZE << bsize[pli];
         if (sbc == nhsb - 1) {
+          cend = (nhb << bsize[pli]);
           /* On the last superblock column, fill in the right border with
              OD_DERING_VERY_LARGE to avoid filtering with the outside. */
           for (r = 0; r < rend + OD_FILT_VBORDER; r++) {
