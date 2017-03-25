@@ -292,6 +292,7 @@ int items_compare(pvq_search_item *a, pvq_search_item *b) {
  * @param [out]    out         coefficients after quantization
  * @param [in]     x0          coefficients before quantization
  * @param [in]     r0          reference, aka predicted coefficients
+ * @param [in]     coeff_scale XXXX
  * @param [in]     n           number of dimensions
  * @param [in]     q0          quantization step size
  * @param [out]    y           pulse vector (i.e. selected PVQ codevector)
@@ -312,7 +313,7 @@ int items_compare(pvq_search_item *a, pvq_search_item *b) {
  * @return         gain        index of the quatized gain
 */
 static int pvq_theta(od_coeff *out, const od_coeff *x0, const od_coeff *r0,
-    int n, int q0, od_coeff *y, int *itheta, int *max_theta, int *vk,
+    int coeff_scale, int n, int q0, od_coeff *y, int *itheta, int *max_theta, int *vk,
     od_val16 beta, double *skip_diff, int nodesync, int is_keyframe, int pli,
     const od_adapt_ctx *adapt, const int16_t *qm, const int16_t *qm_inv,
     double pvq_norm_lambda, int speed) {
@@ -382,8 +383,8 @@ static int pvq_theta(od_coeff *out, const od_coeff *x0, const od_coeff *r0,
     corr += OD_MULT16_16(x16[i], r16[i]);
   }
   cfl_enabled = is_keyframe && pli != 0 && !OD_DISABLE_CFL;
-  cg  = od_pvq_compute_gain(x16, n, q0, &g, beta, xshift);
-  cgr = od_pvq_compute_gain(r16, n, q0, &gr, beta, rshift);
+  cg  = od_pvq_compute_gain(x16, n, q0, coeff_scale, &g, beta, xshift);
+  cgr = od_pvq_compute_gain(r16, n, q0, coeff_scale, &gr, beta, rshift);
   if (cfl_enabled) cgr = OD_CGAIN_SCALE;
   /* gain_offset is meant to make sure one of the quantized gains has
      exactly the same gain as the reference. */
@@ -606,7 +607,7 @@ static int pvq_theta(od_coeff *out, const od_coeff *x0, const od_coeff *r0,
   }
   else {
     if (noref) gain_offset = 0;
-    g = od_gain_expand(OD_SHL(qg, OD_CGAIN_SHIFT) + gain_offset, q0, beta);
+    g = od_gain_expand(OD_SHL(qg, OD_CGAIN_SHIFT) + gain_offset, q0, coeff_scale, beta);
     od_pvq_synthesis_partial(out, y, r16, n, noref, g, theta, m, s,
      qm_inv);
   }
@@ -745,6 +746,7 @@ PVQ_SKIP_TYPE od_pvq_encode(daala_enc_ctx *enc,
                    od_coeff *out,
                    int q_dc,
                    int q_ac,
+                   int coeff_scale,
                    int pli,
                    int bs,
                    const od_val16 *beta,
@@ -838,7 +840,7 @@ PVQ_SKIP_TYPE od_pvq_encode(daala_enc_ctx *enc,
     else
       q = OD_MAXI(1, q_ac);
 
-    qg[i] = pvq_theta(out + off[i], in + off[i], ref + off[i], size[i],
+    qg[i] = pvq_theta(out + off[i], in + off[i], ref + off[i], coeff_scale, size[i],
      q, y + off[i], &theta[i], &max_theta[i],
      &k[i], beta[i], &skip_diff, nodesync, is_keyframe, pli, &enc->state.adapt,
      qm + off[i], qm_inv + off[i], enc->pvq_norm_lambda, speed);
@@ -847,7 +849,7 @@ PVQ_SKIP_TYPE od_pvq_encode(daala_enc_ctx *enc,
   if (is_keyframe) out[0] = 0;
   else {
     int n;
-    n = OD_DIV_R0(abs(in[0] - ref[0]), dc_quant);
+    n = OD_DIV_R0(abs(in[0] - ref[0]) << coeff_scale, dc_quant);
     if (n == 0) {
       out[0] = 0;
     } else {
@@ -874,7 +876,7 @@ PVQ_SKIP_TYPE od_pvq_encode(daala_enc_ctx *enc,
       dc_rate += tell2/8.0;
       od_encode_rollback(enc, &dc_buf);
 
-      out[0] = od_rdo_quant(in[0] - ref[0], dc_quant, dc_rate,
+      out[0] = od_rdo_quant((in[0] - ref[0]) << coeff_scale, dc_quant, dc_rate,
        enc->pvq_norm_lambda);
     }
   }
@@ -955,7 +957,7 @@ PVQ_SKIP_TYPE od_pvq_encode(daala_enc_ctx *enc,
     if (is_keyframe) out[0] = 0;
     else {
       int n;
-      n = OD_DIV_R0(abs(in[0] - ref[0]), dc_quant);
+      n = OD_DIV_R0(abs(in[0] - ref[0]) << coeff_scale, dc_quant);
       if (n == 0) {
         out[0] = 0;
       } else {
@@ -982,7 +984,7 @@ PVQ_SKIP_TYPE od_pvq_encode(daala_enc_ctx *enc,
         dc_rate += tell2/8.0;
         od_encode_rollback(enc, &dc_buf);
 
-        out[0] = od_rdo_quant(in[0] - ref[0], dc_quant, dc_rate,
+        out[0] = od_rdo_quant((in[0] - ref[0]) << coeff_scale, dc_quant, dc_rate,
          enc->pvq_norm_lambda);
       }
     }

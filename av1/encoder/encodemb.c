@@ -1246,7 +1246,8 @@ PVQ_SKIP_TYPE av1_pvq_encode_helper(MACROBLOCK *x, tran_low_t *const coeff,
   const int tx_blk_size = tx_size_wide[tx_size];
   daala_enc_ctx *daala_enc = &x->daala_enc;
   PVQ_SKIP_TYPE ac_dc_coded;
-  int coeff_shift = 3 - get_tx_scale(tx_size);
+  int coeff_scale = get_tx_scale(tx_size);
+  /* int coeff_shift = 3 - get_tx_scale(tx_size); */
   int hbd_downshift = 0;
   int rounding_mask;
   int pvq_dc_quant;
@@ -1272,13 +1273,13 @@ PVQ_SKIP_TYPE av1_pvq_encode_helper(MACROBLOCK *x, tran_low_t *const coeff,
   // DC quantizer for PVQ
   if (use_activity_masking)
     pvq_dc_quant =
-        OD_MAXI(1, (quant[0] << (OD_COEFF_SHIFT - 3) >> hbd_downshift) *
+        OD_MAXI(1, (quant[0] >> hbd_downshift) *
                            daala_enc->state
                                .pvq_qm_q4[plane][od_qm_get_index(tx_size, 0)] >>
                        4);
   else
     pvq_dc_quant =
-        OD_MAXI(1, quant[0] << (OD_COEFF_SHIFT - 3) >> hbd_downshift);
+        OD_MAXI(1, quant[0] >> hbd_downshift);
 
   *eob = 0;
 
@@ -1296,25 +1297,23 @@ PVQ_SKIP_TYPE av1_pvq_encode_helper(MACROBLOCK *x, tran_low_t *const coeff,
 
   // copy int16 inputs to int32
   for (i = 0; i < tx_blk_size * tx_blk_size; i++) {
-    ref_int32[i] =
-        AOM_SIGNED_SHL(ref_coeff_pvq[i], OD_COEFF_SHIFT - coeff_shift) >>
-        hbd_downshift;
-    in_int32[i] = AOM_SIGNED_SHL(coeff_pvq[i], OD_COEFF_SHIFT - coeff_shift) >>
-                  hbd_downshift;
+    ref_int32[i] = ref_coeff_pvq[i] >> hbd_downshift;
+    in_int32[i] = coeff_pvq[i] >> hbd_downshift;
   }
 
-  if (abs(in_int32[0] - ref_int32[0]) < pvq_dc_quant * 141 / 256) { /* 0.55 */
+  if (abs(in_int32[0] - ref_int32[0]) << coeff_scale < pvq_dc_quant * 141 / 256) { /* 0.55 */
     out_int32[0] = 0;
   } else {
-    out_int32[0] = OD_DIV_R0(in_int32[0] - ref_int32[0], pvq_dc_quant);
+    out_int32[0] = OD_DIV_R0((in_int32[0] - ref_int32[0]) << coeff_scale, pvq_dc_quant);
   }
 
   ac_dc_coded =
       od_pvq_encode(daala_enc, ref_int32, in_int32, out_int32,
-                    OD_MAXI(1, quant[0] << (OD_COEFF_SHIFT - 3) >>
+                    OD_MAXI(1, quant[0] >>
                                    hbd_downshift),  // scale/quantizer
-                    OD_MAXI(1, quant[1] << (OD_COEFF_SHIFT - 3) >>
+                    OD_MAXI(1, quant[1] >>
                                    hbd_downshift),  // scale/quantizer
+                    get_tx_scale(tx_size),
                     plane,
                     tx_size, OD_PVQ_BETA[use_activity_masking][plane][tx_size],
                     OD_ROBUST_STREAM,
@@ -1337,16 +1336,15 @@ PVQ_SKIP_TYPE av1_pvq_encode_helper(MACROBLOCK *x, tran_low_t *const coeff,
   // so that final pvq bitstream writing can know whether DC is coded.
   if (pvq_info) pvq_info->dq_dc_residue = out_int32[0];
 
-  out_int32[0] = out_int32[0] * pvq_dc_quant;
+  out_int32[0] = (out_int32[0] * pvq_dc_quant) >> coeff_scale;
   out_int32[0] += ref_int32[0];
 
   // copy int32 result back to int16
-  assert(OD_COEFF_SHIFT > coeff_shift);
-  rounding_mask = (1 << (OD_COEFF_SHIFT - coeff_shift - 1)) - 1;
+  /* assert(OD_COEFF_SHIFT > coeff_shift); */
+  /* rounding_mask = (1 << (OD_COEFF_SHIFT - coeff_shift - 1)) - 1; */
   for (i = 0; i < tx_blk_size * tx_blk_size; i++) {
     out_int32[i] = AOM_SIGNED_SHL(out_int32[i], hbd_downshift);
-    dqcoeff_pvq[i] = (out_int32[i] + (out_int32[i] < 0) + rounding_mask) >>
-                     (OD_COEFF_SHIFT - coeff_shift);
+    dqcoeff_pvq[i] = out_int32[i];
   }
 
   // Back to original coefficient order

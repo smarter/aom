@@ -91,7 +91,7 @@ extern const uint16_t LAPLACE_OFFSET[];
 /* Largest PVQ partition is half the coefficients of largest block size. */
 #define MAXN (OD_TXSIZE_MAX*OD_TXSIZE_MAX/2)
 
-#define OD_COMPAND_SHIFT (8 + OD_COEFF_SHIFT)
+#define OD_COMPAND_SHIFT (8 + 3)
 #define OD_COMPAND_SCALE (1 << OD_COMPAND_SHIFT)
 #define OD_COMPAND_SCALE_1 (1./OD_COMPAND_SCALE)
 
@@ -174,8 +174,8 @@ void od_pvq_synthesis_partial(od_coeff *xcoeff, const od_coeff *ypulse,
                                   int noref, od_val32 g,
                                   od_val32 theta, int m, int s,
                                   const int16_t *qm_inv);
-od_val32 od_gain_expand(od_val32 cg, int q0, od_val16 beta);
-od_val32 od_pvq_compute_gain(const od_val16 *x, int n, int q0, od_val32 *g,
+od_val32 od_gain_expand(od_val32 cg, int q0, int coeff_scale, od_val16 beta);
+od_val32 od_pvq_compute_gain(const od_val16 *x, int n, int q0, int coeff_scale, od_val32 *g,
  od_val16 beta, int bshift);
 int od_pvq_compute_max_theta(od_val32 qcg, od_val16 beta);
 od_val32 od_pvq_compute_theta(int t, int max_theta);

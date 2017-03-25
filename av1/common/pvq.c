@@ -607,18 +607,20 @@ static int32_t od_pow(int32_t x, od_val16 beta)
  * @param [in]  beta  activity masking beta param (exponent)
  * @return            g^(1/beta)
  */
-static od_val32 od_gain_compand(od_val32 g, int q0, od_val16 beta) {
+static od_val32 od_gain_compand(od_val32 g, int q0, int coeff_scale, od_val16 beta) {
 #if defined(OD_FLOAT_PVQ)
-  if (beta == 1) return OD_CGAIN_SCALE*g/(double)q0;
+  if (beta == 1) return OD_CGAIN_SCALE*(g << coeff_scale)/(double)q0;
   else {
-    return OD_CGAIN_SCALE*OD_COMPAND_SCALE*pow(g*OD_COMPAND_SCALE_1,
+    // input is in 8 + (3 - coeff_scale)
+    // shift up: input is in 8 + 3
+    return OD_CGAIN_SCALE*OD_COMPAND_SCALE*pow((g << coeff_scale)*OD_COMPAND_SCALE_1,
      1./beta)/(double)q0;
   }
 #else
-  if (beta == OD_BETA(1)) return (OD_CGAIN_SCALE*g + (q0 >> 1))/q0;
+  if (beta == OD_BETA(1)) return (OD_CGAIN_SCALE*(g << coeff_scale) + (q0 >> 1))/q0;
   else {
     int32_t expr;
-    expr = od_pow(g, od_beta_rcp(beta));
+    expr = od_pow(g << coeff_scale, od_beta_rcp(beta));
     expr <<= OD_CGAIN_SHIFT + OD_COMPAND_SHIFT - OD_EXP2_OUTSHIFT;
     return (expr + (q0 >> 1))/q0;
   }
@@ -667,18 +669,18 @@ static int16_t od_sqrt(int32_t x, int *sqrt_shift)
  * @param [in]  beta  activity masking beta param (exponent)
  * @return            g^beta
  */
-od_val32 od_gain_expand(od_val32 cg0, int q0, od_val16 beta) {
+od_val32 od_gain_expand(od_val32 cg0, int q0, int coeff_scale, od_val16 beta) {
   if (beta == OD_BETA(1)) {
     /*The multiply fits into 28 bits because the expanded gain has a range from
        0 to 2^20.*/
-    return OD_SHR_ROUND(cg0*q0, OD_CGAIN_SHIFT);
+    return OD_SHR_ROUND(cg0*q0, OD_CGAIN_SHIFT + coeff_scale);
   }
   else if (beta == OD_BETA(1.5)) {
 #if defined(OD_FLOAT_PVQ)
     double cg;
     cg = cg0*OD_CGAIN_SCALE_1;
     cg *= q0*OD_COMPAND_SCALE_1;
-    return OD_COMPAND_SCALE*cg*sqrt(cg);
+    return OD_COMPAND_SCALE*cg*sqrt(cg) >> coeff_shift;
 #else
     int32_t irt;
     int64_t tmp;
@@ -693,7 +695,7 @@ od_val32 od_gain_expand(od_val32 cg0, int q0, od_val16 beta) {
     /*Expanded gain must be in Q(OD_COMPAND_SHIFT), thus OD_COMPAND_SHIFT is
        not included here.*/
     return OD_MAXI(1,
-        OD_VSHR_ROUND(tmp, OD_CGAIN_SHIFT + sqrt_outshift + sqrt_inshift));
+        OD_VSHR_ROUND(tmp, OD_CGAIN_SHIFT + sqrt_outshift + sqrt_inshift + coeff_scale));
 #endif
   }
   else {
@@ -702,7 +704,7 @@ od_val32 od_gain_expand(od_val32 cg0, int q0, od_val16 beta) {
        OD_COMPAND_SCALE.*/
     double cg;
     cg = cg0*OD_CGAIN_SCALE_1;
-    return OD_COMPAND_SCALE*pow(cg*q0*OD_COMPAND_SCALE_1, beta);
+    return OD_COMPAND_SCALE*pow(cg*q0*OD_COMPAND_SCALE_1, beta) >> coeff_shift;
 #else
     int32_t expr;
     int32_t cg;
@@ -710,7 +712,7 @@ od_val32 od_gain_expand(od_val32 cg0, int q0, od_val16 beta) {
     expr = od_pow(cg, beta);
     /*Expanded gain must be in Q(OD_COMPAND_SHIFT), hence the subtraction by
        OD_COMPAND_SHIFT.*/
-    return OD_MAXI(1, OD_SHR_ROUND(expr, OD_EXP2_OUTSHIFT - OD_COMPAND_SHIFT));
+    return OD_MAXI(1, OD_SHR_ROUND(expr, OD_EXP2_OUTSHIFT - OD_COMPAND_SHIFT + coeff_scale));
 #endif
   }
 }
@@ -726,8 +728,8 @@ od_val32 od_gain_expand(od_val32 cg0, int q0, od_val16 beta) {
  * @param [in]      bshift shift to be applied to raw gain
  * @return                 quantized/companded gain
  */
-od_val32 od_pvq_compute_gain(const od_val16 *x, int n, int q0, od_val32 *g,
- od_val16 beta, int bshift) {
+od_val32 od_pvq_compute_gain(const od_val16 *x, int n, int q0, int coeff_scale,
+ od_val32 *g, od_val16 beta, int bshift) {
   int i;
   od_val32 acc;
 #if !defined(OD_FLOAT_PVQ)
@@ -748,7 +750,7 @@ od_val32 od_pvq_compute_gain(const od_val16 *x, int n, int q0, od_val32 *g,
 #endif
   /* Normalize gain by quantization step size and apply companding
      (if ACTIVITY != 1). */
-  return od_gain_compand(*g, q0, beta);
+  return od_gain_compand(*g, q0, coeff_scale, beta);
 }
 
 /** Compute theta quantization range from quantized/companded gain

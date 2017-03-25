@@ -114,6 +114,7 @@ typedef struct {
  */
 static void pvq_decode_partition(aom_reader *r,
                                  int q0,
+                                 int coeff_scale,
                                  int n,
                                  generic_encoder model[3],
                                  od_adapt_ctx *adapt,
@@ -215,7 +216,7 @@ static void pvq_decode_partition(aom_reader *r,
     int icgr;
     int cfl_enabled;
     cfl_enabled = pli != 0 && is_keyframe && !OD_DISABLE_CFL;
-    cgr = od_pvq_compute_gain(ref16, n, q0, &gr, beta, rshift);
+    cgr = od_pvq_compute_gain(ref16, n, q0, coeff_scale, &gr, beta, rshift);
     if (cfl_enabled) cgr = OD_CGAIN_SCALE;
 #if defined(OD_FLOAT_PVQ)
     icgr = (int)floor(.5 + cgr);
@@ -265,7 +266,7 @@ static void pvq_decode_partition(aom_reader *r,
   }
   else {
     od_val32 g;
-    g = od_gain_expand(qcg, q0, beta);
+    g = od_gain_expand(qcg, q0, coeff_scale, beta);
     pvq_synthesis(out, y, ref16, n, gr, *noref, g, theta, qm_inv, rshift);
   }
   /* If OD_PVQ_SKIP_ZERO or OD_PVQ_SKIP_COPY, set skip to 1 for visualization */
@@ -278,6 +279,7 @@ static void pvq_decode_partition(aom_reader *r,
  * @param [in]     ref         'reference' (prediction) vector
  * @param [out]    out         decoded partition
  * @param [in]     q0          quantizer
+ * @param [in]     coeff_scale XXX
  * @param [in]     pli         plane index
  * @param [in]     bs          log of the block size minus two
  * @param [in]     beta        per-band activity masking beta param
@@ -292,6 +294,7 @@ void od_pvq_decode(daala_dec_ctx *dec,
                    od_coeff *ref,
                    od_coeff *out,
                    int q0,
+                   int coeff_scale,
                    int pli,
                    int bs,
                    const od_val16 *beta,
@@ -354,7 +357,7 @@ void od_pvq_decode(daala_dec_ctx *dec,
       else
         q = OD_MAXI(1, q0);
 
-      pvq_decode_partition(dec->r, q, size[i],
+      pvq_decode_partition(dec->r, q, coeff_scale, size[i],
        model, &dec->state.adapt, exg + i, ext + i, ref + off[i], out + off[i],
        &noref[i], beta[i], nodesync, is_keyframe, pli,
        (pli != 0)*OD_TXSIZES*PVQ_MAX_PARTITIONS + bs*PVQ_MAX_PARTITIONS + i,

@@ -353,9 +353,9 @@ static int av1_pvq_decode_helper(MACROBLOCKD *xd, tran_low_t *ref_coeff,
                                  PVQ_SKIP_TYPE ac_dc_coded) {
   unsigned int flags;  // used for daala's stream analyzer.
   int off;
+  int coeff_scale = get_tx_scale(bs);
   const int is_keyframe = 0;
   const int has_dc_skip = 1;
-  int coeff_shift = 3 - get_tx_scale(bs);
   int hbd_downshift = 0;
   int rounding_mask;
   // DC quantizer for PVQ
@@ -385,12 +385,12 @@ static int av1_pvq_decode_helper(MACROBLOCKD *xd, tran_low_t *ref_coeff,
   else {
     if (use_activity_masking)
       pvq_dc_quant = OD_MAXI(
-          1, (quant[0] << (OD_COEFF_SHIFT - 3) >> hbd_downshift) *
+          1, (quant[0] >> hbd_downshift) *
                      dec->state.pvq_qm_q4[pli][od_qm_get_index(bs, 0)] >>
                  4);
     else
       pvq_dc_quant =
-          OD_MAXI(1, quant[0] << (OD_COEFF_SHIFT - 3) >> hbd_downshift);
+          OD_MAXI(1, quant[0] >> hbd_downshift);
   }
 
   off = od_qm_offset(bs, xdec);
@@ -398,12 +398,13 @@ static int av1_pvq_decode_helper(MACROBLOCKD *xd, tran_low_t *ref_coeff,
   // copy int16 inputs to int32
   for (i = 0; i < blk_size * blk_size; i++) {
     ref_int32[i] =
-        AOM_SIGNED_SHL(ref_coeff_pvq[i], OD_COEFF_SHIFT - coeff_shift) >>
+        (ref_coeff_pvq[i]) >>
         hbd_downshift;
   }
 
   od_pvq_decode(dec, ref_int32, out_int32,
-                OD_MAXI(1, quant[1] << (OD_COEFF_SHIFT - 3) >> hbd_downshift),
+                OD_MAXI(1, quant[1] >> hbd_downshift),
+                get_tx_scale(bs),
                 pli, bs, OD_PVQ_BETA[use_activity_masking][pli][bs],
                 OD_ROBUST_STREAM, is_keyframe, &flags, ac_dc_coded,
                 dec->state.qm + off, dec->state.qm_inv + off);
@@ -415,15 +416,14 @@ static int av1_pvq_decode_helper(MACROBLOCKD *xd, tran_low_t *ref_coeff,
                                      "dc:mag");
     if (out_int32[0]) out_int32[0] *= aom_read_bit(dec->r, "dc:sign") ? -1 : 1;
   }
-  out_int32[0] = out_int32[0] * pvq_dc_quant + ref_int32[0];
+  out_int32[0] = ((out_int32[0] * pvq_dc_quant) >> coeff_scale) + ref_int32[0];
 
   // copy int32 result back to int16
-  assert(OD_COEFF_SHIFT > coeff_shift);
-  rounding_mask = (1 << (OD_COEFF_SHIFT - coeff_shift - 1)) - 1;
+  /* assert(OD_COEFF_SHIFT > coeff_shift); */
+  // rounding_mask = (1 << (OD_COEFF_SHIFT - coeff_shift - 1)) - 1;
   for (i = 0; i < blk_size * blk_size; i++) {
     out_int32[i] = AOM_SIGNED_SHL(out_int32[i], hbd_downshift);
-    dqcoeff_pvq[i] = (out_int32[i] + (out_int32[i] < 0) + rounding_mask) >>
-                     (OD_COEFF_SHIFT - coeff_shift);
+    dqcoeff_pvq[i] = out_int32[i];
   }
 
   od_coding_order_to_raster(dqcoeff, blk_size, tx_type, dqcoeff_pvq, blk_size);
