@@ -21,23 +21,9 @@
 #include "av1/common/reconinter.h"
 
 int sb_all_skip(const AV1_COMMON *const cm, int mi_row, int mi_col) {
-  int r, c;
-  int maxc, maxr;
-  int skip = 1;
-  maxc = cm->mi_cols - mi_col;
-  maxr = cm->mi_rows - mi_row;
+  MB_MODE_INFO *const mbmi = &cm->mi_grid_visible[mi_row * cm->mi_stride + mi_col]->mbmi;
 
-  maxr = AOMMIN(maxr, cm->mib_size);
-  maxc = AOMMIN(maxc, cm->mib_size);
-
-  for (r = 0; r < maxr; r++) {
-    for (c = 0; c < maxc; c++) {
-      skip = skip &&
-             cm->mi_grid_visible[(mi_row + r) * cm->mi_stride + mi_col + c]
-                 ->mbmi.skip;
-    }
-  }
-  return skip;
+  return mbmi->sb_type == BLOCK_64X64 && mbmi->skip;
 }
 
 static int is_8x8_block_skip(MODE_INFO **grid, int mi_row, int mi_col,
