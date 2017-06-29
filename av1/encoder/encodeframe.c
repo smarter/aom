@@ -3453,9 +3453,6 @@ static void rd_pick_partition(const AV1_COMP *const cpi, ThreadData *td,
                      PARTITION_NONE,
 #endif
                      bsize, ctx_none, best_rdc.rdcost);
-    if (this_rdc.dist != 0) {
-      assert((this_rdc.dist & ((1 << (RDDIV_BITS - 2)) - 1)) == 0);
-    }
     if (this_rdc.rate != INT_MAX) {
       if (bsize_at_least_8x8) {
         this_rdc.rate += partition_cost[PARTITION_NONE];
@@ -3751,9 +3748,6 @@ static void rd_pick_partition(const AV1_COMP *const cpi, ThreadData *td,
 #endif  // CONFIG_SUPERTX
     }
 
-    if (sum_rdc.dist != 0) {
-      assert((sum_rdc.dist & ((1 << (RDDIV_BITS - 2)) - 1)) == 0);
-    }
     if (reached_last_index && sum_rdc.rdcost < best_rdc.rdcost) {
       sum_rdc.rate += partition_cost[PARTITION_SPLIT];
       sum_rdc.rdcost = RDCOST(x->rdmult, sum_rdc.rate, sum_rdc.dist);
@@ -3857,9 +3851,6 @@ static void rd_pick_partition(const AV1_COMP *const cpi, ThreadData *td,
                           subsize, NULL);
       }
 #endif  // CONFIG_DAALA_DIST && CONFIG_CB4X4
-      if (this_rdc.dist != INT64_MAX && this_rdc.dist != 0) {
-        assert((this_rdc.dist & ((1 << (RDDIV_BITS - 2)) - 1)) == 0);
-      }
 
       if (this_rdc.rate == INT_MAX) {
         sum_rdc.rdcost = INT64_MAX;
@@ -4044,9 +4035,6 @@ static void rd_pick_partition(const AV1_COMP *const cpi, ThreadData *td,
                           subsize, NULL);
       }
 #endif  // CONFIG_DAALA_DIST && CONFIG_CB4X4
-      if (this_rdc.dist != INT64_MAX && this_rdc.dist != 0) {
-        assert((this_rdc.dist & ((1 << (RDDIV_BITS - 2)) - 1)) == 0);
-      }
 
       if (this_rdc.rate == INT_MAX) {
         sum_rdc.rdcost = INT64_MAX;
@@ -4223,10 +4211,6 @@ static void rd_pick_partition(const AV1_COMP *const cpi, ThreadData *td,
   // checks occur in some sub function and thus are used...
   (void)best_rd;
   *rd_cost = best_rdc;
-
-  if (best_rdc.dist != INT64_MAX && best_rdc.dist != 0) {
-    assert((best_rdc.dist & ((1 << (RDDIV_BITS - 2)) - 1)) == 0);
-  }
 
 #if CONFIG_DAALA_DIST && CONFIG_CB4X4
   if (bsize <= BLOCK_8X8 && rd_cost->rate != INT_MAX) {
