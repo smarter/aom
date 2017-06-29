@@ -33,8 +33,8 @@ extern uint64_t rd_counter;
 #define RDDIV_BITS 7
 #define RD_EPB_SHIFT 6
 
-static const int64_t dist_mult[3] = { 1, 1, 1 };
-static const int64_t dist_div[3] = { 1, 1, 1 };
+static const int64_t dist_mult[3] = { 1, 8, 8 };
+static const int64_t dist_div[3] = { 1, 7, 7 };
 
 #define DIST_WEIGHT(D, PLANE) (((D) * dist_mult[PLANE]) / (dist_div[PLANE]))
 
