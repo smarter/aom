@@ -1608,9 +1608,9 @@ void av1_dist_block(const AV1_COMP *cpi, MACROBLOCK *x, int plane,
     else
 #endif
       *out_dist =
-          (av1_block_error(coeff, dqcoeff, buffer_length, &this_sse) << RDDIV_BITS) >> shift;
+          (av1_block_error(coeff, dqcoeff, buffer_length, &this_sse) >> shift) << RDDIV_BITS;
 #endif  // CONFIG_PVQ
-    *out_sse = (this_sse << RDDIV_BITS) >> shift;
+    *out_sse = (this_sse >> shift) << RDDIV_BITS;
   } else {
     const BLOCK_SIZE tx_bsize = txsize_to_bsize[tx_size];
 #if !CONFIG_PVQ || CONFIG_DAALA_DIST
