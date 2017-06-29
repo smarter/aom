@@ -60,6 +60,8 @@ static const uint8_t rd_thresh_block_size_factor[BLOCK_SIZES] = {
 #endif  // CONFIG_EXT_PARTITION
 };
 
+uint64_t rd_counter = 0;
+
 static void fill_mode_costs(AV1_COMP *cpi) {
   const FRAME_CONTEXT *const fc = cpi->common.fc;
   int i, j;

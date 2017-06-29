@@ -27,11 +27,13 @@
 extern "C" {
 #endif
 
+extern uint64_t rd_counter;
+
 #define RDDIV_BITS 7
 #define RD_EPB_SHIFT 6
 
 #define RDCOST(RM, R, D)                                          \
-  (printf("%ld\n", D), assert((D & ((1 << (RDDIV_BITS - 2)) - 1)) == 0), (ROUND_POWER_OF_TWO(((int64_t)R) * (RM), AV1_PROB_COST_SHIFT) + \
+  (printf("%ld: %ld\n", rd_counter++, D), assert((D & ((1 << (RDDIV_BITS - 2)) - 1)) == 0), (ROUND_POWER_OF_TWO(((int64_t)R) * (RM), AV1_PROB_COST_SHIFT) + \
      (D)))
 
 #define RDCOST_DBL(RM, R, D)                                       \
