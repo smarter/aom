@@ -33,11 +33,11 @@ extern uint64_t rd_counter;
 #define RD_EPB_SHIFT 6
 
 #define RDCOST(RM, R, D)                                          \
-  (/*printf("%ld: %ld\n", rd_counter, D),*/rd_counter++, assert((D & ((1 << (RDDIV_BITS - 2)) - 1)) == 0), (ROUND_POWER_OF_TWO(((int64_t)R) * (RM), AV1_PROB_COST_SHIFT) + \
+  (/*printf("%ld: %ld\n", rd_counter, D),*/rd_counter++, (ROUND_POWER_OF_TWO(((int64_t)R) * (RM), AV1_PROB_COST_SHIFT) + \
      (D)))
 
 #define RDCOST_DBL(RM, R, D)                                       \
-  (assert((D & ((1 << (RDDIV_BITS - 2)) - 1)) == 0), (((((double)(R)) * (RM)) / (double)(1 << AV1_PROB_COST_SHIFT)) + \
+  ((((((double)(R)) * (RM)) / (double)(1 << AV1_PROB_COST_SHIFT)) + \
                                                       ((double)(D))))
 
 #define QIDX_SKIP_THRESH 115
