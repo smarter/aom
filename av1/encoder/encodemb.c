@@ -223,7 +223,7 @@ static int optimize_b_greedy(const AV1_COMMON *cm, MACROBLOCK *mb, int plane,
 
   rate0 = get_token_bit_costs(*(token_costs_ptr + band_translate[0]), 0, ctx0,
                               EOB_TOKEN);
-  int64_t best_block_rd_cost = RDCOST(rdmult, rate0, accu_error << RDDIV_BITS);
+  int64_t best_block_rd_cost = RDCOST(rdmult, rate0, DIST_WEIGHT(accu_error << RDDIV_BITS, plane));
 
   // int64_t best_block_rd_cost_all0 = best_block_rd_cost;
 
@@ -360,17 +360,17 @@ static int optimize_b_greedy(const AV1_COMMON *cm, MACROBLOCK *mb, int plane,
         }
       }
 
-      rd_cost0 = RDCOST(rdmult, (rate0 + next_bits0), d2 << RDDIV_BITS);
-      rd_cost1 = RDCOST(rdmult, (rate1 + next_bits1), d2_a << RDDIV_BITS);
+      rd_cost0 = RDCOST(rdmult, (rate0 + next_bits0), DIST_WEIGHT(d2 << RDDIV_BITS, plane));
+      rd_cost1 = RDCOST(rdmult, (rate1 + next_bits1), DIST_WEIGHT(d2_a << RDDIV_BITS, plane));
 
       best_x = (rd_cost1 < rd_cost0);
 
       eob_cost0 = RDCOST(rdmult, (accu_rate + rate0 + next_eob_bits0),
-                         (accu_error + d2 - d0) << RDDIV_BITS);
+                         DIST_WEIGHT((accu_error + d2 - d0) << RDDIV_BITS, plane));
       eob_cost1 = eob_cost0;
       if (x_a != 0) {
         eob_cost1 = RDCOST(rdmult, (accu_rate + rate1 + next_eob_bits1),
-                           (accu_error + d2_a - d0) << RDDIV_BITS);
+                           DIST_WEIGHT((accu_error + d2_a - d0) << RDDIV_BITS, plane));
         best_eob_x = (eob_cost1 < eob_cost0);
       } else {
         best_eob_x = 0;

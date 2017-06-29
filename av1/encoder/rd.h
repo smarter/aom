@@ -27,10 +27,16 @@
 extern "C" {
 #endif
 
+
 extern uint64_t rd_counter;
 
 #define RDDIV_BITS 7
 #define RD_EPB_SHIFT 6
+
+static const int64_t dist_mult[3] = { 1, 1, 1 };
+static const int64_t dist_div[3] = { 1, 1, 1 };
+
+#define DIST_WEIGHT(D, PLANE) (((D) * dist_mult[PLANE]) / (dist_div[PLANE]))
 
 #define RDCOST(RM, R, D)                                          \
   (/*printf("%ld: %ld\n", rd_counter, D),*/rd_counter++, (ROUND_POWER_OF_TWO(((int64_t)R) * (RM), AV1_PROB_COST_SHIFT) + \
