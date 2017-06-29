@@ -1141,7 +1141,7 @@ static void model_rd_from_sse(const AV1_COMP *const cpi,
                                  pd->dequant[1] >> dequant_shift, rate, dist);
   }
 
-  *dist <<= 4;
+  *dist <<= (4 + RDDIV_BITS);
 }
 
 static void model_rd_for_sb(const AV1_COMP *const cpi, BLOCK_SIZE bsize,
@@ -1185,7 +1185,7 @@ static void model_rd_for_sb(const AV1_COMP *const cpi, BLOCK_SIZE bsize,
 
     if (plane == 0) x->pred_sse[ref] = sse;
 
-    total_sse += sse;
+    total_sse += sse << RDDIV_BITS;
 
     model_rd_from_sse(cpi, xd, bs, plane, sse, &rate, &dist);
 
@@ -1296,7 +1296,7 @@ static int64_t av1_block_error2_c(const tran_low_t *coeff,
   error = av1_block_error_fp(coeff, dqcoeff, block_size);
   // prediction residue^2 = (orig - ref)^2
   *ssz = av1_block_error_fp(coeff, ref, block_size);
-  return error;
+  return error << RDDIV_BITS;
 }
 #endif  // CONFIG_HIGHBITDEPTH
 #endif  // CONFIG_PVQ
@@ -1481,7 +1481,7 @@ static void get_txb_dimensions(const MACROBLOCKD *xd, int plane,
 // Compute the pixel domain distortion from src and dst on all visible 4x4s in
 // the
 // transform block.
-static unsigned pixel_dist(const AV1_COMP *const cpi, const MACROBLOCK *x,
+static int64_t pixel_dist(const AV1_COMP *const cpi, const MACROBLOCK *x,
                            int plane, const uint8_t *src, const int src_stride,
                            const uint8_t *dst, const int dst_stride,
                            int blk_row, int blk_col,
@@ -1516,17 +1516,17 @@ static unsigned pixel_dist(const AV1_COMP *const cpi, const MACROBLOCK *x,
 #endif
     unsigned sse;
     cpi->fn_ptr[tx_bsize].vf(src, src_stride, dst, dst_stride, &sse);
-    return sse;
+    return (int64_t)sse << RDDIV_BITS;
   }
 #if CONFIG_HIGHBITDEPTH
   if (xd->cur_buf->flags & YV12_FLAG_HIGHBITDEPTH) {
-    uint64_t sse = aom_highbd_sse_odd_size(src, src_stride, dst, dst_stride,
-                                           visible_cols, visible_rows);
-    return (unsigned int)ROUND_POWER_OF_TWO(sse, (xd->bd - 8) * 2);
+    uint64_t sse = (uint64_t)aom_highbd_sse_odd_size(src, src_stride, dst, dst_stride,
+                                           visible_cols, visible_rows) << RDDIV_BITS;
+    return ROUND_POWER_OF_TWO(sse, (xd->bd - 8) * 2);
   }
 #endif  // CONFIG_HIGHBITDEPTH
-  unsigned sse = aom_sse_odd_size(src, src_stride, dst, dst_stride,
-                                  visible_cols, visible_rows);
+  int64_t sse = (int64_t)aom_sse_odd_size(src, src_stride, dst, dst_stride,
+                                  visible_cols, visible_rows) << RDDIV_BITS;
   return sse;
 }
 
@@ -1562,8 +1562,8 @@ static int64_t pixel_diff_dist(const MACROBLOCK *x, int plane,
         visible_cols, visible_rows, qm, use_activity_masking, x->qindex);
   else
 #endif
-    return aom_sum_squares_2d_i16(diff, diff_stride, visible_cols,
-                                  visible_rows);
+    return (int64_t)aom_sum_squares_2d_i16(diff, diff_stride, visible_cols,
+                                  visible_rows) << RDDIV_BITS;
 }
 
 void av1_dist_block(const AV1_COMP *cpi, MACROBLOCK *x, int plane,
@@ -1608,9 +1608,9 @@ void av1_dist_block(const AV1_COMP *cpi, MACROBLOCK *x, int plane,
     else
 #endif
       *out_dist =
-          av1_block_error(coeff, dqcoeff, buffer_length, &this_sse) >> shift;
+          (av1_block_error(coeff, dqcoeff, buffer_length, &this_sse) << RDDIV_BITS) >> shift;
 #endif  // CONFIG_PVQ
-    *out_sse = this_sse >> shift;
+    *out_sse = (this_sse << RDDIV_BITS) >> shift;
   } else {
     const BLOCK_SIZE tx_bsize = txsize_to_bsize[tx_size];
 #if !CONFIG_PVQ || CONFIG_DAALA_DIST

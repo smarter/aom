@@ -31,12 +31,12 @@ extern "C" {
 #define RD_EPB_SHIFT 6
 
 #define RDCOST(RM, R, D)                                          \
-  (ROUND_POWER_OF_TWO(((int64_t)R) * (RM), AV1_PROB_COST_SHIFT) + \
-   (D << RDDIV_BITS))
+  (printf("%ld\n", D), assert(D != 1125899906842624L), assert((D & ((1 << (RDDIV_BITS - 2)) - 1)) == 0), (ROUND_POWER_OF_TWO(((int64_t)R) * (RM), AV1_PROB_COST_SHIFT) + \
+     (D)))
 
 #define RDCOST_DBL(RM, R, D)                                       \
-  (((((double)(R)) * (RM)) / (double)(1 << AV1_PROB_COST_SHIFT)) + \
-   ((double)(D) * (1 << RDDIV_BITS)))
+  (assert((D & ((1 << (RDDIV_BITS - 2)) - 1)) == 0), (((((double)(R)) * (RM)) / (double)(1 << AV1_PROB_COST_SHIFT)) + \
+                                                      ((double)(D))))
 
 #define QIDX_SKIP_THRESH 115
 
