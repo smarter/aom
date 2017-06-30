@@ -188,7 +188,7 @@ static int optimize_b_greedy(const AV1_COMMON *cm, MACROBLOCK *mb, int plane,
   assert((!plane_type && !plane) || (plane_type && plane));
   assert(eob <= default_eob);
 
-  int64_t rdmult = (mb->rdmult * plane_rd_mult[ref][plane_type]) >> 1;
+  int64_t rdmult = (mb->rdmult * 8) >> 1;
 
   int64_t rate0, rate1;
   for (i = 0; i < eob; i++) {
