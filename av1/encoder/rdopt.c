@@ -1119,6 +1119,7 @@ static void model_rd_from_sse(const AV1_COMP *const cpi,
                               int plane, int64_t sse, int *rate,
                               int64_t *dist) {
   const struct macroblockd_plane *const pd = &xd->plane[plane];
+  const int is_inter = is_inter_block(&xd->mi[0]->mbmi);
   const int dequant_shift =
 #if CONFIG_HIGHBITDEPTH
       (xd->cur_buf->flags & YV12_FLAG_HIGHBITDEPTH) ? xd->bd - 5 :
@@ -1142,7 +1143,7 @@ static void model_rd_from_sse(const AV1_COMP *const cpi,
   }
 
   *dist <<= (4 + RDDIV_BITS);
-  *dist = DIST_WEIGHT(*dist, plane);
+  *dist = DIST_WEIGHT(*dist, is_inter, plane);
 }
 
 static void model_rd_for_sb(const AV1_COMP *const cpi, BLOCK_SIZE bsize,
@@ -1155,6 +1156,7 @@ static void model_rd_for_sb(const AV1_COMP *const cpi, BLOCK_SIZE bsize,
   // we need to divide by 8 before sending to modeling function.
   int plane;
   const int ref = xd->mi[0]->mbmi.ref_frame[0];
+  const int is_inter = is_inter_block(&xd->mi[0]->mbmi);
 
   int64_t rate_sum = 0;
   int64_t dist_sum = 0;
@@ -1186,7 +1188,7 @@ static void model_rd_for_sb(const AV1_COMP *const cpi, BLOCK_SIZE bsize,
 
     if (plane == 0) x->pred_sse[ref] = sse;
 
-    total_sse += DIST_WEIGHT(sse << RDDIV_BITS, plane);
+    total_sse += DIST_WEIGHT(sse << RDDIV_BITS, is_inter, plane);
 
     model_rd_from_sse(cpi, xd, bs, plane, sse, &rate, &dist);
 
@@ -1490,6 +1492,7 @@ static int64_t pixel_dist(const AV1_COMP *const cpi, const MACROBLOCK *x,
                            const BLOCK_SIZE tx_bsize) {
   int txb_rows, txb_cols, visible_rows, visible_cols;
   const MACROBLOCKD *xd = &x->e_mbd;
+  const int is_inter = is_inter_block(&xd->mi[0]->mbmi);
 #if CONFIG_DAALA_DIST
   int qm = OD_HVS_QM;
   int use_activity_masking = 0;
@@ -1517,19 +1520,19 @@ static int64_t pixel_dist(const AV1_COMP *const cpi, const MACROBLOCK *x,
 #endif
     unsigned sse;
     cpi->fn_ptr[tx_bsize].vf(src, src_stride, dst, dst_stride, &sse);
-    return DIST_WEIGHT((int64_t)sse << RDDIV_BITS, plane);
+    return DIST_WEIGHT((int64_t)sse << RDDIV_BITS, is_inter, plane);
   }
 #if CONFIG_HIGHBITDEPTH
   if (xd->cur_buf->flags & YV12_FLAG_HIGHBITDEPTH) {
     uint64_t sse = DIST_WEIGHT((uint64_t)aom_highbd_sse_odd_size(src, src_stride, dst, dst_stride,
                                                                  visible_cols, visible_rows) << RDDIV_BITS,
-                               plane);
+                               is_inter, plane);
     return ROUND_POWER_OF_TWO(sse, (xd->bd - 8) * 2);
   }
 #endif  // CONFIG_HIGHBITDEPTH
   int64_t sse = DIST_WEIGHT((int64_t)aom_sse_odd_size(src, src_stride, dst, dst_stride,
                                                       visible_cols, visible_rows) << RDDIV_BITS,
-                            plane);
+                            is_inter, plane);
   return sse;
 }
 
@@ -1542,6 +1545,7 @@ static int64_t pixel_diff_dist(const MACROBLOCK *x, int plane,
                                const BLOCK_SIZE tx_bsize) {
   int visible_rows, visible_cols;
   const MACROBLOCKD *xd = &x->e_mbd;
+  const int is_inter = is_inter_block(&xd->mi[0]->mbmi);
 #if CONFIG_DAALA_DIST
   int txb_height = block_size_high[tx_bsize];
   int txb_width = block_size_wide[tx_bsize];
@@ -1567,7 +1571,7 @@ static int64_t pixel_diff_dist(const MACROBLOCK *x, int plane,
 #endif
     return DIST_WEIGHT((int64_t)aom_sum_squares_2d_i16(diff, diff_stride, visible_cols,
                                                        visible_rows) << RDDIV_BITS,
-                       plane);
+                       is_inter, plane);
 }
 
 void av1_dist_block(const AV1_COMP *cpi, MACROBLOCK *x, int plane,
@@ -1575,6 +1579,7 @@ void av1_dist_block(const AV1_COMP *cpi, MACROBLOCK *x, int plane,
                     TX_SIZE tx_size, int64_t *out_dist, int64_t *out_sse,
                     OUTPUT_STATUS output_status) {
   MACROBLOCKD *const xd = &x->e_mbd;
+  const int is_inter = is_inter_block(&xd->mi[0]->mbmi);
   const struct macroblock_plane *const p = &x->plane[plane];
 #if CONFIG_DAALA_DIST
   struct macroblockd_plane *const pd = &xd->plane[plane];
@@ -1600,8 +1605,8 @@ void av1_dist_block(const AV1_COMP *cpi, MACROBLOCK *x, int plane,
                 shift;
 #else
     *out_dist = DIST_WEIGHT(av1_block_error2_c(coeff, dqcoeff, ref_coeff, buffer_length,
-                                   &this_sse) >>
-                            shift, plane);
+                                   &this_sse) >> shift
+                            is_inter, plane);
 #endif  // CONFIG_HIGHBITDEPTH
 #else   // !CONFIG_PVQ
 #if CONFIG_HIGHBITDEPTH
@@ -1612,9 +1617,10 @@ void av1_dist_block(const AV1_COMP *cpi, MACROBLOCK *x, int plane,
     else
 #endif
       *out_dist =
-          DIST_WEIGHT((av1_block_error(coeff, dqcoeff, buffer_length, &this_sse) >> shift) << RDDIV_BITS, plane);
+          DIST_WEIGHT((av1_block_error(coeff, dqcoeff, buffer_length, &this_sse) >> shift) << RDDIV_BITS,
+                      is_inter, plane);
 #endif  // CONFIG_PVQ
-    *out_sse = DIST_WEIGHT((this_sse >> shift) << RDDIV_BITS, plane);
+    *out_sse = DIST_WEIGHT((this_sse >> shift) << RDDIV_BITS, is_inter, plane);
   } else {
     const BLOCK_SIZE tx_bsize = txsize_to_bsize[tx_size];
 #if !CONFIG_PVQ || CONFIG_DAALA_DIST
