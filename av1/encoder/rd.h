@@ -34,12 +34,12 @@ extern uint64_t rd_counter;
 #define RD_EPB_SHIFT 6
 
   static const int64_t dist_mult[2][3] = {
-    { 1, 8, 8 },
-    { 1, 8, 8 },
+    { 8, 8, 8 },
+    { 8, 8, 8 },
   };
   static const int64_t dist_div[2][3] = {
-    { 1, 7, 7 },
-    { 1, 5, 5 },
+    { 10, 7, 7 },
+    { 8, 5, 5 },
   };
 
 #define DIST_WEIGHT(D, IS_INTER, PLANE) (((D) * dist_mult[IS_INTER][PLANE]) / (dist_div[IS_INTER][PLANE]))
