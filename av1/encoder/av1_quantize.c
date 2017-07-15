@@ -1777,8 +1777,8 @@ void av1_set_quantizer(AV1_COMMON *cm, int q) {
   // delta_q changes.
   cm->base_qindex = q;
   cm->y_dc_delta_q = 0;
-  cm->uv_dc_delta_q = 0;
-  cm->uv_ac_delta_q = 0;
+  cm->uv_dc_delta_q = 1;
+  cm->uv_ac_delta_q = 1;
 }
 
 // Table that converts 0-63 Q-range values passed in outside to the Qindex
